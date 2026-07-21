@@ -1,0 +1,4 @@
+interface:
+  display_name: "Combine HCV Included FASTAs"
+  short_description: "Combine staged NS3, NS5A, and NS5B FASTA files."
+  default_prompt: "Use $hcv-combine-included-fastas to combine the staged HCV FASTA files by gene."
