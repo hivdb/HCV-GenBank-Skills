@@ -27,6 +27,7 @@ See `NS3_workflow.svg` in this skill folder.
 12. `scripts/export_ns3_consensus_fasta.py`
 13. `scripts/build_ns3_gt_ras_profiles.py`
 14. `scripts/build_ns3_subtype_ras_profiles.py`
+15. `scripts/build_ns3_combined_ras_profiles.py`
 
 Prefer the wrapper when running the full workflow:
 
@@ -84,6 +85,7 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - `NS3_Subtype_Consensus.fasta`
 - `NS3_GT_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Profiles.xlsx`
+- `NS3_Combined_RAS_Profiles.xlsx`
 
 ## Operating Rules
 

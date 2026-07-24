@@ -68,6 +68,7 @@ SUBTYPE_WITH_GT_AA_JSON="$SKILL_TEMP_ROOT/build_ns3_subtype_with_gt_aa/last_run_
 COMPLETEPROFILES_JSON="$SKILL_TEMP_ROOT/build_ns3_completeprofiles_tabspergt/last_run_summary.json"
 GT_RAS_JSON="$SKILL_TEMP_ROOT/build_ns3_gt_ras_profiles/last_run_summary.json"
 SUBTYPE_RAS_JSON="$SKILL_TEMP_ROOT/build_ns3_subtype_ras_profiles/last_run_summary.json"
+COMBINED_RAS_JSON="$SKILL_TEMP_ROOT/build_ns3_combined_ras_profiles/last_run_summary.json"
 GT_AA_DISTANCE_SUMMARY="$SKILL_TEMP_ROOT/build_ns3_gt_aa_distance_matrix/last_run_summary.txt"
 SUBTYPE_AA_DISTANCE_SUMMARY="$SKILL_TEMP_ROOT/build_ns3_subtype_aa_distance_matrices/last_run_summary.txt"
 RAS_ENTROPY_SUMMARY="$SKILL_TEMP_ROOT/build_ns3_ras_entropy/last_run_summary.txt"
@@ -77,6 +78,7 @@ mkdir -p "$(dirname "$GT_ALLSTUDIES_JSON")" "$(dirname "$SOURCEFEATURES_JSON")" 
 mkdir -p "$(dirname "$SUBTYPE_ALLSTUDIES_JSON")" "$(dirname "$SUBTYPE_WITH_GT_AA_JSON")"
 mkdir -p "$(dirname "$COMPLETEPROFILES_JSON")"
 mkdir -p "$(dirname "$GT_RAS_JSON")" "$(dirname "$SUBTYPE_RAS_JSON")"
+mkdir -p "$(dirname "$COMBINED_RAS_JSON")"
 mkdir -p "$(dirname "$GT_AA_DISTANCE_SUMMARY")" "$(dirname "$SUBTYPE_AA_DISTANCE_SUMMARY")" "$(dirname "$RAS_ENTROPY_SUMMARY")"
 
 mkdir -p "$OUTPUT_DIR"
@@ -254,7 +256,18 @@ announce_step 13 "Build subtype RAS profile" \
   --output-dir "$OUTPUT_DIR" \
   > "$SUBTYPE_RAS_JSON"
 
-announce_step 14 "Build genotype amino-acid distance matrix" \
+announce_step 14 "Combine genotype and subtype RAS profiles" \
+  "GT RAS profile: $OUTPUT_DIR/NS3_GT_RAS_Profiles.xlsx; subtype RAS profile: $OUTPUT_DIR/NS3_Subtype_RAS_Profiles.xlsx" \
+  "combined RAS profile: $OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx"
+echo "Action: place each genotype RAS consensus row before its subtype rows."
+echo "Result: subtype cells retain amino-acid variants strictly above 10%; each genotype block ends with a blank row."
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_combined_ras_profiles.py" \
+  --gt-ras-profile-workbook "$OUTPUT_DIR/NS3_GT_RAS_Profiles.xlsx" \
+  --subtype-ras-profile-workbook "$OUTPUT_DIR/NS3_Subtype_RAS_Profiles.xlsx" \
+  --output-xlsx "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
+  > "$COMBINED_RAS_JSON"
+
+announce_step 15 "Build genotype amino-acid distance matrix" \
   "consensus FASTA: $OUTPUT_DIR/NS3_GT_Consensus.fasta" \
   "distance workbook: $OUTPUT_DIR/NS3_GT_AA_Distance_Pos36_175.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_gt_aa_distance_matrix.py" \
@@ -266,7 +279,7 @@ announce_step 14 "Build genotype amino-acid distance matrix" \
   --end 175 \
   > "$GT_AA_DISTANCE_SUMMARY"
 
-announce_step 15 "Build subtype amino-acid distance matrices" \
+announce_step 16 "Build subtype amino-acid distance matrices" \
   "consensus FASTA: $OUTPUT_DIR/NS3_Subtype_Consensus.fasta" \
   "distance workbook: $OUTPUT_DIR/NS3_Subtype_AA_Distance_Pos36_175.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_aa_distance_matrices.py" \
@@ -277,7 +290,7 @@ announce_step 15 "Build subtype amino-acid distance matrices" \
   --end 175 \
   > "$SUBTYPE_AA_DISTANCE_SUMMARY"
 
-announce_step 16 "Build RAS entropy reports" \
+announce_step 17 "Build RAS entropy reports" \
   "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   "entropy workbooks: $OUTPUT_DIR/NS3_GT_RAS_Entropy.xlsx; $OUTPUT_DIR/NS3_Subtype_RAS_Entropy.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_ras_entropy.py" \
