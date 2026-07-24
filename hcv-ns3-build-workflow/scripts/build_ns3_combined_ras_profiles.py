@@ -10,6 +10,8 @@ from collections import defaultdict
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
@@ -46,13 +48,19 @@ def genotype_from_label(label: object) -> str | None:
     return match.group(1) if match else None
 
 
-def filter_subtype_cell(value: object, threshold: float) -> str:
-    """Return only AA/frequency pairs whose percentage is strictly above threshold."""
-    return "".join(
-        f"{amino_acid}{frequency}"
+def variants_to_rich_text(value: object, threshold: float | None = None) -> CellRichText | str:
+    """Render amino-acid frequencies with superscript frequencies, as in RAS profiles."""
+    variants = [
+        (amino_acid, frequency)
         for amino_acid, frequency in VARIANT_RE.findall(str(value or ""))
-        if float(frequency) > threshold
-    )
+        if threshold is None or float(frequency) > threshold
+    ]
+    if not variants:
+        return ""
+    parts: list[str | TextBlock] = []
+    for amino_acid, frequency in variants:
+        parts.extend((amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency)))
+    return CellRichText(*parts)
 
 
 def write_combined_workbook(
@@ -88,7 +96,7 @@ def write_combined_workbook(
     output_rows = 0
     for genotype in sorted(gt_by_number, key=int):
         gt_row = gt_by_number[genotype]
-        worksheet.append(gt_row)
+        worksheet.append([gt_row[0]] + [variants_to_rich_text(value) for value in gt_row[1:]])
         output_rows += 1
         for cell in worksheet[worksheet.max_row]:
             cell.fill = gt_fill
@@ -97,7 +105,7 @@ def write_combined_workbook(
         for subtype_row in subtypes_by_gt.get(genotype, []):
             worksheet.append(
                 [subtype_row[0]]
-                + [filter_subtype_cell(value, threshold) for value in subtype_row[1:]]
+                + [variants_to_rich_text(value, threshold) for value in subtype_row[1:]]
             )
             output_rows += 1
         worksheet.append([])
