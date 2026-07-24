@@ -165,6 +165,8 @@ announce_step 6 "Filter staged FASTA files by RefID metadata" \
 announce_step 7 "Build genotype study workbook" \
   "workbook: $EXCEL_FILE; filtered FASTAs: $INCLUDED_FASTA_DIR" \
   "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx"
+echo "Action: align each filtered study sequence to the HCV genotype reference sequences."
+echo "Result: group sequences by RefID/study, assign the best genotype, and record alignment results in the genotype workbook."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_gt_allstudies.py" \
   --excel-file "$EXCEL_FILE" \
   --sheet "$SHEET_NAME" \
@@ -195,6 +197,8 @@ echo "Skipping disabled NS3 source-feature extraction and grouped-summary steps"
 announce_step 8 "Build subtype study workbook" \
   "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; filtered FASTAs: $INCLUDED_FASTA_DIR" \
   "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx"
+echo "Action: use the genotype assignments and filtered sequences to compare each study with subtype reference sequences."
+echo "Result: assign the best subtype within each genotype and write per-sequence amino-acid data to the subtype workbook."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_allstudies_wseqs.py" \
   --combined-workbook "$OUTPUT_DIR/NS3_GT_AllStudies.xlsx" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
