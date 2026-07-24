@@ -65,16 +65,19 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     root = parser.parse_args().repo_root.resolve()
-    comet_dir, local_dir = root / "outputs" / "comet", root / "outputs" / "local_alignment"
+    comet_dir = root / "outputs" / "comet"
+    comparison_dir = root / "outputs" / "comet-local-diff"
+    comparison_dir.mkdir(parents=True, exist_ok=True)
+    local_dir = root / "outputs" / "local_alignment"
     for gene in GENES:
         source = comet_dir / f"{gene}_Profile_Input_Source.xlsx"
         if not source.is_file():
             print(f"{gene.lower()}_status=comet_profile_input_source_missing"); continue
         comet = profile_rows(source)
-        write_rows(comet_dir / f"{gene}_Profile_Input_Accessions.csv", comet)
+        write_rows(comparison_dir / f"{gene}_Profile_Input_Accessions.csv", comet)
         local_path = local_dir / f"{gene}_Profile_Input_Accessions.csv"
         local = read_csv(local_path) if local_path.is_file() else {}
-        write_comparison(gene, comet, local, comet_dir, "ok" if local_path.is_file() else "local_profile_input_csv_missing")
+        write_comparison(gene, comet, local, comparison_dir, "ok" if local_path.is_file() else "local_profile_input_csv_missing")
         print(f"{gene.lower()}_profile_input_accession_count={len(comet)}")
     return 0
 
