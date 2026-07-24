@@ -41,7 +41,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refid-column", default="RefID")
     parser.add_argument("--refname-column", default="RefName")
     parser.add_argument("--numpatients-column", default="NumPts")
-    parser.add_argument("--positive-column", action="append", default=["NS3Count"])
+    parser.add_argument(
+        "--positive-column",
+        action="append",
+        default=[],
+        help="Optional column that must be numeric and greater than 0; repeat for multiple columns",
+    )
     parser.add_argument("--min-aligned-nt", type=int, default=200, help="Skip hits shorter than this overlap length")
     parser.add_argument(
         "--genotype-subtype-csv",

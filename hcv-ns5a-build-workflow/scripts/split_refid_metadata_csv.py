@@ -117,6 +117,11 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     fieldnames, rows = load_rows(input_csv)
+    input_accessions = {
+        (row.get("Accession") or "").strip()
+        for row in rows
+        if (row.get("Accession") or "").strip()
+    }
     accession_filters = {
         "17": load_accessions(input_csv.parent / "17.csv"),
         "85": load_accessions(input_csv.parent / "85.csv"),
@@ -130,6 +135,7 @@ def main() -> int:
             rows_by_refid[refid].append(row)
 
     summary_rows: list[dict[str, str | int]] = []
+    output_accessions: set[str] = set()
     for refid in sorted(filtered_refids(), key=lambda value: (int(value), value)):
         ref_rows = rows_by_refid[refid]
         if refid in accession_filters:
@@ -140,6 +146,11 @@ def main() -> int:
             ]
         else:
             kept_rows = [row for row in ref_rows if row_is_kept(refid, row)]
+        output_accessions.update(
+            (row.get("Accession") or "").strip()
+            for row in kept_rows
+            if (row.get("Accession") or "").strip()
+        )
         output_csv = output_dir / f"RefID_{refid}_metadata.csv"
         write_csv(output_csv, fieldnames, kept_rows)
         summary_rows.append(
@@ -153,6 +164,8 @@ def main() -> int:
         )
 
     print(f"refid_count={len(summary_rows)}")
+    print(f"input_accession_count={len(input_accessions)}")
+    print(f"output_accession_count={len(output_accessions)}")
     print(f"input_row_count={len(rows)}")
     print(f"filtered_refids={','.join(sorted(filtered_refids()))}")
     print(f"output_dir={output_dir.resolve()}")

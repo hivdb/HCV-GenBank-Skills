@@ -1,5 +1,5 @@
 [common]
-genbank_dir = "/absolute/path/to/genbank_seq_files"
+genbank_dir = "HCVData/GenBankFiles"
 sheet_name = "Ref_summary_20260429 (2)"
 output_dir = "outputs"
 reference_fasta = "HCV_GT_RefSeqs.fasta"
@@ -9,15 +9,18 @@ min_sequences = 10
 python_bin = ".venv/bin/python"
 
 [ns3]
-excel_file = "/absolute/path/to/HCV_BlastHits.xlsx"
-fasta_pool = "/absolute/path/to/FASTA"
+excel_file = "Ref-selection/___IncludedNS3Refs.xlsx"
+sheet_name = "NS3_PtGT0_Check"
+fasta_pool = "HCVData/FASTA"
 
 [ns5a]
-excel_file = "/absolute/path/to/HCV_BlastHits.xlsx"
-fasta_pool = "/absolute/path/to/FASTA"
-genbank_dir = "/absolute/path/to/genbank_seq_files"
+excel_file = "Ref-selection/___IncludedNS5ARefs.xlsx"
+sheet_name = "NS5A_PtGT0_Check"
+fasta_pool = "HCVData/FASTA"
+genbank_dir = "HCVData/GenBankFiles"
 
 [ns5b]
-excel_file = "/absolute/path/to/HCV_BlastHits.xlsx"
-fasta_pool = "/absolute/path/to/FASTA"
-genbank_dir = "/absolute/path/to/genbank_seq_files"
+excel_file = "Ref-selection/___IncludedNS5BRefs.xlsx"
+sheet_name = "NS5B_PtGT0_Check"
+fasta_pool = "HCVData/FASTA"
+genbank_dir = "HCVData/GenBankFiles"

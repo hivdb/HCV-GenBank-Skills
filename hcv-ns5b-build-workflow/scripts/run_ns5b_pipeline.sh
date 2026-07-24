@@ -46,7 +46,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/outputs}"
 REFERENCE_FASTA="${REFERENCE_FASTA:-$REPO_ROOT/HCV_GT_RefSeqs.fasta}"
 SUBTYPE_JSON="${SUBTYPE_JSON:-$REPO_ROOT/HCV_Subtype_Refs_By_Genome_NA.json}"
 GT_AA_JSON="${GT_AA_JSON:-$REPO_ROOT/HCV_GT_Refs_By_Gene_AA.json}"
-ACCESSIONS_METADATA_CSV="${ACCESSIONS_METADATA_CSV:-/Users/kaimingtao/Library/CloudStorage/Dropbox/Shared/Vistas/HCVData/Accessions_metadata.csv}"
+ACCESSIONS_METADATA_CSV="${ACCESSIONS_METADATA_CSV:-$REPO_ROOT/HCVData/Accessions_metadata.csv}"
 SKILL_NAME="hcv-ns5b-build-workflow"
 TEMP_ROOT="${TEMP_ROOT:-$REPO_ROOT/temp/$SKILL_NAME/$(basename "$0" .sh)}"
 
@@ -111,16 +111,26 @@ while IFS= read -r src; do
   cp "$src" "$INCLUDED_FASTA_DIR/"
 done < "$MATCHED_TXT"
 
+SOURCE_ACCESSION_COUNT="$(while IFS= read -r src; do
+  [[ -n "$src" ]] || continue
+  awk '/^>/ {sub(/^>/, ""); split($0, fields, /[[:space:]]+/); print fields[1]}' "$src"
+done < "$MATCHED_TXT" | LC_ALL=C sort -u | wc -l | tr -d ' ')"
+STAGED_ACCESSION_COUNT="$(awk '/^>/ {sub(/^>/, ""); split($0, fields, /[[:space:]]+/); print fields[1]}' "$INCLUDED_FASTA_DIR"/*.fasta | LC_ALL=C sort -u | wc -l | tr -d ' ')"
+echo "step=4 stage_refid_fastas input_accession_count=$SOURCE_ACCESSION_COUNT output_accession_count=$STAGED_ACCESSION_COUNT"
+
+echo "step=5 filter_accessions_metadata"
 "$PYTHON_BIN" "$SCRIPT_DIR/filter_accessions_metadata_by_fasta.py" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
   --metadata-csv "$ACCESSIONS_METADATA_CSV" \
   --output-dir "$TEMP_ROOT"
 
 rm -rf "$REFID_METADATA_DIR"
+echo "step=6 split_refid_metadata"
 "$PYTHON_BIN" "$SCRIPT_DIR/split_refid_metadata_csv.py" \
   --input-csv "$TEMP_ROOT/included_accessions_metadata.csv" \
   --output-dir "$REFID_METADATA_DIR"
 
+echo "step=7 filter_refid_fastas"
 "$PYTHON_BIN" "$SCRIPT_DIR/filter_refid_fastas_by_metadata.py" \
   --metadata-dir "$REFID_METADATA_DIR" \
   --fasta-dir "$INCLUDED_FASTA_DIR"
@@ -135,7 +145,6 @@ rm -rf "$REFID_METADATA_DIR"
   --refid-column RefID \
   --refname-column RefName \
   --numpatients-column 'Num Pts' \
-  --positive-column NS5BCount \
   > "$GT_ALLSTUDIES_JSON"
 
 echo "Skipping NS5B source-feature extraction and grouped summary steps"

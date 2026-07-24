@@ -188,6 +188,11 @@ def main() -> int:
         accession = (row.get(args.accession_column) or "").strip()
         if accession in fasta_accession_set:
             filtered_rows.append(row)
+    filtered_accessions = {
+        (row.get(args.accession_column) or "").strip()
+        for row in filtered_rows
+        if (row.get(args.accession_column) or "").strip()
+    }
 
     metadata_accessions = set(rows_by_accession)
     missing_accessions = [accession for accession in fasta_accessions if accession not in metadata_accessions]
@@ -201,6 +206,8 @@ def main() -> int:
     write_csv(genotype_subtype_csv, ["accession", "genotype", "subtype", "column_name"], genotype_subtype_rows)
     write_lines(missing_txt, missing_accessions)
 
+    print(f"input_accession_count={len(fasta_accessions)}")
+    print(f"output_accession_count={len(filtered_accessions)}")
     print(f"fasta_accession_count={len(fasta_accessions)}")
     print(f"metadata_accession_count={len(metadata_accessions)}")
     print(f"filtered_row_count={len(filtered_rows)}")

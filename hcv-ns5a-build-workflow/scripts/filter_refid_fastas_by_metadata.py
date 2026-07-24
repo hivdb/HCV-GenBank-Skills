@@ -65,6 +65,14 @@ def header_accession(header: str) -> str:
     return header[1:].strip().split()[0]
 
 
+def collect_fasta_accessions(fasta_dir: Path) -> set[str]:
+    return {
+        header_accession(header)
+        for fasta_path in fasta_dir.glob("*.fasta")
+        for header, _sequence_lines in read_fasta(fasta_path)
+    }
+
+
 def write_fasta(path: Path, records: list[tuple[str, list[str]]]) -> None:
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         for header, sequence_lines in records:
@@ -84,15 +92,13 @@ def main() -> int:
         raise RuntimeError(f"FASTA directory was not found: {fasta_dir}")
 
     metadata_paths = sorted(metadata_dir.glob("RefID_*_metadata.csv"))
+    input_accessions = collect_fasta_accessions(fasta_dir)
     fasta_by_refid = {
         refid: path
         for path in sorted(fasta_dir.glob("*.fasta"))
         if (refid := refid_from_fasta_path(path))
     }
 
-    total_before = 0
-    total_after = 0
-    filtered_refids = 0
     filtered_fasta_refids = 0
     missing_fasta_count = 0
 
@@ -100,11 +106,9 @@ def main() -> int:
         refid = refid_from_metadata_path(metadata_path)
         if not refid:
             continue
-        filtered_refids += 1
         fasta_path = fasta_by_refid.get(refid)
         if fasta_path is None:
             missing_fasta_count += 1
-            print(f"filter_result=RefID:{refid},Status:missing_fasta,TotalRecords:0,KeptRecords:0")
             continue
 
         allowed_accessions = load_metadata_accessions(metadata_path)
@@ -116,23 +120,14 @@ def main() -> int:
         ]
         write_fasta(fasta_path, kept_records)
 
-        total_before += len(records)
-        total_after += len(kept_records)
         filtered_fasta_refids += 1
-        print(
-            "filter_result="
-            f"RefID:{refid},"
-            f"TotalRecords:{len(records)},"
-            f"KeptRecords:{len(kept_records)},"
-            f"RemovedRecords:{len(records) - len(kept_records)}"
-        )
 
-    print(f"filtered_refid_count={filtered_refids}")
-    print(f"filtered_fasta_refid_count={filtered_fasta_refids}")
-    print(f"missing_fasta_count={missing_fasta_count}")
-    print(f"total_records_before={total_before}")
-    print(f"total_records_after={total_after}")
-    print(f"total_records_removed={total_before - total_after}")
+    output_accessions = collect_fasta_accessions(fasta_dir)
+    print(f"staged_fasta_accessions_before_filter={len(input_accessions)}")
+    print(f"staged_fasta_accessions_after_filter={len(output_accessions)}")
+    print(f"staged_fasta_accessions_removed={len(input_accessions - output_accessions)}")
+    print(f"refid_fasta_files_filtered={filtered_fasta_refids}")
+    print(f"filter_rules_without_matching_fasta={missing_fasta_count}")
     return 0
 
 

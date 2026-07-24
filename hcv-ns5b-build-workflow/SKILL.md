@@ -49,7 +49,7 @@ Temporary files and step summaries are written under `temp/hcv-ns5b-build-workfl
 
 ## Inputs
 
-- Excel workbook and configured worksheet containing `RefID`, `RefName`, patient-count, and `NS5BCount` fields
+- Excel workbook and configured worksheet containing `RefID`, `RefName`, and patient-count fields
 - FASTA pool directory containing RefID-prefixed FASTA files
 - `HCV_GT_RefSeqs.fasta`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
