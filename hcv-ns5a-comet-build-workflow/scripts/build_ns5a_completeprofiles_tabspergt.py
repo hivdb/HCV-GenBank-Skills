@@ -49,7 +49,7 @@ def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
     return job_dir
 
 
-def load_rows(workbook_path: Path) -> list[dict[str, Any]]:
+def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
     header = [str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))]
@@ -59,24 +59,39 @@ def load_rows(workbook_path: Path) -> list[dict[str, Any]]:
         if name not in index:
             raise RuntimeError(f"Column '{name}' not found in {workbook_path}")
     rows: list[dict[str, Any]] = []
+    unassigned_genotype_accessions: set[str] = set()
+    unassigned_subtype_accessions: set[str] = set()
     for values in ws.iter_rows(min_row=2, values_only=True):
         aa_sequence = values[index["AASequence"]]
         start = values[index["StartAAPosition"]]
         end = values[index["EndAAPosition"]]
         if not aa_sequence or start in (None, "") or end in (None, ""):
             continue
+        accession = str(values[index["AccessionID"]]).strip()
+        genotype = str(values[index["ClosestGT"]]).strip()
+        subtype = str(values[index["ClosestSubtype"]]).strip()
+        if genotype.casefold().startswith("unassign"):
+            unassigned_genotype_accessions.add(accession)
+        if subtype.casefold().startswith("unassign"):
+            unassigned_subtype_accessions.add(accession)
+        if genotype.casefold().startswith("unassign") or subtype.casefold().startswith("unassign"):
+            continue
         rows.append(
             {
-                "AccessionID": str(values[index["AccessionID"]]).strip(),
-                "ClosestGT": str(values[index["ClosestGT"]]).strip(),
-                "ClosestSubtype": str(values[index["ClosestSubtype"]]).strip(),
+                "AccessionID": accession,
+                "ClosestGT": genotype,
+                "ClosestSubtype": subtype,
                 "StartAAPosition": int(start),
                 "EndAAPosition": int(end),
                 "AASequence": str(aa_sequence).strip(),
             }
         )
     wb.close()
-    return rows
+    return rows, {
+        "ignored_unassigned_genotype_accession_count": len(unassigned_genotype_accessions),
+        "ignored_unassigned_subtype_accession_count": len(unassigned_subtype_accessions),
+        "ignored_unassigned_accession_count": len(unassigned_genotype_accessions | unassigned_subtype_accessions),
+    }
 
 
 def build_position_counts(rows: list[dict[str, Any]]) -> tuple[dict[int, int], dict[int, Counter[str]]]:
@@ -193,8 +208,8 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     script_temp_dir()
 
-    rows = load_rows(input_workbook)
-    counts = accession_counts(rows)
+    rows, ignored_counts = load_rows(input_workbook)
+    counts = {**accession_counts(rows), **ignored_counts}
     if args.report_only:
         print(json.dumps(counts))
         return 0

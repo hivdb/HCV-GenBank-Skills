@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV Profile Input Comparison"
+  short_description: "Compare NS3, NS5A, and NS5B profile inputs"
+  default_prompt: "Use $hcv-profile-input-comparison to generate and compare profile-input accession CSVs for all three HCV genes."

@@ -89,9 +89,7 @@ mkdir -p "$(dirname "$GT_AA_DISTANCE_SUMMARY")" "$(dirname "$SUBTYPE_AA_DISTANCE
 mkdir -p "$OUTPUT_DIR"
 
 cleanup() {
-  if [[ -n "${AA_TMP_WORKBOOK:-}" && -f "${AA_TMP_WORKBOOK:-}" ]]; then
-    rm -f "$AA_TMP_WORKBOOK"
-  fi
+  :
 }
 trap cleanup EXIT
 
@@ -220,13 +218,14 @@ echo "Action: write the Comet subtype for each retained accession; no subtype al
 
 announce_step 10 "Extract genotype-position amino-acid sequences" \
   "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx; filtered FASTAs: $INCLUDED_FASTA_DIR" \
-  "amino-acid workbook: recorded in $SUBTYPE_WITH_GT_AA_JSON"
+  "amino-acid workbook: $OUTPUT_DIR/NS3_Profile_Input_Source.xlsx"
 echo "Action: use blastx once against the Comet genotype reference to map and translate each raw sequence."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_with_gt_aa.py" \
   --subtype-workbook "$OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
   --gt-aa-json "$GT_AA_JSON" \
   --output-dir "$OUTPUT_DIR" \
+  --output-workbook "$OUTPUT_DIR/NS3_Profile_Input_Source.xlsx" \
   > "$SUBTYPE_WITH_GT_AA_JSON"
 
 AA_TMP_WORKBOOK="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output_workbook"])' "$SUBTYPE_WITH_GT_AA_JSON")"
@@ -234,29 +233,25 @@ PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_completeprofiles_ta
 PROFILE_INPUT_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["included_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_WITH_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_with_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_WITHOUT_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_without_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
+PROFILE_INPUT_UNASSIGNED_GT="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["ignored_unassigned_genotype_accession_count"])' "$PROFILE_INPUT_COUNTS")"
+PROFILE_INPUT_UNASSIGNED_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["ignored_unassigned_subtype_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 
 announce_step 11 "Build complete profile workbooks" \
   "amino-acid workbook: $AA_TMP_WORKBOOK" \
-  "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx; profile accessions: $OUTPUT_DIR/NS3_Profile_Input_Accessions.csv"
+  "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx"
 echo "profile_input_included_accession_count=$PROFILE_INPUT_INCLUDED_ACCESSIONS"
 echo "profile_input_accessions_with_comet_subtype_count=$PROFILE_INPUT_WITH_SUBTYPE"
 echo "profile_input_accessions_without_comet_subtype_count=$PROFILE_INPUT_WITHOUT_SUBTYPE"
+echo "profile_input_ignored_unassigned_genotype_accession_count=$PROFILE_INPUT_UNASSIGNED_GT"
+echo "profile_input_ignored_unassigned_subtype_accession_count=$PROFILE_INPUT_UNASSIGNED_SUBTYPE"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
-  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Input_Accessions.csv" \
   > "$COMPLETEPROFILES_JSON"
 PROFILE_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["included_accession_count"])' "$COMPLETEPROFILES_JSON")"
 PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessions_with_comet_subtype_count"])' "$COMPLETEPROFILES_JSON")"
 echo "complete_profile_included_accession_count=$PROFILE_INCLUDED_ACCESSIONS"
 echo "complete_profile_accessions_with_subtype_count=$PROFILE_WITH_SUBTYPE_ACCESSIONS"
-
-echo "Profile assignment comparison: Comet profile accessions versus local-alignment profile accessions."
-"$PYTHON_BIN" "$SCRIPT_DIR/compare_profile_input_assignments.py" \
-  --comet-csv "$OUTPUT_DIR/NS3_Profile_Input_Accessions.csv" \
-  --local-csv "$REPO_ROOT/outputs/local_alignment/NS3_Profile_Input_Accessions.csv" \
-  --summary-csv "$OUTPUT_DIR/NS3_Profile_Input_Assignment_Comparison.csv" \
-  --differences-csv "$OUTPUT_DIR/NS3_Profile_Input_Assignment_Differences.csv"
 
 announce_step 12 "Export consensus FASTA files" \
   "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
