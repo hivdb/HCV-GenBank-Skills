@@ -1,7 +1,7 @@
 [common]
 genbank_dir = "HCVData/GenBankFiles"
 sheet_name = "Ref_summary_20260429 (2)"
-output_dir = "outputs"
+output_dir = "outputs/local_alignment"
 reference_fasta = "HCV_GT_RefSeqs.fasta"
 subtype_json = "HCV_Subtype_Refs_By_Genome_NA.json"
 gt_aa_json = "HCV_GT_Refs_By_Gene_AA.json"
@@ -25,8 +25,20 @@ sheet_name = "NS5A_PtGT0_Check"
 fasta_pool = "HCVData/FASTA"
 genbank_dir = "HCVData/GenBankFiles"
 
+[ns5a_comet]
+excel_file = "Ref-selection/___IncludedNS5ARefs.xlsx"
+sheet_name = "NS5A_PtGT0_Check"
+fasta_pool = "HCVData/FASTA"
+output_dir = "outputs_comet"
+
 [ns5b]
 excel_file = "Ref-selection/___IncludedNS5BRefs.xlsx"
 sheet_name = "NS5B_PtGT0_Check"
 fasta_pool = "HCVData/FASTA"
 genbank_dir = "HCVData/GenBankFiles"
+
+[ns5b_comet]
+excel_file = "Ref-selection/___IncludedNS5BRefs.xlsx"
+sheet_name = "NS5B_PtGT0_Check"
+fasta_pool = "HCVData/FASTA"
+output_dir = "outputs_comet"
