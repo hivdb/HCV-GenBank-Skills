@@ -42,7 +42,7 @@ EXCEL_FILE="${EXCEL_FILE:-}"
 FASTA_POOL="${FASTA_POOL:-}"
 GENBANK_DIR="${GENBANK_DIR:-}"
 SHEET_NAME="${SHEET_NAME:-}"
-OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/outputs_comet}"
+OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/outputs/comet}"
 REFERENCE_FASTA="${REFERENCE_FASTA:-$REPO_ROOT/HCV_GT_RefSeqs.fasta}"
 SUBTYPE_JSON="${SUBTYPE_JSON:-$REPO_ROOT/HCV_Subtype_Refs_By_Genome_NA.json}"
 GT_AA_JSON="${GT_AA_JSON:-$REPO_ROOT/HCV_GT_Refs_By_Gene_AA.json}"
@@ -77,6 +77,7 @@ REFID_METADATA_DIR="$TEMP_ROOT/refid_metadata"
 COMET_GENOTYPE_CSV="$TEMP_ROOT/comet_ns3_genotype_assignments.csv"
 COMET_SUBTYPE_CSV="$TEMP_ROOT/comet_ns3_subtype_assignments.csv"
 COMET_NOT_FOUND_CSV="$TEMP_ROOT/comet_ns3_not_found_or_unassigned.csv"
+COMET_NOT_FOUND_FASTA="$TEMP_ROOT/comet_ns3_not_found_or_unassigned.fasta"
 mkdir -p "$TEMP_ROOT"
 mkdir -p "$(dirname "$GT_ALLSTUDIES_JSON")" "$(dirname "$SOURCEFEATURES_JSON")" "$(dirname "$SOURCEFEATURES_GROUPED_JSON")"
 mkdir -p "$(dirname "$SUBTYPE_ALLSTUDIES_JSON")" "$(dirname "$SUBTYPE_WITH_GT_AA_JSON")"
@@ -144,18 +145,7 @@ STAGED_ACCESSION_COUNT="$(awk '/^>/ {sub(/^>/, ""); split($0, fields, /[[:space:
 echo "staged_fasta_accessions_input=$SOURCE_ACCESSION_COUNT"
 echo "staged_fasta_accessions_output=$STAGED_ACCESSION_COUNT"
 
-announce_step 4 "Apply authoritative Comet assignments" \
-  "Comet calls: $COMET_SUBTYPING_CSV; staged FASTAs: $INCLUDED_FASTA_DIR" \
-  "Comet assignments: $COMET_GENOTYPE_CSV and $COMET_SUBTYPE_CSV; filtered staged FASTAs: $INCLUDED_FASTA_DIR"
-echo "Action: derive genotype from the first character of each Comet subtype and remove unmatched or unassigned accessions."
-"$PYTHON_BIN" "$SCRIPT_DIR/prepare_comet_ns3_assignments.py" \
-  --comet-csv "$COMET_SUBTYPING_CSV" \
-  --fasta-dir "$INCLUDED_FASTA_DIR" \
-  --genotype-output-csv "$COMET_GENOTYPE_CSV" \
-  --subtype-output-csv "$COMET_SUBTYPE_CSV" \
-  --not-found-output-csv "$COMET_NOT_FOUND_CSV"
-
-announce_step 5 "Filter master accession metadata" \
+announce_step 4 "Filter master accession metadata" \
   "staged FASTAs: $INCLUDED_FASTA_DIR; master metadata: $ACCESSIONS_METADATA_CSV" \
   "filtered metadata: $TEMP_ROOT/included_accessions_metadata.csv; genotype/subtype metadata: $TEMP_ROOT/included_accessions_genotype_subtype.csv"
 "$PYTHON_BIN" "$SCRIPT_DIR/filter_accessions_metadata_by_fasta.py" \
@@ -164,7 +154,7 @@ announce_step 5 "Filter master accession metadata" \
   --output-dir "$TEMP_ROOT"
 
 rm -rf "$REFID_METADATA_DIR"
-announce_step 6 "Apply RefID-specific metadata rules" \
+announce_step 5 "Apply RefID-specific metadata rules" \
   "filtered metadata: $TEMP_ROOT/included_accessions_metadata.csv" \
   "per-RefID metadata: $REFID_METADATA_DIR"
 "$PYTHON_BIN" "$SCRIPT_DIR/split_refid_metadata_csv.py" \
@@ -172,28 +162,35 @@ announce_step 6 "Apply RefID-specific metadata rules" \
   --output-dir "$REFID_METADATA_DIR" \
   > /dev/null
 
-announce_step 7 "Filter staged FASTA files by RefID metadata" \
+announce_step 6 "Filter staged FASTA files by RefID metadata" \
   "staged FASTAs: $INCLUDED_FASTA_DIR; per-RefID metadata: $REFID_METADATA_DIR" \
   "filtered staged FASTAs: $INCLUDED_FASTA_DIR"
 "$PYTHON_BIN" "$SCRIPT_DIR/filter_refid_fastas_by_metadata.py" \
   --metadata-dir "$REFID_METADATA_DIR" \
   --fasta-dir "$INCLUDED_FASTA_DIR"
 
-announce_step 8 "Build genotype study workbook" \
-  "workbook: $EXCEL_FILE; filtered FASTAs: $INCLUDED_FASTA_DIR" \
-  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx"
-echo "Action: align each filtered study sequence to the HCV genotype reference sequences."
-echo "Result: group sequences by RefID/study, assign the best genotype, and record alignment results in the genotype workbook."
-"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_gt_allstudies.py" \
-  --excel-file "$EXCEL_FILE" \
-  --sheet "$SHEET_NAME" \
+announce_step 7 "Report and filter Comet status after RefID filtering" \
+  "RefID-filtered FASTAs: $INCLUDED_FASTA_DIR; Comet calls: $COMET_SUBTYPING_CSV" \
+  "Comet assignments: $COMET_GENOTYPE_CSV and $COMET_SUBTYPE_CSV; missing/unassigned raw FASTA: $COMET_NOT_FOUND_FASTA; retained FASTAs: $INCLUDED_FASTA_DIR"
+echo "Action 1: print assigned, missing, and unassigned counts for the RefID-filtered FASTA accessions."
+echo "Action 2: remove only accessions missing from Comet or marked unassigned."
+"$PYTHON_BIN" "$SCRIPT_DIR/prepare_comet_ns3_assignments.py" \
+  --comet-csv "$COMET_SUBTYPING_CSV" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
-  --reference-fasta "$REFERENCE_FASTA" \
-  --genotype-subtype-csv "$COMET_GENOTYPE_CSV" \
+  --genotype-output-csv "$COMET_GENOTYPE_CSV" \
+  --subtype-output-csv "$COMET_SUBTYPE_CSV" \
+  --not-found-output-csv "$COMET_NOT_FOUND_CSV" \
+  --not-found-fasta-output "$COMET_NOT_FOUND_FASTA" \
+  --remove-unassigned
+
+announce_step 8 "Build genotype study workbook from Comet" \
+  "Comet genotype assignments: $COMET_GENOTYPE_CSV; filtered FASTAs: $INCLUDED_FASTA_DIR" \
+  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx"
+echo "Action: write the Comet genotype for each retained accession; no genotype alignment is run."
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_comet_gt_allstudies.py" \
+  --fasta-dir "$INCLUDED_FASTA_DIR" \
+  --comet-genotype-csv "$COMET_GENOTYPE_CSV" \
   --output-dir "$OUTPUT_DIR" \
-  --refid-column RefID \
-  --refname-column RefName \
-  --numpatients-column 'Num Pts' \
   > "$GT_ALLSTUDIES_JSON"
 
 echo "Skipping disabled NS3 source-feature extraction and grouped-summary steps"
@@ -211,30 +208,20 @@ echo "Skipping disabled NS3 source-feature extraction and grouped-summary steps"
 #   echo "GENBANK_DIR not provided; skipping NS3 source-feature extraction and grouped summary steps"
 # fi
 
-announce_step 9 "Build subtype study workbook" \
-  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; filtered FASTAs: $INCLUDED_FASTA_DIR" \
+announce_step 9 "Build subtype study workbook from Comet" \
+  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV" \
   "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx"
-echo "Action: use the genotype assignments and filtered sequences to compare each study with subtype reference sequences."
-echo "Result: assign the best subtype within each genotype and write per-sequence amino-acid data to the subtype workbook."
-"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_allstudies_wseqs.py" \
-  --combined-workbook "$OUTPUT_DIR/NS3_GT_AllStudies.xlsx" \
-  --fasta-dir "$INCLUDED_FASTA_DIR" \
-  --subtype-json "$SUBTYPE_JSON" \
-  --genotype-subtype-csv "$COMET_GENOTYPE_CSV" \
+echo "Action: write the Comet subtype for each retained accession; no subtype alignment is run."
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_comet_subtype_allstudies.py" \
+  --genotype-workbook "$OUTPUT_DIR/NS3_GT_AllStudies.xlsx" \
+  --comet-subtype-csv "$COMET_SUBTYPE_CSV" \
   --output-dir "$OUTPUT_DIR" \
   > "$SUBTYPE_ALLSTUDIES_JSON"
 
-announce_step 10 "Apply authoritative Comet subtype calls" \
-  "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx; Comet calls: $COMET_SUBTYPE_CSV" \
-  "updated subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx"
-echo "Action: replace distance-derived subtype labels with Comet subtype calls while retaining aligned amino-acid sequences."
-"$PYTHON_BIN" "$SCRIPT_DIR/apply_comet_ns3_subtypes.py" \
-  --subtype-workbook "$OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx" \
-  --comet-subtype-csv "$COMET_SUBTYPE_CSV"
-
-announce_step 11 "Add genotype amino-acid references" \
-  "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx" \
-  "intermediate amino-acid workbook: recorded in $SUBTYPE_WITH_GT_AA_JSON"
+announce_step 10 "Extract genotype-position amino-acid sequences" \
+  "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx; filtered FASTAs: $INCLUDED_FASTA_DIR" \
+  "amino-acid workbook: recorded in $SUBTYPE_WITH_GT_AA_JSON"
+echo "Action: use blastx once against the Comet genotype reference to map and translate each raw sequence."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_with_gt_aa.py" \
   --subtype-workbook "$OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
@@ -243,16 +230,35 @@ announce_step 11 "Add genotype amino-acid references" \
   > "$SUBTYPE_WITH_GT_AA_JSON"
 
 AA_TMP_WORKBOOK="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output_workbook"])' "$SUBTYPE_WITH_GT_AA_JSON")"
+PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_completeprofiles_tabspergt.py" --input-workbook "$AA_TMP_WORKBOOK" --report-only)"
+PROFILE_INPUT_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["included_accession_count"])' "$PROFILE_INPUT_COUNTS")"
+PROFILE_INPUT_WITH_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_with_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
+PROFILE_INPUT_WITHOUT_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_without_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
 
-announce_step 12 "Build complete profile workbooks" \
+announce_step 11 "Build complete profile workbooks" \
   "amino-acid workbook: $AA_TMP_WORKBOOK" \
-  "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx"
+  "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx; profile accessions: $OUTPUT_DIR/NS3_Profile_Input_Accessions.csv"
+echo "profile_input_included_accession_count=$PROFILE_INPUT_INCLUDED_ACCESSIONS"
+echo "profile_input_accessions_with_comet_subtype_count=$PROFILE_INPUT_WITH_SUBTYPE"
+echo "profile_input_accessions_without_comet_subtype_count=$PROFILE_INPUT_WITHOUT_SUBTYPE"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Input_Accessions.csv" \
   > "$COMPLETEPROFILES_JSON"
+PROFILE_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["included_accession_count"])' "$COMPLETEPROFILES_JSON")"
+PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessions_with_comet_subtype_count"])' "$COMPLETEPROFILES_JSON")"
+echo "complete_profile_included_accession_count=$PROFILE_INCLUDED_ACCESSIONS"
+echo "complete_profile_accessions_with_subtype_count=$PROFILE_WITH_SUBTYPE_ACCESSIONS"
 
-announce_step 13 "Export consensus FASTA files" \
+echo "Profile assignment comparison: Comet profile accessions versus local-alignment profile accessions."
+"$PYTHON_BIN" "$SCRIPT_DIR/compare_profile_input_assignments.py" \
+  --comet-csv "$OUTPUT_DIR/NS3_Profile_Input_Accessions.csv" \
+  --local-csv "$REPO_ROOT/outputs/local_alignment/NS3_Profile_Input_Accessions.csv" \
+  --summary-csv "$OUTPUT_DIR/NS3_Profile_Input_Assignment_Comparison.csv" \
+  --differences-csv "$OUTPUT_DIR/NS3_Profile_Input_Assignment_Differences.csv"
+
+announce_step 12 "Export consensus FASTA files" \
   "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   "consensus FASTAs: $OUTPUT_DIR/NS3_GT_Consensus.fasta; $OUTPUT_DIR/NS3_Subtype_Consensus.fasta"
 "$PYTHON_BIN" "$SCRIPT_DIR/export_ns3_consensus_fasta.py" \
@@ -261,7 +267,7 @@ announce_step 13 "Export consensus FASTA files" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
 
-announce_step 14 "Build genotype RAS profile" \
+announce_step 13 "Build genotype RAS profile" \
   "genotype profile workbook: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx" \
   "RAS profile: $OUTPUT_DIR/NS3_GT_RAS_Profiles.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_gt_ras_profiles.py" \
@@ -270,7 +276,7 @@ announce_step 14 "Build genotype RAS profile" \
   --output-dir "$OUTPUT_DIR" \
   > "$GT_RAS_JSON"
 
-announce_step 15 "Build subtype RAS profile" \
+announce_step 14 "Build subtype RAS profile" \
   "subtype profile workbook: $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   "RAS profile: $OUTPUT_DIR/NS3_Subtype_RAS_Profiles.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_ras_profiles.py" \
@@ -279,7 +285,7 @@ announce_step 15 "Build subtype RAS profile" \
   --output-dir "$OUTPUT_DIR" \
   > "$SUBTYPE_RAS_JSON"
 
-announce_step 16 "Combine genotype and subtype RAS profiles" \
+announce_step 15 "Combine genotype and subtype RAS profiles" \
   "GT RAS profile: $OUTPUT_DIR/NS3_GT_RAS_Profiles.xlsx; subtype RAS profile: $OUTPUT_DIR/NS3_Subtype_RAS_Profiles.xlsx" \
   "combined RAS profile: $OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx"
 echo "Action: place each genotype RAS consensus row before its subtype rows."
@@ -290,7 +296,7 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --output-xlsx "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
   > "$COMBINED_RAS_JSON"
 
-announce_step 17 "Build genotype amino-acid distance matrix" \
+announce_step 16 "Build genotype amino-acid distance matrix" \
   "consensus FASTA: $OUTPUT_DIR/NS3_GT_Consensus.fasta" \
   "distance workbook: $OUTPUT_DIR/NS3_GT_AA_Distance_Pos36_175.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_gt_aa_distance_matrix.py" \
@@ -302,7 +308,7 @@ announce_step 17 "Build genotype amino-acid distance matrix" \
   --end 175 \
   > "$GT_AA_DISTANCE_SUMMARY"
 
-announce_step 18 "Build subtype amino-acid distance matrices" \
+announce_step 17 "Build subtype amino-acid distance matrices" \
   "consensus FASTA: $OUTPUT_DIR/NS3_Subtype_Consensus.fasta" \
   "distance workbook: $OUTPUT_DIR/NS3_Subtype_AA_Distance_Pos36_175.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_aa_distance_matrices.py" \
@@ -313,7 +319,7 @@ announce_step 18 "Build subtype amino-acid distance matrices" \
   --end 175 \
   > "$SUBTYPE_AA_DISTANCE_SUMMARY"
 
-announce_step 19 "Build RAS entropy reports" \
+announce_step 18 "Build RAS entropy reports" \
   "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   "entropy workbooks: $OUTPUT_DIR/NS3_GT_RAS_Entropy.xlsx; $OUTPUT_DIR/NS3_Subtype_RAS_Entropy.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_ras_entropy.py" \

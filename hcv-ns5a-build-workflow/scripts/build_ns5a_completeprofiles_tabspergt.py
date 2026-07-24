@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import shutil
 from collections import Counter, defaultdict
@@ -21,6 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build GT and subtype NS5A amino-acid profile workbooks.")
     parser.add_argument("--input-workbook", required=True, help="Path to NS5A AA extraction workbook.")
     parser.add_argument("--output-dir", default="outputs", help="Base output directory.")
+    parser.add_argument("--profile-accessions-csv", help="CSV listing accessions included in profile construction.")
     return parser.parse_args()
 
 
@@ -48,7 +50,7 @@ def load_rows(workbook_path: Path) -> list[dict[str, Any]]:
     ws = wb[wb.sheetnames[0]]
     header = [str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))]
     index = {name: i for i, name in enumerate(header)}
-    required = ["ClosestGT", "ClosestSubtype", "StartAAPosition", "EndAAPosition", "AASequence"]
+    required = ["AccessionID", "ClosestGT", "ClosestSubtype", "StartAAPosition", "EndAAPosition", "AASequence"]
     for name in required:
         if name not in index:
             raise RuntimeError(f"Column '{name}' not found in {workbook_path}")
@@ -61,6 +63,7 @@ def load_rows(workbook_path: Path) -> list[dict[str, Any]]:
             continue
         rows.append(
             {
+                "AccessionID": str(values[index["AccessionID"]]).strip(),
                 "ClosestGT": str(values[index["ClosestGT"]]).strip(),
                 "ClosestSubtype": str(values[index["ClosestSubtype"]]).strip(),
                 "StartAAPosition": int(start),
@@ -70,6 +73,21 @@ def load_rows(workbook_path: Path) -> list[dict[str, Any]]:
         )
     wb.close()
     return rows
+
+
+def write_profile_accessions(path: Path, rows: list[dict[str, Any]]) -> None:
+    accessions: dict[str, tuple[str, str]] = {}
+    for row in rows:
+        accession = row["AccessionID"]
+        if accession:
+            accessions[accession] = (row["ClosestGT"], row["ClosestSubtype"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["accession", "genotype", "subtype"])
+        for accession in sorted(accessions):
+            genotype, subtype = accessions[accession]
+            writer.writerow([accession, genotype, subtype])
 
 
 def build_position_counts(rows: list[dict[str, Any]]) -> tuple[dict[int, int], dict[int, Counter[str]]]:
@@ -158,6 +176,8 @@ def main() -> int:
     script_temp_dir()
 
     rows = load_rows(input_workbook)
+    if args.profile_accessions_csv:
+        write_profile_accessions(Path(args.profile_accessions_csv), rows)
     rows_by_gt: dict[str, list[dict[str, Any]]] = defaultdict(list)
     rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for row in rows:

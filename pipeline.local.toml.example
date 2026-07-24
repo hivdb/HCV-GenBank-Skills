@@ -17,7 +17,7 @@ fasta_pool = "HCVData/FASTA"
 excel_file = "Ref-selection/___IncludedNS3Refs.xlsx"
 sheet_name = "NS3_PtGT0_Check"
 fasta_pool = "HCVData/FASTA"
-output_dir = "outputs_comet"
+output_dir = "outputs/comet"
 
 [ns5a]
 excel_file = "Ref-selection/___IncludedNS5ARefs.xlsx"
@@ -29,7 +29,7 @@ genbank_dir = "HCVData/GenBankFiles"
 excel_file = "Ref-selection/___IncludedNS5ARefs.xlsx"
 sheet_name = "NS5A_PtGT0_Check"
 fasta_pool = "HCVData/FASTA"
-output_dir = "outputs_comet"
+output_dir = "outputs/comet"
 
 [ns5b]
 excel_file = "Ref-selection/___IncludedNS5BRefs.xlsx"
@@ -41,4 +41,4 @@ genbank_dir = "HCVData/GenBankFiles"
 excel_file = "Ref-selection/___IncludedNS5BRefs.xlsx"
 sheet_name = "NS5B_PtGT0_Check"
 fasta_pool = "HCVData/FASTA"
-output_dir = "outputs_comet"
+output_dir = "outputs/comet"

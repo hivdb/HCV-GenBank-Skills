@@ -376,7 +376,7 @@ def build_rows_for_study(
         if metadata_gt:
             best_gt = metadata_gt
             best_hit = valid_hits.get(metadata_gt)
-            assignment_source = "metadata"
+            assignment_source = "Comet"
         else:
             best_gt, best_hit = min(
                 valid_hits.items(),

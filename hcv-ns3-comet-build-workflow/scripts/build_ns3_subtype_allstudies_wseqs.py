@@ -579,7 +579,7 @@ def main() -> int:
     for row in base_rows:
         rows_by_refid[row["RefID"]].append(row)
 
-    query_entries_by_gt: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    query_entries_by_gt_subtype: dict[tuple[str, str], list[tuple[str, str]]] = defaultdict(list)
     entries_by_qseqid: dict[str, str] = {}
     row_lookup: dict[str, dict[str, Any]] = {}
     skipped_missing_fasta: list[dict[str, str]] = []
@@ -604,56 +604,37 @@ def main() -> int:
             gt = row["ClosestGT"]
             metadata = metadata_assignments.get(accession, {})
             metadata_subtype = normalize_subtype(metadata.get("subtype", ""), gt)
-            if metadata_subtype:
-                output_rows.append(
-                    {
-                        "RefID": row["RefID"],
-                        "RefName": row["RefName"],
-                        "AccessionID": row["AccessionID"],
-                        "ClosestGT": gt,
-                        "ClosestSubtype": metadata_subtype,
-                        "ClosestSubtypeAssignmentSource": "metadata",
-                        "ClosestSubtypeMetadataColumn": metadata.get("column_name", ""),
-                        "ClosestSubtypeRefAccession": "",
-                        "ClosestSubtypeDistance": "",
-                        "NextClosestSubtype": "",
-                        "NextClosestSubtypeDistance": "",
-                        "AlignedNT": "",
-                        "NextClosestSubtypeAlignedNT": "",
-                        "StartAAPosition": "",
-                        "EndAAPosition": "",
-                        "AASequence": "",
-                        "AlignedQueryNT": "",
-                        "AlignedSubjectNT": "",
-                    }
-                )
+            if not metadata_subtype:
+                skipped_no_subtype_hit.append(row)
                 continue
             qseqid = f"{refid}|{accession}"
-            query_entries_by_gt[gt].append((qseqid, sequence))
+            query_entries_by_gt_subtype[(gt, metadata_subtype)].append((qseqid, sequence))
             entries_by_qseqid[qseqid] = sequence
             row_lookup[qseqid] = row
 
-    for gt, entries in sorted(query_entries_by_gt.items(), key=lambda item: int(item[0])):
-        refs = refs_by_gt.get(gt, [])
+    for (gt, comet_subtype), entries in sorted(query_entries_by_gt_subtype.items(), key=lambda item: (int(item[0][0]), item[0][1])):
+        refs = [
+            ref for ref in refs_by_gt.get(gt, [])
+            if str(ref["subtype"]).casefold() == comet_subtype.casefold()
+        ]
         if not refs:
             for qseqid, _sequence in entries:
                 skipped_missing_subtype_refs.append(row_lookup[qseqid])
             continue
         query_fasta = job_dir / f"ns3_queries_gt{gt}.fasta"
         write_fasta_entries(query_fasta, entries)
-        db_prefix, subject_meta = build_subtype_db(job_dir, gt, refs)
-        hits = run_blastn(query_fasta, db_prefix, job_dir / f"ns3_gt{gt}.blast.tsv")
+        db_prefix, subject_meta = build_subtype_db(job_dir, f"{gt}_{comet_subtype}", refs)
+        hits = run_blastn(query_fasta, db_prefix, job_dir / f"ns3_gt{gt}_{comet_subtype}.blast.tsv")
         hits_by_query = choose_best_by_subtype(hits, subject_meta, args.min_aligned_nt)
 
-        for qseqid, row in row_lookup.items():
-            if row["ClosestGT"] != gt:
-                continue
+        for qseqid, _sequence in entries:
+            row = row_lookup[qseqid]
             subtype_hits = hits_by_query.get(qseqid)
             if not subtype_hits:
                 skipped_no_subtype_hit.append(row)
                 continue
             best = subtype_hits[0]
-            second = subtype_hits[1] if len(subtype_hits) > 1 else None
+            second = None
             start_aa, end_aa, aa_sequence = extract_aa_window(entries_by_qseqid[qseqid], best)
             output_rows.append(
                 {
@@ -661,9 +642,9 @@ def main() -> int:
                     "RefName": row["RefName"],
                     "AccessionID": row["AccessionID"],
                     "ClosestGT": row["ClosestGT"],
-                    "ClosestSubtype": best["subtype"],
-                    "ClosestSubtypeAssignmentSource": "distance",
-                    "ClosestSubtypeMetadataColumn": "",
+                    "ClosestSubtype": comet_subtype,
+                    "ClosestSubtypeAssignmentSource": "Comet",
+                    "ClosestSubtypeMetadataColumn": metadata_assignments.get(row["AccessionID"], {}).get("column_name", "Comet NS3"),
                     "ClosestSubtypeRefAccession": best["subtype_ref_accession"],
                     "ClosestSubtypeDistance": best["distance"],
                     "NextClosestSubtype": second["subtype"] if second else "",

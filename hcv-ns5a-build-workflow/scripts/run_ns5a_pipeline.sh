@@ -223,10 +223,11 @@ AA_TMP_WORKBOOK="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.a
 
 announce_step 10 "Build complete profile workbooks" \
   "amino-acid workbook: $AA_TMP_WORKBOOK" \
-  "profile workbooks: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx"
+  "profile workbooks: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx; profile accessions: $OUTPUT_DIR/NS5A_Profile_Input_Accessions.csv"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Input_Accessions.csv" \
   > "$COMPLETEPROFILES_JSON"
 
 announce_step 11 "Export consensus FASTA files" \
