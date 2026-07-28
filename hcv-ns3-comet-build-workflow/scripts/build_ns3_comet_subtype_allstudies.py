@@ -15,6 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--genotype-workbook", required=True)
     parser.add_argument("--comet-subtype-csv", required=True)
+    parser.add_argument("--noncomet-subtype-workbook", required=True)
     parser.add_argument("--output-dir", required=True)
     return parser.parse_args()
 
@@ -31,9 +32,34 @@ def load_subtypes(path: Path) -> dict[str, str]:
     return assignments
 
 
+def load_noncomet_1d(path: Path) -> dict[str, tuple[str, str, str, str]]:
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    sheet = workbook[workbook.sheetnames[0]]
+    header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]
+    index = {name: position for position, name in enumerate(header)}
+    required = ["RefID", "RefName", "AccessionID", "ClosestGT", "ClosestSubtype"]
+    missing = [name for name in required if name not in index]
+    if missing:
+        raise RuntimeError(f"Columns missing from {path}: {', '.join(missing)}")
+    assignments: dict[str, tuple[str, str, str, str]] = {}
+    for values in sheet.iter_rows(min_row=2, values_only=True):
+        subtype = str(values[index["ClosestSubtype"]]).strip().lower()
+        accession = str(values[index["AccessionID"]]).strip()
+        if subtype == "1d" and accession:
+            assignments[accession.split(".", 1)[0]] = (
+                str(values[index["RefID"]]).strip(),
+                str(values[index["RefName"]]).strip(),
+                accession,
+                str(values[index["ClosestGT"]]).strip(),
+            )
+    workbook.close()
+    return assignments
+
+
 def main() -> int:
     args = parse_args()
     assignments = load_subtypes(Path(args.comet_subtype_csv))
+    noncomet_1d = load_noncomet_1d(Path(args.noncomet_subtype_workbook))
     workbook = load_workbook(args.genotype_workbook, read_only=True, data_only=True)
     sheet = workbook[workbook.sheetnames[0]]
     header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]
@@ -43,19 +69,37 @@ def main() -> int:
     if missing:
         raise RuntimeError(f"Columns missing from {args.genotype_workbook}: {', '.join(missing)}")
 
-    rows: list[tuple[str, str, str, str, str]] = []
+    rows: list[tuple[str, str, str, str, str, str, str]] = []
+    seen_accessions: set[str] = set()
+    override_count = 0
     for values in sheet.iter_rows(min_row=2, values_only=True):
         accession = str(values[index["GenBankAccession"]]).strip()
+        accession_key = accession.split(".", 1)[0]
         subtype = assignments.get(accession) or assignments.get(accession.split(".", 1)[0])
         if subtype:
+            if accession_key in noncomet_1d:
+                subtype = "1d"
+                source, metadata_column = "Non-Comet 1d override", "Non-Comet ClosestSubtype"
+                override_count += 1
+            else:
+                source, metadata_column = "Comet", "Comet NS3"
             rows.append((
                 str(values[index["RefID"]]).strip(),
                 str(values[index["RefName"]]).strip(),
                 accession,
                 str(values[index["BestGT"]]).strip(),
                 subtype,
+                source,
+                metadata_column,
             ))
+            seen_accessions.add(accession_key)
     workbook.close()
+
+    addition_count = 0
+    for accession_key, (refid, refname, accession, genotype) in noncomet_1d.items():
+        if accession_key not in seen_accessions:
+            rows.append((refid, refname, accession, genotype, "1d", "Non-Comet 1d addition", "Non-Comet ClosestSubtype"))
+            addition_count += 1
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -67,10 +111,10 @@ def main() -> int:
         "RefID", "RefName", "AccessionID", "ClosestGT", "ClosestSubtype",
         "ClosestSubtypeAssignmentSource", "ClosestSubtypeMetadataColumn",
     ])
-    for refid, refname, accession, genotype, subtype in rows:
-        sheet.append([refid, refname, accession, genotype, subtype, "Comet", "Comet NS3"])
+    for row in rows:
+        sheet.append(row)
     output.save(output_path)
-    print(json.dumps({"output_workbook": str(output_path.resolve()), "row_count": len(rows), "comet_subtype_count": len(rows)}))
+    print(json.dumps({"output_workbook": str(output_path.resolve()), "row_count": len(rows), "noncomet_1d_override_count": override_count, "noncomet_1d_addition_count": addition_count}))
     return 0
 
 

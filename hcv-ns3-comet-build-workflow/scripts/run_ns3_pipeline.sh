@@ -48,11 +48,16 @@ SUBTYPE_JSON="${SUBTYPE_JSON:-$REPO_ROOT/HCV_Subtype_Refs_By_Genome_NA.json}"
 GT_AA_JSON="${GT_AA_JSON:-$REPO_ROOT/HCV_GT_Refs_By_Gene_AA.json}"
 ACCESSIONS_METADATA_CSV="${ACCESSIONS_METADATA_CSV:-$REPO_ROOT/HCVData/Accessions_metadata.csv}"
 COMET_SUBTYPING_CSV="${COMET_SUBTYPING_CSV:-$REPO_ROOT/Comet Subtyping/NS3.csv}"
+NONCOMET_SUBTYPE_WORKBOOK="${NONCOMET_SUBTYPE_WORKBOOK:-$REPO_ROOT/outputs/local_alignment/NS3_Subtype_AllStudies_WSeqs.xlsx}"
 SKILL_NAME="hcv-ns3-comet-build-workflow"
 TEMP_ROOT="${TEMP_ROOT:-$REPO_ROOT/temp/$SKILL_NAME/$(basename "$0" .sh)}"
 
 if [[ -z "$EXCEL_FILE" || -z "$FASTA_POOL" || -z "$SHEET_NAME" ]]; then
   usage
+  exit 1
+fi
+if [[ ! -f "$NONCOMET_SUBTYPE_WORKBOOK" ]]; then
+  echo "Missing non-COMET subtype workbook required for 1d overrides: $NONCOMET_SUBTYPE_WORKBOOK" >&2
   exit 1
 fi
 
@@ -207,22 +212,23 @@ echo "Skipping disabled NS3 source-feature extraction and grouped-summary steps"
 # fi
 
 announce_step 9 "Build subtype study workbook from Comet" \
-  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV" \
+  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV; non-COMET 1d assignments: $NONCOMET_SUBTYPE_WORKBOOK" \
   "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx"
 echo "Action: write the Comet subtype for each retained accession; no subtype alignment is run."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_comet_subtype_allstudies.py" \
   --genotype-workbook "$OUTPUT_DIR/NS3_GT_AllStudies.xlsx" \
   --comet-subtype-csv "$COMET_SUBTYPE_CSV" \
+  --noncomet-subtype-workbook "$NONCOMET_SUBTYPE_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
   > "$SUBTYPE_ALLSTUDIES_JSON"
 
 announce_step 10 "Extract genotype-position amino-acid sequences" \
-  "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx; filtered FASTAs: $INCLUDED_FASTA_DIR" \
+  "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx; FASTA pool: $FASTA_POOL" \
   "amino-acid workbook: $OUTPUT_DIR/NS3_Profile_Input_Source.xlsx"
 echo "Action: use blastx once against the Comet genotype reference to map and translate each raw sequence."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_with_gt_aa.py" \
   --subtype-workbook "$OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx" \
-  --fasta-dir "$INCLUDED_FASTA_DIR" \
+  --fasta-dir "$FASTA_POOL" \
   --gt-aa-json "$GT_AA_JSON" \
   --output-dir "$OUTPUT_DIR" \
   --output-workbook "$OUTPUT_DIR/NS3_Profile_Input_Source.xlsx" \
