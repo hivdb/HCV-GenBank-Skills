@@ -294,7 +294,7 @@ def choose_best_hits(hits: list[dict[str, Any]], min_aa_overlap: int) -> dict[st
     return best
 
 
-def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[int, int, str]:
+def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[int, int, str, str]:
     qstart = min(hit["qstart"], hit["qend"])
     qend = max(hit["qstart"], hit["qend"])
     frame = hit["qframe"]
@@ -305,7 +305,7 @@ def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[i
     nt_window = nt_window[: len(nt_window) - (len(nt_window) % 3)]
     query_aa = translate_nt(nt_window)
     if not query_aa:
-        return 0, 0, ""
+        return 0, 0, "", ""
 
     global_alignment = build_aligner().align(reference_aa, query_aa)[0]
     aligned_reference_aa, aligned_query_aa = alignment_strings(reference_aa, query_aa, global_alignment.coordinates)
@@ -324,8 +324,8 @@ def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[i
                 query_chars.append(query_char)
 
     if start_aa is None or end_aa is None:
-        return 0, 0, ""
-    return start_aa, end_aa, "".join(query_chars)
+        return 0, 0, "", ""
+    return start_aa, end_aa, "".join(query_chars), nt_window
 
 
 def cleanup_db_files(job_dir: Path) -> None:
@@ -341,10 +341,10 @@ def write_output(path: Path, header: list[str], rows: list[dict[str, Any]]) -> N
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "NS5A_GT_AA_Extraction"
-    output_header = header + ["StartAAPosition", "EndAAPosition", "AASequence"]
+    output_header = header + ["StartAAPosition", "EndAAPosition", "AASequence", "NASequence"]
     sheet.append(output_header)
     for row in rows:
-        sheet.append([row.get(col, "") for col in header] + [row.get("StartAAPosition", ""), row.get("EndAAPosition", ""), row.get("AASequence", "")])
+        sheet.append([row.get(col, "") for col in header] + [row.get("StartAAPosition", ""), row.get("EndAAPosition", ""), row.get("AASequence", ""), row.get("NASequence", "")])
     workbook.save(path)
 
 
@@ -396,11 +396,12 @@ def main() -> int:
             hit = best_hits.get(qseqid)
             if hit is None:
                 continue
-            start_aa, end_aa, aa_sequence = extract_aa(sequence_by_qseqid[qseqid], hit, reference_aa)
+            start_aa, end_aa, aa_sequence, na_sequence = extract_aa(sequence_by_qseqid[qseqid], hit, reference_aa)
             output_row = dict(row)
             output_row["StartAAPosition"] = start_aa if aa_sequence else ""
             output_row["EndAAPosition"] = end_aa if aa_sequence else ""
             output_row["AASequence"] = aa_sequence
+            output_row["NASequence"] = na_sequence
             output_rows.append(output_row)
         try:
             query_fasta.unlink()

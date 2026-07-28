@@ -86,6 +86,7 @@ The workflow writes NS5A outputs under `outputs/`, including:
 - `NS5A_Subtype_Consensus.fasta`
 - `NS5A_GT_RAS_Profiles.xlsx`
 - `NS5A_Subtype_RAS_Profiles.xlsx`
+- paired AA/NA RAS and position-range distance workbooks under `outputs/`
 
 ## Operating Rules
 
