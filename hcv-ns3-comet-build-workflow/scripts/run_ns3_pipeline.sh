@@ -187,14 +187,12 @@ echo "Action 2: remove only accessions missing from Comet or marked unassigned."
   --remove-unassigned
 
 announce_step 8 "Build genotype study workbook from Comet" \
-  "Comet genotype assignments: $COMET_GENOTYPE_CSV; filtered FASTAs: $INCLUDED_FASTA_DIR; NS3 NA references: $REFERENCE_FASTA" \
+  "Comet genotype assignments: $COMET_GENOTYPE_CSV; filtered FASTAs: $INCLUDED_FASTA_DIR" \
   "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx"
-echo "Action: retain Comet genotypes and calculate nucleotide distances to GT1-GT8 NS3 references."
+echo "Action: write the Comet genotype for each retained accession; paired distance calculations run later."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_comet_gt_allstudies.py" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
   --comet-genotype-csv "$COMET_GENOTYPE_CSV" \
-  --reference-fasta "$REFERENCE_FASTA" \
-  --temp-dir "$SKILL_TEMP_ROOT/build_ns3_comet_gt_allstudies" \
   --output-dir "$OUTPUT_DIR" \
   > "$GT_ALLSTUDIES_JSON"
 
@@ -300,6 +298,14 @@ announce_step 12 "Export consensus FASTA files" \
   --subtype-profile-workbook "$OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
+
+announce_step 12a "Compare subtype consensus to subtype references" \
+  "subtype profile: $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx; references: $SUBTYPE_JSON" \
+  "distance report: $OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_Pos36_175.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_consensus_reference_distance.py" \
+  --subtype-profile-workbook "$OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
+  --subtype-json "$SUBTYPE_JSON" \
+  --output-xlsx "$OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_Pos36_175.xlsx" --start 36 --end 175
 
 announce_step 13 "Build genotype RAS profile" \
   "genotype profile workbook: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx" \
