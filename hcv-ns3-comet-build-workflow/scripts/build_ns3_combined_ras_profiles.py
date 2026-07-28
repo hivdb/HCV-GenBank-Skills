@@ -17,6 +17,8 @@ from openpyxl.utils import get_column_letter
 
 
 VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
+TOTAL_SEQUENCE_RE = re.compile(r"\(\s*(\d+)\s*,")
+MIN_TOTAL_SEQUENCES = 10
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,6 +50,11 @@ def genotype_from_label(label: object) -> str | None:
     return match.group(1) if match else None
 
 
+def has_minimum_total_sequences(label: object) -> bool:
+    match = TOTAL_SEQUENCE_RE.search(str(label))
+    return match is not None and int(match.group(1)) >= MIN_TOTAL_SEQUENCES
+
+
 def variants_to_rich_text(value: object, threshold: float | None = None) -> CellRichText | str:
     """Render amino-acid frequencies with superscript frequencies, as in RAS profiles."""
     variants = [
@@ -74,11 +81,12 @@ def write_combined_workbook(
         genotype: row
         for row in gt_rows
         if (genotype := genotype_from_label(row[0])) is not None
+        and has_minimum_total_sequences(row[0])
     }
     subtypes_by_gt: dict[str, list[list[object]]] = defaultdict(list)
     for row in subtype_rows:
         genotype = genotype_from_label(row[0])
-        if genotype is not None:
+        if genotype is not None and has_minimum_total_sequences(row[0]):
             subtypes_by_gt[genotype].append(row)
 
     workbook = Workbook()
