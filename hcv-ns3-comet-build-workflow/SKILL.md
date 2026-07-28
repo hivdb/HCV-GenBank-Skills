@@ -70,7 +70,7 @@ The COMET subtype step overrides retained accessions called `1d` by the non-COME
 
 The workflow writes NS3 outputs under `outputs/`, including:
 
-- `NS3_GT_AllStudies.xlsx`
+- `NS3_GT_AllStudies.xlsx` (Comet genotype calls plus per-GT NS3 nucleotide distances and aligned-nucleotide counts)
 - `NS3_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `temp/hcv-ns3-comet-build-workflow/.../find_refid_fastas/...`
 - copied included RefID FASTA files under `temp/hcv-ns3-comet-build-workflow/run_ns3_pipeline/included_refid_fastas/`
@@ -81,6 +81,8 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - source-feature CSV/XLSX outputs only if the commented source-feature steps are re-enabled
 - `NS3_Subtype_AllStudies_WSeqs.xlsx`
 - `NS3_Subtype_With_GT_AA.xlsx`
+- `NS3_GT_NA_Distance_RAS.xlsx` and `NS3_Subtype_NA_Distance_RAS.xlsx` (full pairwise nucleotide-distance matrices over NS3 RAS codons only; the subtype workbook has one matrix per genotype and requires at least 10 sequences per subtype)
+- `NS3_GT_AA_Distance_RAS.xlsx` and `NS3_Subtype_AA_Distance_RAS.xlsx` (equivalent full pairwise amino-acid distance matrices over NS3 RAS positions only)
 - `NS3_GT_CompleteProfiles_TabsPerGT.xlsx`
 - `NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx`
 - `NS3_GT_Consensus.fasta`

@@ -292,7 +292,7 @@ def choose_best_hits(hits: list[dict[str, Any]], min_aa_overlap: int) -> dict[st
     return best
 
 
-def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[int, int, str]:
+def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[int, int, str, str]:
     qstart = min(hit["qstart"], hit["qend"])
     qend = max(hit["qstart"], hit["qend"])
     frame = hit["qframe"]
@@ -303,7 +303,7 @@ def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[i
     nt_window = nt_window[: len(nt_window) - (len(nt_window) % 3)]
     query_aa = translate_nt(nt_window)
     if not query_aa:
-        return 0, 0, ""
+        return 0, 0, "", ""
 
     global_alignment = build_aligner().align(reference_aa, query_aa)[0]
     aligned_reference_aa, aligned_query_aa = alignment_strings(reference_aa, query_aa, global_alignment.coordinates)
@@ -322,16 +322,16 @@ def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[i
                 query_chars.append(query_char)
 
     if start_aa is None or end_aa is None:
-        return 0, 0, ""
-    return start_aa, end_aa, "".join(query_chars)
+        return 0, 0, "", ""
+    return start_aa, end_aa, "".join(query_chars), nt_window
 
 
 def write_workbook(path: Path, header: list[str], rows: list[dict[str, Any]]) -> None:
     wb = Workbook()
     ws = wb.active
     ws.title = "NS3_Subtype_Distance"
-    base_header = [col for col in header if col not in {"StartAAPosition", "EndAAPosition", "AASequence"}]
-    full_header = base_header + ["StartAAPosition", "EndAAPosition", "AASequence"]
+    base_header = [col for col in header if col not in {"StartAAPosition", "EndAAPosition", "AASequence", "NASequence"}]
+    full_header = base_header + ["StartAAPosition", "EndAAPosition", "AASequence", "NASequence"]
     ws.append(full_header)
     for row in rows:
         ws.append([row.get(col, "") for col in full_header])
@@ -369,7 +369,7 @@ def main() -> int:
         rows_by_gt[row["ClosestGT"]].append(row)
 
     fasta_cache: dict[str, dict[str, str]] = {}
-    results: dict[tuple[str, str], tuple[int, int, str]] = {}
+    results: dict[tuple[str, str], tuple[int, int, str, str]] = {}
     summary: dict[str, Any] = {"input_rows": len(rows), "by_gt": {}}
 
     for gt, group_rows in sorted(rows_by_gt.items(), key=lambda item: int(item[0])):
@@ -399,8 +399,8 @@ def main() -> int:
         extracted = 0
         reference_aa = gt_refs[gt]
         for qseqid, hit in best_hits.items():
-            start_aa, end_aa, aa_sequence = extract_aa(seq_by_qseqid[qseqid], hit, reference_aa)
-            results[tuple(qseqid.split("|", 1))] = (start_aa, end_aa, aa_sequence)
+            start_aa, end_aa, aa_sequence, na_sequence = extract_aa(seq_by_qseqid[qseqid], hit, reference_aa)
+            results[tuple(qseqid.split("|", 1))] = (start_aa, end_aa, aa_sequence, na_sequence)
             extracted += 1
         summary["by_gt"][gt] = {"queries": len(query_entries), "extracted": extracted}
 
@@ -411,8 +411,9 @@ def main() -> int:
             row["StartAAPosition"] = ""
             row["EndAAPosition"] = ""
             row["AASequence"] = ""
+            row["NASequence"] = ""
         else:
-            row["StartAAPosition"], row["EndAAPosition"], row["AASequence"] = value
+            row["StartAAPosition"], row["EndAAPosition"], row["AASequence"], row["NASequence"] = value
 
     out_path = (
         Path(args.output_workbook).expanduser()

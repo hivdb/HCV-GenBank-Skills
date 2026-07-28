@@ -187,12 +187,14 @@ echo "Action 2: remove only accessions missing from Comet or marked unassigned."
   --remove-unassigned
 
 announce_step 8 "Build genotype study workbook from Comet" \
-  "Comet genotype assignments: $COMET_GENOTYPE_CSV; filtered FASTAs: $INCLUDED_FASTA_DIR" \
+  "Comet genotype assignments: $COMET_GENOTYPE_CSV; filtered FASTAs: $INCLUDED_FASTA_DIR; NS3 NA references: $REFERENCE_FASTA" \
   "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx"
-echo "Action: write the Comet genotype for each retained accession; no genotype alignment is run."
+echo "Action: retain Comet genotypes and calculate nucleotide distances to GT1-GT8 NS3 references."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_comet_gt_allstudies.py" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
   --comet-genotype-csv "$COMET_GENOTYPE_CSV" \
+  --reference-fasta "$REFERENCE_FASTA" \
+  --temp-dir "$SKILL_TEMP_ROOT/build_ns3_comet_gt_allstudies" \
   --output-dir "$OUTPUT_DIR" \
   > "$GT_ALLSTUDIES_JSON"
 
@@ -253,11 +255,42 @@ echo "profile_input_ignored_unassigned_subtype_accession_count=$PROFILE_INPUT_UN
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
   > "$COMPLETEPROFILES_JSON"
 PROFILE_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["included_accession_count"])' "$COMPLETEPROFILES_JSON")"
 PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessions_with_comet_subtype_count"])' "$COMPLETEPROFILES_JSON")"
 echo "complete_profile_included_accession_count=$PROFILE_INCLUDED_ACCESSIONS"
 echo "complete_profile_accessions_with_subtype_count=$PROFILE_WITH_SUBTYPE_ACCESSIONS"
+
+announce_step 11a "Build nucleotide distance matrices" \
+  "profile accession set: $OUTPUT_DIR/NS3_Profile_Accessions.csv; classified NS3 nucleotide sequences: $AA_TMP_WORKBOOK" \
+  "RAS-only distance workbooks: $OUTPUT_DIR/NS3_GT_NA_Distance_RAS.xlsx; $OUTPUT_DIR/NS3_Subtype_NA_Distance_RAS.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_na_distance_matrices.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
+  --gt-output-xlsx "$OUTPUT_DIR/NS3_GT_NA_Distance_RAS.xlsx" \
+  --subtype-output-xlsx "$OUTPUT_DIR/NS3_Subtype_NA_Distance_RAS.xlsx" \
+  --min-subtype-sequences 10
+
+announce_step 11aa "Build nucleotide position-range distance matrices" \
+  "profile accession set: $OUTPUT_DIR/NS3_Profile_Accessions.csv; classified nucleotide sequences: $AA_TMP_WORKBOOK" \
+  "distance workbooks: $OUTPUT_DIR/NS3_GT_NA_Distance_Pos36_175.xlsx; $OUTPUT_DIR/NS3_Subtype_NA_Distance_Pos36_175.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_na_distance_matrices.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
+  --gt-output-xlsx "$OUTPUT_DIR/NS3_GT_NA_Distance_Pos36_175.xlsx" \
+  --subtype-output-xlsx "$OUTPUT_DIR/NS3_Subtype_NA_Distance_Pos36_175.xlsx" \
+  --min-subtype-sequences 10 --start 36 --end 175
+
+announce_step 11b "Build amino-acid RAS distance matrices" \
+  "profile accession set: $OUTPUT_DIR/NS3_Profile_Accessions.csv; classified NS3 amino-acid sequences: $AA_TMP_WORKBOOK" \
+  "RAS-only distance workbooks: $OUTPUT_DIR/NS3_GT_AA_Distance_RAS.xlsx; $OUTPUT_DIR/NS3_Subtype_AA_Distance_RAS.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_aa_distance_matrices.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
+  --gt-output-xlsx "$OUTPUT_DIR/NS3_GT_AA_Distance_RAS.xlsx" \
+  --subtype-output-xlsx "$OUTPUT_DIR/NS3_Subtype_AA_Distance_RAS.xlsx" \
+  --min-subtype-sequences 10
 
 announce_step 12 "Export consensus FASTA files" \
   "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
@@ -297,30 +330,16 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --output-xlsx "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
   > "$COMBINED_RAS_JSON"
 
-announce_step 16 "Build genotype amino-acid distance matrix" \
-  "consensus FASTA: $OUTPUT_DIR/NS3_GT_Consensus.fasta" \
-  "distance workbook: $OUTPUT_DIR/NS3_GT_AA_Distance_Pos36_175.xlsx"
-"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_gt_aa_distance_matrix.py" \
-  --input-fasta "$OUTPUT_DIR/NS3_GT_Consensus.fasta" \
-  --aligned-fasta "$OUTPUT_DIR/NS3_GT_Consensus_aligned.fasta" \
-  --output-xlsx "$OUTPUT_DIR/NS3_GT_AA_Distance_Pos36_175.xlsx" \
-  --details-xlsx "$SKILL_TEMP_ROOT/build_ns3_gt_aa_distance_matrix/NS3_GT_AA_Distance_Pos36_175_details.xlsx" \
-  --start 36 \
-  --end 175 \
+announce_step 16 "Build paired amino-acid distance matrices" \
+  "profile accession set: $OUTPUT_DIR/NS3_Profile_Accessions.csv; classified amino-acid sequences: $AA_TMP_WORKBOOK" \
+  "distance workbooks: $OUTPUT_DIR/NS3_GT_AA_Distance_Pos36_175.xlsx; $OUTPUT_DIR/NS3_Subtype_AA_Distance_Pos36_175.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_aa_distance_matrices.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
+  --gt-output-xlsx "$OUTPUT_DIR/NS3_GT_AA_Distance_Pos36_175.xlsx" \
+  --subtype-output-xlsx "$OUTPUT_DIR/NS3_Subtype_AA_Distance_Pos36_175.xlsx" \
+  --min-subtype-sequences 10 --start 36 --end 175 \
   > "$GT_AA_DISTANCE_SUMMARY"
-
-announce_step 17 "Build subtype amino-acid distance matrices" \
-  "consensus FASTA: $OUTPUT_DIR/NS3_Subtype_Consensus.fasta; minimum subtype sequences: 10" \
-  "distance workbook: $OUTPUT_DIR/NS3_Subtype_AA_Distance_Pos36_175.xlsx"
-"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_aa_distance_matrices.py" \
-  --input-fasta "$OUTPUT_DIR/NS3_Subtype_Consensus.fasta" \
-  --subtype-profile-workbook "$OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
-  --min-subtype-sequences 10 \
-  --output-xlsx "$OUTPUT_DIR/NS3_Subtype_AA_Distance_Pos36_175.xlsx" \
-  --temp-dir "$SKILL_TEMP_ROOT/build_ns3_subtype_aa_distance_matrices" \
-  --start 36 \
-  --end 175 \
-  > "$SUBTYPE_AA_DISTANCE_SUMMARY"
 
 announce_step 18 "Build RAS entropy reports" \
   "profile workbooks: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
