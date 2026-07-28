@@ -136,9 +136,9 @@ def load_subtype_profile_rows(
             if pos in wanted:
                 profile_rows[gt][subtype][pos].append((aa, pct))
                 position_coverage[gt][subtype][pos] = denom
-            current = subtype_counts[gt].get(subtype, 0)
-            if denom > current:
-                subtype_counts[gt][subtype] = denom
+                current = subtype_counts[gt].get(subtype, 0)
+                if denom > current:
+                    subtype_counts[gt][subtype] = denom
     wb.close()
     return profile_rows, subtype_counts, position_coverage
 
