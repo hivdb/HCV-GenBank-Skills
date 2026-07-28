@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gt-ras-profile-workbook", required=True)
     parser.add_argument("--subtype-ras-profile-workbook", required=True)
     parser.add_argument("--output-xlsx", default="outputs/NS5B_Combined_RAS_Profiles.xlsx")
-    parser.add_argument("--subtype-frequency-threshold", type=float, default=10.0)
+    parser.add_argument("--subtype-frequency-threshold", type=float, default=1.0)
     return parser.parse_args()
 
 
@@ -55,12 +55,15 @@ def has_minimum_total_sequences(label: object) -> bool:
     return match is not None and int(match.group(1)) >= MIN_TOTAL_SEQUENCES
 
 
-def variants_to_rich_text(value: object, threshold: float | None = None) -> CellRichText | str:
+def variants_to_rich_text(
+    value: object, threshold: float | None = None, excluded_amino_acids: set[str] | None = None
+) -> CellRichText | str:
     """Render amino-acid frequencies with superscript frequencies, as in RAS profiles."""
     variants = [
         (amino_acid, frequency)
         for amino_acid, frequency in VARIANT_RE.findall(str(value or ""))
-        if threshold is None or float(frequency) > threshold
+        if (threshold is None or float(frequency) >= threshold)
+        and amino_acid not in (excluded_amino_acids or set())
     ]
     if not variants:
         return ""
@@ -68,6 +71,21 @@ def variants_to_rich_text(value: object, threshold: float | None = None) -> Cell
     for amino_acid, frequency in variants:
         parts.extend((amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency)))
     return CellRichText(*parts)
+
+
+def most_frequent_variant(value: object) -> tuple[str, str] | None:
+    variants = VARIANT_RE.findall(str(value or ""))
+    if not variants:
+        return None
+    return max(variants, key=lambda variant: float(variant[1]))
+
+
+def most_frequent_variant_to_rich_text(value: object) -> CellRichText | str:
+    variant = most_frequent_variant(value)
+    if variant is None:
+        return ""
+    amino_acid, frequency = variant
+    return CellRichText(amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency))
 
 
 def write_combined_workbook(
@@ -104,16 +122,26 @@ def write_combined_workbook(
     output_rows = 0
     for genotype in sorted(gt_by_number, key=int):
         gt_row = gt_by_number[genotype]
-        worksheet.append([gt_row[0]] + [variants_to_rich_text(value) for value in gt_row[1:]])
+        worksheet.append(
+            [gt_row[0]] + [most_frequent_variant_to_rich_text(value) for value in gt_row[1:]]
+        )
         output_rows += 1
         for cell in worksheet[worksheet.max_row]:
             cell.fill = gt_fill
             cell.font = bold
 
+        gt_amino_acids = [most_frequent_variant(value) for value in gt_row[1:]]
         for subtype_row in subtypes_by_gt.get(genotype, []):
             worksheet.append(
                 [subtype_row[0]]
-                + [variants_to_rich_text(value, threshold) for value in subtype_row[1:]]
+                + [
+                    variants_to_rich_text(
+                        value,
+                        threshold,
+                        {gt_variant[0]} if gt_variant is not None else None,
+                    )
+                    for value, gt_variant in zip(subtype_row[1:], gt_amino_acids)
+                ]
             )
             output_rows += 1
         worksheet.append([])
