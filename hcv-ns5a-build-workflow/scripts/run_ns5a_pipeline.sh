@@ -281,10 +281,12 @@ announce_step 15 "Build genotype amino-acid distance matrix" \
   > "$GT_AA_DISTANCE_SUMMARY"
 
 announce_step 16 "Build subtype amino-acid distance matrices" \
-  "consensus FASTA: $OUTPUT_DIR/NS5A_Subtype_Consensus.fasta" \
+  "consensus FASTA: $OUTPUT_DIR/NS5A_Subtype_Consensus.fasta; minimum subtype sequences: 10" \
   "distance workbook: $OUTPUT_DIR/NS5A_Subtype_AA_Distance_Pos24_93.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_subtype_aa_distance_matrices.py" \
   --input-fasta "$OUTPUT_DIR/NS5A_Subtype_Consensus.fasta" \
+  --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
+  --min-subtype-sequences 10 \
   --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_AA_Distance_Pos24_93.xlsx" \
   --temp-dir "$SKILL_TEMP_ROOT/build_ns5a_subtype_aa_distance_matrices" \
   --start 24 \
