@@ -328,8 +328,9 @@ announce_step 17a "Build paired AA and NA distance matrices" \
   "profile accession set: $OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
   "paired-distance workbooks under: $OUTPUT_DIR"
 for type in aa na; do
-  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_${type}_distance_matrices.py" --input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --sequence-type "$type" --positions "24,26,28,29,30,31,32,38,58,62,92,93" --gt-output-xlsx "$OUTPUT_DIR/NS5A_GT_${type^^}_Distance_RAS.xlsx" --subtype-output-xlsx "$OUTPUT_DIR/NS5A_Subtype_${type^^}_Distance_RAS.xlsx" --min-subtype-sequences 10
-  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_${type}_distance_matrices.py" --input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --sequence-type "$type" --positions "$(seq 24 93 | paste -sd, -)" --gt-output-xlsx "$OUTPUT_DIR/NS5A_GT_${type^^}_Distance_Pos24_93.xlsx" --subtype-output-xlsx "$OUTPUT_DIR/NS5A_Subtype_${type^^}_Distance_Pos24_93.xlsx" --min-subtype-sequences 10
+  upper_type="$(printf '%s' "$type" | tr '[:lower:]' '[:upper:]')"
+  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_${type}_distance_matrices.py" --input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --sequence-type "$type" --positions "24,26,28,29,30,31,32,38,58,62,92,93" --gt-output-xlsx "$OUTPUT_DIR/NS5A_GT_${upper_type}_Distance_RAS.xlsx" --subtype-output-xlsx "$OUTPUT_DIR/NS5A_Subtype_${upper_type}_Distance_RAS.xlsx" --min-subtype-sequences 10
+  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_${type}_distance_matrices.py" --input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --sequence-type "$type" --positions "$(seq 24 93 | paste -sd, -)" --gt-output-xlsx "$OUTPUT_DIR/NS5A_GT_${upper_type}_Distance_Pos24_93.xlsx" --subtype-output-xlsx "$OUTPUT_DIR/NS5A_Subtype_${upper_type}_Distance_Pos24_93.xlsx" --min-subtype-sequences 10
 done
 
 announce_step 18 "Build RAS entropy reports" \

@@ -253,6 +253,7 @@ echo "profile_input_ignored_unassigned_subtype_accession_count=$PROFILE_INPUT_UN
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
   > "$COMPLETEPROFILES_JSON"
 PROFILE_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["included_accession_count"])' "$COMPLETEPROFILES_JSON")"
 PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessions_with_comet_subtype_count"])' "$COMPLETEPROFILES_JSON")"
@@ -267,6 +268,7 @@ announce_step 12 "Export consensus FASTA files" \
   --subtype-profile-workbook "$OUTPUT_DIR/NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_subtype_consensus_reference_distance.py" --subtype-profile-workbook "$OUTPUT_DIR/NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx" --subtype-json "$SUBTYPE_JSON" --output-xlsx "$OUTPUT_DIR/NS5B_Subtype_Consensus_Reference_AA_Distance_Pos150_321.xlsx" --start 150 --end 321
 
 announce_step 13 "Build genotype RAS profile" \
   "genotype profile workbook: $OUTPUT_DIR/NS5B_GT_CompleteProfiles_TabsPerGT.xlsx" \
@@ -321,6 +323,15 @@ announce_step 17 "Build subtype amino-acid distance matrices" \
   --start 150 \
   --end 321 \
   > "$SUBTYPE_AA_DISTANCE_SUMMARY"
+
+announce_step 17a "Build paired AA and NA distance matrices" \
+  "profile accession set: $OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
+  "paired-distance workbooks under: $OUTPUT_DIR"
+for type in aa na; do
+  upper_type="$(printf '%s' "$type" | tr '[:lower:]' '[:upper:]')"
+  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_${type}_distance_matrices.py" --input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" --sequence-type "$type" --positions "150,159,206,282,316,320,321" --gt-output-xlsx "$OUTPUT_DIR/NS5B_GT_${upper_type}_Distance_RAS.xlsx" --subtype-output-xlsx "$OUTPUT_DIR/NS5B_Subtype_${upper_type}_Distance_RAS.xlsx" --min-subtype-sequences 10
+  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_${type}_distance_matrices.py" --input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" --sequence-type "$type" --positions "$(seq 150 321 | paste -sd, -)" --gt-output-xlsx "$OUTPUT_DIR/NS5B_GT_${upper_type}_Distance_Pos150_321.xlsx" --subtype-output-xlsx "$OUTPUT_DIR/NS5B_Subtype_${upper_type}_Distance_Pos150_321.xlsx" --min-subtype-sequences 10
+done
 
 announce_step 18 "Build RAS entropy reports" \
   "profile workbooks: $OUTPUT_DIR/NS5B_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
