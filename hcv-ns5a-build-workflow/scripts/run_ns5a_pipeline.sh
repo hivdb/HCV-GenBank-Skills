@@ -84,9 +84,9 @@ mkdir -p "$(dirname "$GT_AA_DISTANCE_SUMMARY")" "$(dirname "$SUBTYPE_AA_DISTANCE
 mkdir -p "$OUTPUT_DIR"
 
 cleanup() {
-  if [[ -n "${AA_TMP_WORKBOOK:-}" && -f "${AA_TMP_WORKBOOK:-}" ]]; then
-    rm -f "$AA_TMP_WORKBOOK"
-  fi
+  # Keep the profile-input workbook: paired distance reports use its AA/NA
+  # sequences and it is a documented pipeline output.
+  :
 }
 trap cleanup EXIT
 
@@ -217,17 +217,18 @@ announce_step 9 "Add genotype amino-acid references" \
   --fasta-dir "$INCLUDED_FASTA_DIR" \
   --gt-aa-json "$GT_AA_JSON" \
   --output-dir "$OUTPUT_DIR" \
+  --output-workbook "$OUTPUT_DIR/NS5A_Profile_Input_Source.xlsx" \
   > "$SUBTYPE_WITH_GT_AA_JSON"
 
 AA_TMP_WORKBOOK="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output_workbook"])' "$SUBTYPE_WITH_GT_AA_JSON")"
 
 announce_step 10 "Build complete profile workbooks" \
   "amino-acid workbook: $AA_TMP_WORKBOOK" \
-  "profile workbooks: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx; profile accessions: $OUTPUT_DIR/NS5A_Profile_Input_Accessions.csv"
+  "profile workbooks: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx; profile accessions: $OUTPUT_DIR/NS5A_Profile_Accessions.csv"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
-  --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Input_Accessions.csv" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
   > "$COMPLETEPROFILES_JSON"
 
 announce_step 11 "Export consensus FASTA files" \
@@ -238,6 +239,7 @@ announce_step 11 "Export consensus FASTA files" \
   --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_subtype_consensus_reference_distance.py" --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" --subtype-json "$SUBTYPE_JSON" --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_Consensus_Reference_AA_Distance_Pos24_93.xlsx" --start 24 --end 93
 
 announce_step 12 "Build genotype RAS profile" \
   "genotype profile workbook: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx" \
@@ -292,6 +294,26 @@ announce_step 16 "Build subtype amino-acid distance matrices" \
   --start 24 \
   --end 93 \
   > "$SUBTYPE_AA_DISTANCE_SUMMARY"
+
+for sequence_type in aa na; do
+  upper_type="$(printf '%s' "$sequence_type" | tr '[:lower:]' '[:upper:]')"
+  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_${sequence_type}_distance_matrices.py" \
+    --input-workbook "$AA_TMP_WORKBOOK" \
+    --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
+    --sequence-type "$sequence_type" \
+    --positions 24,26,28,29,30,31,32,38,58,62,92,93 \
+    --gt-output-xlsx "$OUTPUT_DIR/NS5A_GT_${upper_type}_Distance_RAS.xlsx" \
+    --subtype-output-xlsx "$OUTPUT_DIR/NS5A_Subtype_${upper_type}_Distance_RAS.xlsx" \
+    --min-subtype-sequences 10
+  "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_${sequence_type}_distance_matrices.py" \
+    --input-workbook "$AA_TMP_WORKBOOK" \
+    --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
+    --sequence-type "$sequence_type" \
+    --positions "$(seq 24 93 | paste -sd, -)" \
+    --gt-output-xlsx "$OUTPUT_DIR/NS5A_GT_${upper_type}_Distance_Pos24_93.xlsx" \
+    --subtype-output-xlsx "$OUTPUT_DIR/NS5A_Subtype_${upper_type}_Distance_Pos24_93.xlsx" \
+    --min-subtype-sequences 10
+done
 
 announce_step 17 "Build RAS entropy reports" \
   "profile workbooks: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
