@@ -42,6 +42,12 @@ WORKFLOW_TEMP_ROOTS = {
     "NS5B": Path("temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline"),
 }
 
+CURRENT_SELECTION_WORKBOOKS = {
+    "NS3": Path("Ref-selection/___IncludedNS3Refs.xlsx"),
+    "NS5A": Path("Ref-selection/___IncludedNS5ARefs.xlsx"),
+    "NS5B": Path("Ref-selection/___IncludedNS5BRefs.xlsx"),
+}
+
 
 def filter_result_creation(gene: str, refid: str, information: str) -> str:
     if refid not in FILTERS[gene]:
@@ -50,6 +56,16 @@ def filter_result_creation(gene: str, refid: str, information: str) -> str:
         f"Step 5 reads rows with RefID {refid} from included_accessions_metadata.csv, "
         f"keeps rows where {information}, and writes the retained full metadata rows to FilterResultFile."
     )
+
+
+def load_current_selection_refids(gene: str, sheet_name: str) -> set[str]:
+    workbook = load_workbook(CURRENT_SELECTION_WORKBOOKS[gene], read_only=True, data_only=True)
+    sheet = workbook[sheet_name]
+    header = [str(value or "") for value in next(sheet.iter_rows(values_only=True))]
+    refid_index = header.index("RefID")
+    refids = {str(values[refid_index] or "").strip() for values in sheet.iter_rows(min_row=2, values_only=True)}
+    workbook.close()
+    return refids
 
 
 def main() -> None:
@@ -62,6 +78,7 @@ def main() -> None:
     rows: list[dict[str, str]] = []
     for gene in ("NS3", "NS5A", "NS5B"):
         sheet_name = f"{gene}_PtGT0_Check"
+        current_selection_refids = load_current_selection_refids(gene, sheet_name)
         sheet = workbook[sheet_name]
         header = [str(value or "") for value in next(sheet.iter_rows(values_only=True))]
         refid_index, num_pts_index = header.index("RefID"), header.index("Num Pts")
@@ -78,6 +95,7 @@ def main() -> None:
                 "GeneName": gene,
                 "RefID": refid,
                 "NumPtsValue": num_pts,
+                "CurrentIncludedRefsCheck": "Present" if refid in current_selection_refids else "Absent",
                 "FilterInformation": filter_information,
                 "FilterResultFile": str(result_path) if refid in FILTERS[gene] and result_path.is_file() else "",
                 "FilterResultCreation": filter_result_creation(gene, refid, filter_information),
@@ -86,7 +104,7 @@ def main() -> None:
     output = Path(args.output_csv)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["OldFileName", "SheetName", "GeneName", "RefID", "NumPtsValue", "FilterInformation", "FilterResultFile", "FilterResultCreation"], lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=["OldFileName", "SheetName", "GeneName", "RefID", "NumPtsValue", "CurrentIncludedRefsCheck", "FilterInformation", "FilterResultFile", "FilterResultCreation"], lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     print(f"output_csv={output.resolve()}\ncheck_refid_count={len(rows)}")
