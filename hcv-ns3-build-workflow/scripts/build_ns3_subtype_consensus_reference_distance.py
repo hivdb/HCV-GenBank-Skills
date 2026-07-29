@@ -7,6 +7,7 @@ from Bio import Align
 from openpyxl import Workbook,load_workbook
 CODONS={'TTT':'F','TTC':'F','TTA':'L','TTG':'L','TCT':'S','TCC':'S','TCA':'S','TCG':'S','TAT':'Y','TAC':'Y','TAA':'*','TAG':'*','TGT':'C','TGC':'C','TGA':'*','TGG':'W','CTT':'L','CTC':'L','CTA':'L','CTG':'L','CCT':'P','CCC':'P','CCA':'P','CCG':'P','CAT':'H','CAC':'H','CAA':'Q','CAG':'Q','CGT':'R','CGC':'R','CGA':'R','CGG':'R','ATT':'I','ATC':'I','ATA':'I','ATG':'M','ACT':'T','ACC':'T','ACA':'A','ACG':'T','AAT':'N','AAC':'N','AAA':'K','AAG':'K','AGT':'S','AGC':'S','AGA':'R','AGG':'R','GTT':'V','GTC':'V','GTA':'V','GTG':'V','GCT':'A','GCC':'A','GCA':'A','GCG':'A','GAT':'D','GAC':'D','GAA':'E','GAG':'E','GGT':'G','GGC':'G','GGA':'G','GGG':'G'}
 VALID=set('ACDEFGHIKLMNPQRSTVWY*')
+RAS_POSITIONS=(36,41,43,54,55,56,80,122,155,156,158,166,168,170,175)
 def aligned_strings(reference,query,coordinates):
  out=[[],[]]
  for n in range(len(coordinates[0])-1):
@@ -16,7 +17,8 @@ def aligned_strings(reference,query,coordinates):
   else: out[0].append('-'*(qe-qs)); out[1].append(query[qs:qe])
  return ''.join(out[0]),''.join(out[1])
 def main():
- p=argparse.ArgumentParser(); p.add_argument('--subtype-profile-workbook',required=True); p.add_argument('--subtype-json',required=True); p.add_argument('--output-xlsx',required=True); p.add_argument('--start',type=int,default=36); p.add_argument('--end',type=int,default=175); a=p.parse_args()
+ p=argparse.ArgumentParser(); p.add_argument('--subtype-profile-workbook',required=True); p.add_argument('--subtype-json',required=True); p.add_argument('--output-xlsx',required=True); p.add_argument('--positions',default=','.join(map(str,RAS_POSITIONS))); a=p.parse_args()
+ positions=tuple(sorted({int(pos) for pos in a.positions.split(',') if pos.strip()}))
  refs={}
  for r in json.loads(Path(a.subtype_json).read_text()):
   m=re.search(r'Genotype\s*(\d+[A-Za-z0-9]*)',str(r.get('genotypeName','')))
@@ -36,7 +38,7 @@ def main():
    acc,refaa=ref; consensus=''.join(calls.get(pos,(0,'X'))[1] for pos in range(1,len(refaa)+1)); aligner=Align.PairwiseAligner(mode='global'); aligner.match_score=2; aligner.mismatch_score=-1; aligner.open_gap_score=-5; aligner.extend_gap_score=-1; alignment=aligner.align(refaa,consensus)[0]; aligned_ref,aligned_consensus=aligned_strings(refaa,consensus,alignment.coordinates); refpos=0; pairs=[]
    for refaa_char,consensus_char in zip(aligned_ref,aligned_consensus):
     if refaa_char!='-': refpos+=1
-    if refaa_char!='-' and a.start<=refpos<=a.end and refaa_char in VALID and consensus_char in VALID: pairs.append((refaa_char,consensus_char))
+    if refaa_char!='-' and refpos in positions and refaa_char in VALID and consensus_char in VALID: pairs.append((refaa_char,consensus_char))
    diff=sum(x!=y for x,y in pairs); wsout.append([gt,st,acc,len(pairs),diff,diff/len(pairs) if pairs else '', 'ok' if pairs else 'no_comparable_positions'])
- wb.close(); meta=out.create_sheet('metadata'); meta.append(['aa_position_range',f'{a.start}-{a.end}']); meta.append(['alignment','global AA alignment of profile consensus to translated subtype genome reference']); meta.append(['distance_definition','AA differences / comparable aligned reference positions']); Path(a.output_xlsx).parent.mkdir(parents=True,exist_ok=True); out.save(a.output_xlsx)
+ wb.close(); meta=out.create_sheet('metadata'); meta.append(['aa_positions',','.join(map(str,positions))]); meta.append(['alignment','global AA alignment of profile consensus to translated subtype genome reference']); meta.append(['distance_definition','AA differences / comparable aligned NS3 RAS positions']); Path(a.output_xlsx).parent.mkdir(parents=True,exist_ok=True); out.save(a.output_xlsx)
 if __name__=='__main__': main()
