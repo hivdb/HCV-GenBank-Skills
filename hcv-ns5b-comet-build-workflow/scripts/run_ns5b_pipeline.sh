@@ -57,7 +57,7 @@ if [[ -z "$EXCEL_FILE" || -z "$FASTA_POOL" || -z "$SHEET_NAME" ]]; then
   exit 1
 fi
 if [[ ! -f "$NONCOMET_SUBTYPE_WORKBOOK" ]]; then
-  echo "Missing non-COMET subtype workbook required for 1d overrides: $NONCOMET_SUBTYPE_WORKBOOK" >&2
+  echo "Missing non-COMET subtype workbook required for 1d and genotype 7/8 subtype overrides: $NONCOMET_SUBTYPE_WORKBOOK" >&2
   exit 1
 fi
 
@@ -212,7 +212,7 @@ echo "Skipping disabled NS5B source-feature extraction and grouped-summary steps
 # fi
 
 announce_step 9 "Build subtype study workbook from Comet" \
-  "genotype workbook: $OUTPUT_DIR/NS5B_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV; non-COMET 1d assignments: $NONCOMET_SUBTYPE_WORKBOOK" \
+  "genotype workbook: $OUTPUT_DIR/NS5B_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV; non-COMET 1d and genotype 7/8 subtype assignments: $NONCOMET_SUBTYPE_WORKBOOK" \
   "subtype workbook: $OUTPUT_DIR/NS5B_Subtype_AllStudies_WSeqs.xlsx"
 echo "Action: write the Comet subtype for each retained accession; no subtype alignment is run."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_comet_subtype_allstudies.py" \
@@ -259,6 +259,12 @@ PROFILE_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loa
 PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["accessions_with_comet_subtype_count"])' "$COMPLETEPROFILES_JSON")"
 echo "complete_profile_included_accession_count=$PROFILE_INCLUDED_ACCESSIONS"
 echo "complete_profile_accessions_with_subtype_count=$PROFILE_WITH_SUBTYPE_ACCESSIONS"
+
+"$PYTHON_BIN" "$REPO_ROOT/scripts/export_noncomet_priority_profile_accessions.py" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
+  --comet-subtype-csv "$COMET_SUBTYPING_CSV" \
+  --noncomet-subtype-workbook "$NONCOMET_SUBTYPE_WORKBOOK" \
+  --output-csv "$OUTPUT_DIR/NS5B_NonComet_Priority_Profile_Accessions.csv"
 
 announce_step 12 "Export consensus FASTA files" \
   "profile workbooks: $OUTPUT_DIR/NS5B_GT_CompleteProfiles_TabsPerGT.xlsx; $OUTPUT_DIR/NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx" \

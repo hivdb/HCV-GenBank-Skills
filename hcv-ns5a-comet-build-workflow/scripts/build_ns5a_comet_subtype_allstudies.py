@@ -32,7 +32,7 @@ def load_subtypes(path: Path) -> dict[str, str]:
     return assignments
 
 
-def load_noncomet_1d(path: Path) -> dict[str, tuple[str, str, str, str]]:
+def load_noncomet_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str, str, str]]:
     workbook = load_workbook(path, read_only=True, data_only=True)
     sheet = workbook[workbook.sheetnames[0]]
     header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]
@@ -41,13 +41,14 @@ def load_noncomet_1d(path: Path) -> dict[str, tuple[str, str, str, str]]:
     missing = [name for name in required if name not in index]
     if missing:
         raise RuntimeError(f"Columns missing from {path}: {', '.join(missing)}")
-    assignments: dict[str, tuple[str, str, str, str]] = {}
+    assignments: dict[str, tuple[str, str, str, str, str]] = {}
     for values in sheet.iter_rows(min_row=2, values_only=True):
         subtype = str(values[index["ClosestSubtype"]]).strip().lower()
         accession = str(values[index["AccessionID"]]).strip()
-        if subtype == "1d" and accession:
+        genotype = str(values[index["ClosestGT"]]).strip().lower()
+        if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
             assignments[accession.split(".", 1)[0]] = (
-                str(values[index["RefID"]]).strip(), str(values[index["RefName"]]).strip(), accession, str(values[index["ClosestGT"]]).strip()
+                str(values[index["RefID"]]).strip(), str(values[index["RefName"]]).strip(), accession, genotype, subtype
             )
     workbook.close()
     return assignments
@@ -56,7 +57,7 @@ def load_noncomet_1d(path: Path) -> dict[str, tuple[str, str, str, str]]:
 def main() -> int:
     args = parse_args()
     assignments = load_subtypes(Path(args.comet_subtype_csv))
-    noncomet_1d = load_noncomet_1d(Path(args.noncomet_subtype_workbook))
+    noncomet_priority_subtypes = load_noncomet_priority_subtypes(Path(args.noncomet_subtype_workbook))
     workbook = load_workbook(args.genotype_workbook, read_only=True, data_only=True)
     sheet = workbook[workbook.sheetnames[0]]
     header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]
@@ -74,8 +75,8 @@ def main() -> int:
         accession_key = accession.split(".", 1)[0]
         subtype = assignments.get(accession) or assignments.get(accession.split(".", 1)[0])
         if subtype:
-            if accession_key in noncomet_1d:
-                subtype, source, metadata_column = "1d", "Non-Comet 1d override", "Non-Comet ClosestSubtype"
+            if accession_key in noncomet_priority_subtypes:
+                subtype, source, metadata_column = noncomet_priority_subtypes[accession_key][4], "Non-Comet priority subtype override", "Non-Comet ClosestSubtype"
                 override_count += 1
             else:
                 source, metadata_column = "Comet", "Comet NS5A"
@@ -92,9 +93,9 @@ def main() -> int:
     workbook.close()
 
     addition_count = 0
-    for accession_key, (refid, refname, accession, genotype) in noncomet_1d.items():
+    for accession_key, (refid, refname, accession, genotype, subtype) in noncomet_priority_subtypes.items():
         if accession_key not in seen_accessions:
-            rows.append((refid, refname, accession, genotype, "1d", "Non-Comet 1d addition", "Non-Comet ClosestSubtype"))
+            rows.append((refid, refname, accession, genotype, subtype, "Non-Comet priority subtype addition", "Non-Comet ClosestSubtype"))
             addition_count += 1
 
     output_dir = Path(args.output_dir)
@@ -110,7 +111,7 @@ def main() -> int:
     for row in rows:
         sheet.append(row)
     output.save(output_path)
-    print(json.dumps({"output_workbook": str(output_path.resolve()), "row_count": len(rows), "noncomet_1d_override_count": override_count, "noncomet_1d_addition_count": addition_count}))
+    print(json.dumps({"output_workbook": str(output_path.resolve()), "row_count": len(rows), "noncomet_priority_subtype_override_count": override_count, "noncomet_priority_subtype_addition_count": addition_count}))
     return 0
 
 
