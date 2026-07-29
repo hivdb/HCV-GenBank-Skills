@@ -301,11 +301,11 @@ announce_step 12 "Export consensus FASTA files" \
 
 announce_step 12a "Compare subtype consensus to subtype references" \
   "subtype profile: $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx; references: $SUBTYPE_JSON" \
-  "distance report: $OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_Pos36_175.xlsx"
+  "RAS-only distance report: $OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_consensus_reference_distance.py" \
   --subtype-profile-workbook "$OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   --subtype-json "$SUBTYPE_JSON" \
-  --output-xlsx "$OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_Pos36_175.xlsx" --start 36 --end 175
+  --output-xlsx "$OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"
 
 announce_step 13 "Build genotype RAS profile" \
   "genotype profile workbook: $OUTPUT_DIR/NS3_GT_CompleteProfiles_TabsPerGT.xlsx" \

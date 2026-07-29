@@ -239,7 +239,7 @@ announce_step 11 "Export consensus FASTA files" \
   --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
-"$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_subtype_consensus_reference_distance.py" --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" --subtype-json "$SUBTYPE_JSON" --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_Consensus_Reference_AA_Distance_Pos24_93.xlsx" --start 24 --end 93
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_subtype_consensus_reference_distance.py" --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" --subtype-json "$SUBTYPE_JSON" --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"
 
 announce_step 12 "Build genotype RAS profile" \
   "genotype profile workbook: $OUTPUT_DIR/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx" \
