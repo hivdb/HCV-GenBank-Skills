@@ -65,6 +65,8 @@ The per-RefID metadata split step writes CSVs only for RefIDs that have explicit
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
 The COMET subtype step overrides retained accessions called `1d` by the non-COMET subtype workbook and adds non-COMET `1d` accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
 
+Complete-profile construction retains an accession only when it has callable amino-acid coverage at every NS5B RAS position: 150, 159, 206, 282, 316, 320, and 321. Missing, `X`, stop (`*`), or non-standard calls at any of these positions exclude that accession from the profile and its downstream RAS and distance reports.
+
 ## Outputs
 
 The workflow writes NS5B outputs under `outputs/`, including:

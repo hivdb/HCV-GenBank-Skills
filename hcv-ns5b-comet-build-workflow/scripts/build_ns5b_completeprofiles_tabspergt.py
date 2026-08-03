@@ -15,6 +15,8 @@ from openpyxl import Workbook, load_workbook
 
 
 AA_ORDER = list("ACDEFGHIKLMNPQRSTVWY") + ["*"]
+REQUIRED_RAS_POSITIONS = (150, 159, 206, 282, 316, 320, 321)
+CALLABLE_AAS = frozenset(AA_ORDER) - {"*"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,6 +51,17 @@ def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
     return job_dir
 
 
+def missing_ras_positions(start: int, aa_sequence: str) -> list[int]:
+    """Return required RAS positions not covered by a callable amino-acid call."""
+    missing: list[int] = []
+    sequence = aa_sequence.upper()
+    for position in REQUIRED_RAS_POSITIONS:
+        offset = position - start
+        if offset < 0 or offset >= len(sequence) or sequence[offset] not in CALLABLE_AAS:
+            missing.append(position)
+    return missing
+
+
 def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
@@ -61,7 +74,10 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
     rows: list[dict[str, Any]] = []
     unassigned_genotype_accessions: set[str] = set()
     unassigned_subtype_accessions: set[str] = set()
+    incomplete_ras_accessions: set[str] = set()
     for values in ws.iter_rows(min_row=2, values_only=True):
+        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+            continue
         aa_sequence = values[index["AASequence"]]
         start = values[index["StartAAPosition"]]
         end = values[index["EndAAPosition"]]
@@ -76,14 +92,19 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
             unassigned_subtype_accessions.add(accession)
         if genotype.casefold().startswith("unassign") or subtype.casefold().startswith("unassign"):
             continue
+        start_position = int(start)
+        sequence = str(aa_sequence).strip()
+        if missing_ras_positions(start_position, sequence):
+            incomplete_ras_accessions.add(accession)
+            continue
         rows.append(
             {
                 "AccessionID": accession,
                 "ClosestGT": genotype,
                 "ClosestSubtype": subtype,
-                "StartAAPosition": int(start),
+                "StartAAPosition": start_position,
                 "EndAAPosition": int(end),
-                "AASequence": str(aa_sequence).strip(),
+                "AASequence": sequence,
             }
         )
     wb.close()
@@ -91,6 +112,7 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
         "ignored_unassigned_genotype_accession_count": len(unassigned_genotype_accessions),
         "ignored_unassigned_subtype_accession_count": len(unassigned_subtype_accessions),
         "ignored_unassigned_accession_count": len(unassigned_genotype_accessions | unassigned_subtype_accessions),
+        "ignored_incomplete_ras_coverage_accession_count": len(incomplete_ras_accessions),
     }
 
 
@@ -239,6 +261,8 @@ def main() -> int:
         "subtype_workbook": str(subtype_path.resolve()),
         "gt_sequence_counts": gt_summary,
         "subtype_group_count": sum(len(v) for v in rows_by_gt_subtype.values()),
+        "required_ras_positions": list(REQUIRED_RAS_POSITIONS),
+        "profile_input_rule": "Every retained accession has a callable amino-acid at every required RAS position.",
         "note": "CountWithAA and CountWithAAAlone are identical because current AA sequences contain single-letter calls, not explicit mixtures.",
     }
     print(json.dumps(summary, indent=2))
@@ -247,5 +271,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
-            continue

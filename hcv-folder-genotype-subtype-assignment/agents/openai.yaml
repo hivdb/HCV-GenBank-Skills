@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV Folder Genotype/Subtype Assignment"
+  short_description: "Assign HCV genotype and subtype from FASTAs"
+  default_prompt: "Use $hcv-folder-genotype-subtype-assignment to assign genotype then subtype for NS3, NS5A, and NS5B sequences in a FASTA folder."

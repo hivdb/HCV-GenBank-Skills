@@ -235,12 +235,22 @@ echo "Action: use blastx once against the Comet genotype reference to map and tr
   > "$SUBTYPE_WITH_GT_AA_JSON"
 
 AA_TMP_WORKBOOK="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output_workbook"])' "$SUBTYPE_WITH_GT_AA_JSON")"
+announce_step 10b "Validate NS5B profile alignment coordinates" \
+  "amino-acid extraction: $AA_TMP_WORKBOOK" \
+  "marked profile input: $OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/validate_ns5b_profile_alignment.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" --gt-aa-json "$GT_AA_JSON" \
+  --output-workbook "$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx" \
+  --flagged-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Alignment_QC_Flagged_Accessions.csv" \
+  | tee "$SKILL_TEMP_ROOT/validate_ns5b_profile_alignment.json"
+AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
 PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_completeprofiles_tabspergt.py" --input-workbook "$AA_TMP_WORKBOOK" --report-only)"
 PROFILE_INPUT_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["included_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_WITH_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_with_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_WITHOUT_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_without_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_UNASSIGNED_GT="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["ignored_unassigned_genotype_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_UNASSIGNED_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["ignored_unassigned_subtype_accession_count"])' "$PROFILE_INPUT_COUNTS")"
+PROFILE_INPUT_INCOMPLETE_RAS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["ignored_incomplete_ras_coverage_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 
 announce_step 11 "Build complete profile workbooks" \
   "amino-acid workbook: $AA_TMP_WORKBOOK" \
@@ -250,6 +260,7 @@ echo "profile_input_accessions_with_comet_subtype_count=$PROFILE_INPUT_WITH_SUBT
 echo "profile_input_accessions_without_comet_subtype_count=$PROFILE_INPUT_WITHOUT_SUBTYPE"
 echo "profile_input_ignored_unassigned_genotype_accession_count=$PROFILE_INPUT_UNASSIGNED_GT"
 echo "profile_input_ignored_unassigned_subtype_accession_count=$PROFILE_INPUT_UNASSIGNED_SUBTYPE"
+echo "profile_input_ignored_incomplete_ras_coverage_accession_count=$PROFILE_INPUT_INCOMPLETE_RAS"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_completeprofiles_tabspergt.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-dir "$OUTPUT_DIR" \
@@ -354,12 +365,3 @@ echo "matched_fasta_report=${MATCHED_TXT#$REPO_ROOT/}"
 echo "included_fasta_dir=${INCLUDED_FASTA_DIR#$REPO_ROOT/}"
 echo "output_dir=${OUTPUT_DIR#$REPO_ROOT/}"
 echo "temp_root=${TEMP_ROOT#$REPO_ROOT/}"
-announce_step 10b "Validate NS5B profile alignment coordinates" \
-  "amino-acid extraction: $AA_TMP_WORKBOOK" \
-  "marked profile input: $OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
-"$PYTHON_BIN" "$SCRIPT_DIR/validate_ns5b_profile_alignment.py" \
-  --input-workbook "$AA_TMP_WORKBOOK" --gt-aa-json "$GT_AA_JSON" \
-  --output-workbook "$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx" \
-  --flagged-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Alignment_QC_Flagged_Accessions.csv" \
-  | tee "$SKILL_TEMP_ROOT/validate_ns5b_profile_alignment.json"
-AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
