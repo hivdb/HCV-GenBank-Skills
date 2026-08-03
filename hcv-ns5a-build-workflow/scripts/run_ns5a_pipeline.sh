@@ -221,6 +221,15 @@ announce_step 9 "Add genotype amino-acid references" \
   > "$SUBTYPE_WITH_GT_AA_JSON"
 
 AA_TMP_WORKBOOK="$("$PYTHON_BIN" -c 'import json,sys; print(json.load(open(sys.argv[1]))["output_workbook"])' "$SUBTYPE_WITH_GT_AA_JSON")"
+announce_step 9b "Validate NS5A profile alignment coordinates" \
+  "amino-acid extraction: $AA_TMP_WORKBOOK" \
+  "marked profile input: $OUTPUT_DIR/NS5A_Profile_Input_Alignment_QC.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/validate_ns5a_profile_alignment.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" --gt-aa-json "$GT_AA_JSON" \
+  --output-workbook "$OUTPUT_DIR/NS5A_Profile_Input_Alignment_QC.xlsx" \
+  --flagged-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Alignment_QC_Flagged_Accessions.csv" \
+  | tee "$SKILL_TEMP_ROOT/validate_ns5a_profile_alignment.json"
+AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5A_Profile_Input_Alignment_QC.xlsx"
 
 announce_step 10 "Build complete profile workbooks" \
   "amino-acid workbook: $AA_TMP_WORKBOOK" \

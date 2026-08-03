@@ -354,3 +354,12 @@ echo "matched_fasta_report=${MATCHED_TXT#$REPO_ROOT/}"
 echo "included_fasta_dir=${INCLUDED_FASTA_DIR#$REPO_ROOT/}"
 echo "output_dir=${OUTPUT_DIR#$REPO_ROOT/}"
 echo "temp_root=${TEMP_ROOT#$REPO_ROOT/}"
+announce_step 10b "Validate NS5B profile alignment coordinates" \
+  "amino-acid extraction: $AA_TMP_WORKBOOK" \
+  "marked profile input: $OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/validate_ns5b_profile_alignment.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" --gt-aa-json "$GT_AA_JSON" \
+  --output-workbook "$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx" \
+  --flagged-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Alignment_QC_Flagged_Accessions.csv" \
+  | tee "$SKILL_TEMP_ROOT/validate_ns5b_profile_alignment.json"
+AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"

@@ -23,11 +23,12 @@ See `NS3_workflow.svg` in this skill folder.
 8. `scripts/build_ns3_sourcefeatures_grouped_csv.py` is currently commented out in the wrapper
 9. `scripts/build_ns3_subtype_allstudies_wseqs.py`
 10. `scripts/build_ns3_subtype_with_gt_aa.py`
-11. `scripts/build_ns3_completeprofiles_tabspergt.py`
-12. `scripts/export_ns3_consensus_fasta.py`
-13. `scripts/build_ns3_gt_ras_profiles.py`
-14. `scripts/build_ns3_subtype_ras_profiles.py`
-15. `scripts/build_ns3_combined_ras_profiles.py`
+11. `scripts/validate_ns3_profile_alignment.py`
+12. `scripts/build_ns3_completeprofiles_tabspergt.py`
+13. `scripts/export_ns3_consensus_fasta.py`
+14. `scripts/build_ns3_gt_ras_profiles.py`
+15. `scripts/build_ns3_subtype_ras_profiles.py`
+16. `scripts/build_ns3_combined_ras_profiles.py`
 
 Prefer the wrapper when running the full workflow:
 
@@ -65,6 +66,7 @@ The metadata filtering step writes `included_accessions_metadata.csv` and report
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/` and prints filter, kept row count, and total row count. Current filters: `30` source_isolate contains `Day1`; `85` accession is listed in `85.csv`; `142` source_isolate contains `baseline`; `192` source_isolate contains `day 1`; `346` source_isolate contains `baseline/D0`; `499` source_isolate contains `HCC`; `600` source_isolate does not contain `failure`; `661` source_isolation_source equals `plasma`; `884` source_isolate contains `Pre-TH`; `943` source_isolate contains `Day 1`; `1356` source_isolate does not contain `IC`; `2008` source_isolate does not contain `chimpanzee`; `2110` source_isolate contains `T0`; `2116` source_collection_date is before 2011; `2138` source_isolate contains `Week 0`; `2150` source_isolate contains `b`; `2168` source_isolate contains `pre`; `2178` source_isolation_source equals `plasma`; `2227` accession is listed in `2227_Nguyen_(2015)_w_metadata_filtered.csv`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
 The COMET subtype step gives priority to non-COMET subtype assignments for retained accessions called `1d` and for all genotype 7 or 8 accessions; it also adds priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
+The pre-profile alignment QC is an eligibility gate: only rows marked `PASS` in `NS3_Profile_Input_Alignment_QC.xlsx` are used for genotype/subtype profiles and their profile-accession list. The gate excludes coordinate-span failures, missing AA/coordinates, and sequences with at least 15% genotype-reference disagreement across at least 150 comparable AA positions. All excluded rows remain in the QC workbook and CSV, grouped by status and reason.
 
 ## Outputs
 
@@ -81,6 +83,8 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - source-feature CSV/XLSX outputs only if the commented source-feature steps are re-enabled
 - `NS3_Subtype_AllStudies_WSeqs.xlsx`
 - `NS3_Subtype_With_GT_AA.xlsx`
+- `NS3_Profile_Input_Alignment_QC.xlsx` (profile input with per-accession alignment QC columns and a `Flagged_Accessions` sheet)
+- `NS3_Profile_Alignment_QC_Flagged_Accessions.csv` (flagged accessions and RAS positions requiring review)
 - `NS3_GT_NA_Distance_RAS.xlsx` and `NS3_Subtype_NA_Distance_RAS.xlsx` (full pairwise nucleotide-distance matrices over NS3 RAS codons only; the subtype workbook has one matrix per genotype and requires at least 10 sequences per subtype)
 - `NS3_GT_AA_Distance_RAS.xlsx` and `NS3_Subtype_AA_Distance_RAS.xlsx` (equivalent full pairwise amino-acid distance matrices over NS3 RAS positions only)
 - `NS3_GT_CompleteProfiles_TabsPerGT.xlsx`

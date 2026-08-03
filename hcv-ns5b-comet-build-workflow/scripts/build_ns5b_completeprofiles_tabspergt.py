@@ -247,3 +247,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+            continue

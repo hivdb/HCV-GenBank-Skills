@@ -56,6 +56,8 @@ def load_rows(workbook_path: Path) -> list[dict[str, Any]]:
             raise RuntimeError(f"Column '{name}' not found in {workbook_path}")
     rows: list[dict[str, Any]] = []
     for values in ws.iter_rows(min_row=2, values_only=True):
+        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+            continue
         aa_sequence = values[index["AASequence"]]
         start = values[index["StartAAPosition"]]
         end = values[index["EndAAPosition"]]
