@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""Legacy NA-alignment reference generator.
+
+Do not use this script to produce the production per-gene subtype amino-acid
+references.  Locating a gene by aligning subtype nucleotide genomes to a
+genotype nucleotide reference is not sufficiently reliable.  Instead, use
+``scripts/rebuild_subtype_reference_aas_from_genbank.py``: it obtains the
+annotated protein sequence from each accession's GenBank record and derives
+the per-gene AA sequence from that annotation.
+
+This script is retained for historical NA extraction, diagnostics, and
+alignment-quality reporting.
+"""
 
 from __future__ import annotations
 

@@ -9,6 +9,14 @@ Use this skill when the task is to prepare reusable HCV genotype and subtype ref
 
 This is a one-time preprocessing step for later high-throughput genotype/subtype calling workflows.
 
+> **Important:** Do not use this NA-alignment workflow to create the
+> production per-gene subtype AA reference FASTAs. Aligning subtype nucleotide
+> genomes to genotype nucleotide references is not sufficiently reliable for
+> that purpose. Use `scripts/rebuild_subtype_reference_aas_from_genbank.py`
+> from the repository root, which derives gene AA sequences from GenBank
+> protein annotations, instead. This workflow remains useful for legacy NA
+> extraction, diagnostics, and alignment-quality reporting.
+
 ## Workflow
 
 1. Identify the required FASTA/JSON inputs.
