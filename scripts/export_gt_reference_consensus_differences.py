@@ -4,15 +4,21 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import re
 from pathlib import Path
 
 from Bio import Align
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 
 GENES = ("NS3", "NS5A_NTD", "NS5B")
 VALID_AAS = set("ACDEFGHIKLMNPQRSTVWY*")
+RAS_POSITIONS = {
+    "NS3": (36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175),
+    "NS5A_NTD": (24, 26, 28, 29, 30, 31, 32, 38, 58, 62, 92, 93),
+    "NS5B": (150, 159, 206, 282, 316, 320, 321),
+}
 
 
 def read_fasta(path: Path) -> dict[str, str]:
@@ -90,6 +96,25 @@ def header_fields(header: str) -> dict[str, str]:
     return dict(field.split("=", 1) for field in header.split("|") if "=" in field)
 
 
+def write_excel(output_path: Path, rows: list[list[str | int]]) -> None:
+    """Write a RAS-only comparison workbook."""
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "RAS comparison"
+    for row in rows:
+        worksheet.append(row)
+
+    for row in worksheet.iter_rows():
+        if row[0].value == "Gene":
+            for cell in row:
+                cell.font = Font(bold=True)
+    worksheet.freeze_panes = "A2"
+    for column_cells in worksheet.columns:
+        width = max((len(str(cell.value or "")) for cell in column_cells), default=0)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = min(width + 2, 30)
+    workbook.save(output_path)
+
+
 def write_subtype_alignment(
     gene: str, reference_path: Path, consensus_path: Path, output_path: Path
 ) -> tuple[int, int]:
@@ -108,24 +133,23 @@ def write_subtype_alignment(
         rows.append((genotype, subtype, accession, covered_alignment_pairs(reference, consensus)))
     rows.sort(key=lambda row: (int(row[0]), row[1], row[2]))
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        for index, (genotype, subtype, accession, pairs) in enumerate(rows):
-            positions = sorted(pairs)
-            writer.writerow(["Gene", "Genotype", "Subtype", "ReferenceAccession", "Sequence"] + positions)
-            writer.writerow(
-                [gene, f"GT{genotype}", subtype, accession, "Reference"]
-                + [pairs[position][0] for position in positions]
-            )
-            writer.writerow(
-                [gene, f"GT{genotype}", subtype, accession, "Consensus"]
-                + [
-                    consensus_aa if consensus_aa != reference_aa else ""
-                    for reference_aa, consensus_aa in (pairs[position] for position in positions)
-                ]
-            )
-            if index != len(rows) - 1:
-                writer.writerow([])
+    excel_rows: list[list[str | int]] = []
+    for genotype, subtype, _accession, pairs in rows:
+        positions = RAS_POSITIONS[gene]
+        excel_rows.append([])
+        excel_rows.append(["Gene", "Genotype", "Subtype", "Sequence"] + list(positions))
+        excel_rows.append(
+            [gene, f"GT{genotype}", subtype, "Reference"]
+            + [pairs[position][0] if position in pairs else "" for position in positions]
+        )
+        excel_rows.append(
+            [gene, f"GT{genotype}", subtype, "Consensus"]
+            + [
+                pairs[position][1] if position in pairs and pairs[position][1] != pairs[position][0] else ""
+                for position in positions
+            ]
+        )
+    write_excel(output_path, excel_rows)
     return len(rows), skipped
 
 
@@ -140,22 +164,20 @@ def write_differences(gene: str, refs: dict[tuple[str, str], str], consensus_pat
         pairs = covered_alignment_pairs(reference, consensus)
         sequences[genotype] = pairs
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        for genotype in "12345678":
-            pairs = sequences[genotype]
-            # Include every position covered by the aligned consensus, not just mismatches.
-            positions = sorted(pairs)
-            writer.writerow(["Gene", "Genotype", "Sequence"] + positions)
-            values = [pairs[position][0] for position in positions]
-            writer.writerow([gene, f"GT{genotype}", "Reference"] + values)
-            values = [
-                consensus_aa if consensus_aa != reference_aa else ""
-                for reference_aa, consensus_aa in (pairs[position] for position in positions)
-            ]
-            writer.writerow([gene, f"GT{genotype}", "Consensus"] + values)
-            if genotype != "8":
-                writer.writerow([])
+    excel_rows: list[list[str | int]] = []
+    for genotype in "12345678":
+        pairs = sequences[genotype]
+        positions = RAS_POSITIONS[gene]
+        excel_rows.append([])
+        excel_rows.append(["Gene", "Genotype", "Sequence"] + list(positions))
+        values = [pairs[position][0] if position in pairs else "" for position in positions]
+        excel_rows.append([gene, f"GT{genotype}", "Reference"] + values)
+        values = [
+            pairs[position][1] if position in pairs and pairs[position][1] != pairs[position][0] else ""
+            for position in positions
+        ]
+        excel_rows.append([gene, f"GT{genotype}", "Consensus"] + values)
+    write_excel(output_path, excel_rows)
     return sum(len(pairs) for pairs in sequences.values())
 
 
@@ -174,7 +196,7 @@ def main() -> int:
     refs = load_references(args.reference_fasta)
     for gene in GENES:
         consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
-        output = args.output_dir / f"HCV_GT_Ref_vs_Comet_GT_Consensus_Differences_{gene}.csv"
+        output = args.output_dir / f"HCV_GT_Ref_vs_Comet_GT_Consensus_Differences_{gene}.xlsx"
         count = write_differences(
             gene,
             refs,
@@ -186,7 +208,7 @@ def main() -> int:
         for gene in GENES:
             consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
             reference_path = args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
-            output = args.output_dir / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.csv"
+            output = args.output_dir / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx"
             matched, skipped = write_subtype_alignment(
                 gene,
                 reference_path,

@@ -2,9 +2,9 @@
 """Rebuild HCV subtype AA reference FASTAs from annotated GenBank proteins.
 
 For each accession listed in the existing subtype-reference FASTAs, this script
-uses an annotated gene CDS translation when available.  Otherwise it extracts
+uses an annotated gene CDS translation when available. Otherwise it extracts
 the gene from the annotated polyprotein translation by local AA alignment to
-the corresponding HCV.fasta gene reference.  GenBank files are cached locally.
+the matching genotype AA reference. GenBank files are cached locally.
 """
 
 from __future__ import annotations
@@ -30,6 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference-dir", type=Path, default=Path("Reference_seqs"))
     parser.add_argument("--hcv-fasta", type=Path, default=Path("HCV.fasta"))
+    parser.add_argument(
+        "--gt-reference-fasta",
+        type=Path,
+        default=Path("Reference_seqs/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta"),
+        help="Per-gene genotype AA references used to extract genes from polyprotein CDSs.",
+    )
     parser.add_argument("--genbank-dir", type=Path, default=Path("Reference_seqs/genbank_records"))
     parser.add_argument("--email", default="", help="Optional NCBI contact email")
     parser.add_argument("--tool", default="hcv-subtype-reference-rebuild")
@@ -95,6 +101,18 @@ def hcv_gene_references(path: Path) -> dict[str, str]:
     return refs
 
 
+def genotype_gene_references(path: Path) -> dict[tuple[str, str], str]:
+    references: dict[tuple[str, str], str] = {}
+    for header, sequence in read_fasta(path):
+        match = re.fullmatch(r"genotype ([1-8]) \| (NS3|NS5A_NTD|NS5B)", header)
+        if match:
+            references[(match.group(1), match.group(2))] = sequence
+    missing = [f"GT{genotype} {gene}" for genotype in "12345678" for gene in GENES if (genotype, gene) not in references]
+    if missing:
+        raise RuntimeError(f"Missing genotype AA references: {', '.join(missing)}")
+    return references
+
+
 def feature_translation(feature) -> str:
     translation = feature.qualifiers.get("translation", [])
     return str(translation[0]).replace(" ", "").upper() if translation else ""
@@ -113,7 +131,11 @@ def annotated_gene_translation(record, gene: str) -> str | None:
         if feature.type != "CDS":
             continue
         translation = feature_translation(feature)
-        if translation and any(alias in feature_labels(feature) for alias in aliases):
+        labels = feature_labels(feature)
+        # A polyprotein product lists every gene (including NS5A) in its
+        # description. It is not an individual gene CDS and must be aligned
+        # as a whole below, rather than truncated from its N terminus.
+        if translation and "POLYPROTEIN" not in labels and any(alias in labels for alias in aliases):
             return translation[:213] if gene == "NS5A_NTD" else translation
     return None
 
@@ -166,7 +188,7 @@ def write_report(path: Path, rows: list[dict[str, object]]) -> None:
 def main() -> int:
     args = parse_args()
     genes = tuple(args.gene or GENES)
-    references = hcv_gene_references(args.hcv_fasta)
+    genotype_references = genotype_gene_references(args.gt_reference_fasta)
     input_records = {gene: read_fasta(args.reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta") for gene in genes}
     accession_cache: dict[str, object] = {}
     rebuilt: dict[str, list[tuple[str, str]]] = {gene: [] for gene in genes}
@@ -183,7 +205,8 @@ def main() -> int:
             try:
                 if accession not in accession_cache:
                     accession_cache[accession] = get_record(accession, args.genbank_dir, args.email, args.tool, args.refresh_genbank)
-                sequence, source, coverage, identity = extract_gene(accession_cache[accession], gene, references[gene])
+                reference = genotype_references[(fields["genotype"], gene)]
+                sequence, source, coverage, identity = extract_gene(accession_cache[accession], gene, reference)
                 if coverage < MIN_COVERAGE:
                     raise RuntimeError(f"low alignment coverage ({coverage:.1%})")
                 rebuilt[gene].append((header, sequence))
