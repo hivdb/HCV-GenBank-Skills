@@ -18,7 +18,8 @@ from openpyxl.utils import get_column_letter
 
 VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
 TOTAL_SEQUENCE_RE = re.compile(r"\(\s*(\d+)\s*,")
-MIN_TOTAL_SEQUENCES = 10
+# Include NS5A genotype and subtype profile rows only above this cutoff.
+MIN_TOTAL_SEQUENCES = 5
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,7 +55,7 @@ def has_minimum_total_sequences(label: object) -> bool:
     if genotype_from_label(label) in {"7", "8"}:
         return True
     match = TOTAL_SEQUENCE_RE.search(str(label))
-    return match is not None and int(match.group(1)) >= MIN_TOTAL_SEQUENCES
+    return match is not None and int(match.group(1)) > MIN_TOTAL_SEQUENCES
 
 
 def variants_to_rich_text(

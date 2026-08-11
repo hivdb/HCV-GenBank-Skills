@@ -75,6 +75,7 @@ COMPLETEPROFILES_JSON="$SKILL_TEMP_ROOT/build_ns5b_completeprofiles_tabspergt/la
 GT_RAS_JSON="$SKILL_TEMP_ROOT/build_ns5b_gt_ras_profiles/last_run_summary.json"
 SUBTYPE_RAS_JSON="$SKILL_TEMP_ROOT/build_ns5b_subtype_ras_profiles/last_run_summary.json"
 COMBINED_RAS_JSON="$SKILL_TEMP_ROOT/build_ns5b_combined_ras_profiles/last_run_summary.json"
+RAS_CONSENSUS_DIFFERENCE_JSON="$SKILL_TEMP_ROOT/build_ns5b_subtype_ras_consensus_difference_summary/last_run_summary.json"
 GT_AA_DISTANCE_SUMMARY="$SKILL_TEMP_ROOT/build_ns5b_gt_aa_distance_matrix/last_run_summary.txt"
 SUBTYPE_AA_DISTANCE_SUMMARY="$SKILL_TEMP_ROOT/build_ns5b_subtype_aa_distance_matrices/last_run_summary.txt"
 RAS_ENTROPY_SUMMARY="$SKILL_TEMP_ROOT/build_ns5b_ras_entropy/last_run_summary.txt"
@@ -89,6 +90,7 @@ mkdir -p "$(dirname "$SUBTYPE_ALLSTUDIES_JSON")" "$(dirname "$SUBTYPE_WITH_GT_AA
 mkdir -p "$(dirname "$COMPLETEPROFILES_JSON")"
 mkdir -p "$(dirname "$GT_RAS_JSON")" "$(dirname "$SUBTYPE_RAS_JSON")"
 mkdir -p "$(dirname "$COMBINED_RAS_JSON")"
+mkdir -p "$(dirname "$RAS_CONSENSUS_DIFFERENCE_JSON")"
 mkdir -p "$(dirname "$GT_AA_DISTANCE_SUMMARY")" "$(dirname "$SUBTYPE_AA_DISTANCE_SUMMARY")" "$(dirname "$RAS_ENTROPY_SUMMARY")"
 
 mkdir -p "$OUTPUT_DIR"
@@ -315,6 +317,18 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --subtype-ras-profile-workbook "$OUTPUT_DIR/NS5B_Subtype_RAS_Profiles.xlsx" \
   --output-xlsx "$OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx" \
   > "$COMBINED_RAS_JSON"
+
+announce_step 15a "Summarize subtype RAS differences from genotype consensus" \
+  "combined RAS profile: $OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx; profile sequences: $AA_TMP_WORKBOOK" \
+  "difference workbook: $OUTPUT_DIR/NS5B_Subtype_RAS_Consensus_Difference_Summary.xlsx; trend chart: $OUTPUT_DIR/NS5B_Subtype_RAS_Consensus_Difference_Trend.png"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_subtype_ras_consensus_difference_summary.py" \
+  --combined-profile-workbook "$OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx" \
+  --profile-input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
+  --gt-aa-json "$GT_AA_JSON" \
+  --output-xlsx "$OUTPUT_DIR/NS5B_Subtype_RAS_Consensus_Difference_Summary.xlsx" \
+  --output-png "$OUTPUT_DIR/NS5B_Subtype_RAS_Consensus_Difference_Trend.png" \
+  > "$RAS_CONSENSUS_DIFFERENCE_JSON"
 
 announce_step 16 "Build genotype amino-acid distance matrix" \
   "consensus FASTA: $OUTPUT_DIR/NS5B_GT_Consensus.fasta" \

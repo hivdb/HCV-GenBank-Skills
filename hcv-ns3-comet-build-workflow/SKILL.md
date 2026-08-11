@@ -29,6 +29,7 @@ See `NS3_workflow.svg` in this skill folder.
 14. `scripts/build_ns3_gt_ras_profiles.py`
 15. `scripts/build_ns3_subtype_ras_profiles.py`
 16. `scripts/build_ns3_combined_ras_profiles.py`
+17. `scripts/build_ns3_subtype_ras_consensus_difference_summary.py`
 
 Prefer the wrapper when running the full workflow:
 
@@ -94,6 +95,7 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - `NS3_GT_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Profiles.xlsx`
 - `NS3_Combined_RAS_Profiles.xlsx`
+- `NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx` (per-subtype mean and median RAS AA differences from genotype consensus)
 
 ## Operating Rules
 
