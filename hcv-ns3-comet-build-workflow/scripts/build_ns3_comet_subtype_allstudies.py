@@ -46,7 +46,7 @@ def load_noncomet_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str
         subtype = str(values[index["ClosestSubtype"]]).strip().lower()
         accession = str(values[index["AccessionID"]]).strip()
         genotype = str(values[index["ClosestGT"]]).strip().lower()
-        if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
+        if accession and (subtype == "1d" or genotype == "8" or subtype.startswith("8")):
             assignments[accession.split(".", 1)[0]] = (
                 str(values[index["RefID"]]).strip(),
                 str(values[index["RefName"]]).strip(),

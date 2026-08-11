@@ -57,7 +57,7 @@ if [[ -z "$EXCEL_FILE" || -z "$FASTA_POOL" || -z "$SHEET_NAME" ]]; then
   exit 1
 fi
 if [[ ! -f "$NONCOMET_SUBTYPE_WORKBOOK" ]]; then
-  echo "Missing non-COMET subtype workbook required for 1d and genotype 7/8 subtype overrides: $NONCOMET_SUBTYPE_WORKBOOK" >&2
+  echo "Missing non-COMET subtype workbook required for 1d and genotype 8 subtype overrides: $NONCOMET_SUBTYPE_WORKBOOK" >&2
   exit 1
 fi
 
@@ -212,7 +212,7 @@ echo "Skipping disabled NS3 source-feature extraction and grouped-summary steps"
 # fi
 
 announce_step 9 "Build subtype study workbook from Comet" \
-  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV; non-COMET 1d and genotype 7/8 subtype assignments: $NONCOMET_SUBTYPE_WORKBOOK" \
+  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx; Comet subtype assignments: $COMET_SUBTYPE_CSV; non-COMET 1d and genotype 8 subtype assignments: $NONCOMET_SUBTYPE_WORKBOOK" \
   "subtype workbook: $OUTPUT_DIR/NS3_Subtype_AllStudies_WSeqs.xlsx"
 echo "Action: write the Comet subtype for each retained accession; no subtype alignment is run."
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_comet_subtype_allstudies.py" \
