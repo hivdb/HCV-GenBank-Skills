@@ -30,6 +30,7 @@ See `NS3_workflow.svg` in this skill folder.
 15. `scripts/build_ns3_subtype_ras_profiles.py`
 16. `scripts/build_ns3_combined_ras_profiles.py`
 17. `scripts/build_ns3_subtype_ras_consensus_difference_summary.py`
+18. `scripts/build_ns3_subtype_profile_coverage_report.py` (GT5 subtype 5a coverage audit)
 
 Prefer the wrapper when running the full workflow:
 
@@ -85,6 +86,7 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - `NS3_Subtype_AllStudies_WSeqs.xlsx`
 - `NS3_Subtype_With_GT_AA.xlsx`
 - `NS3_Profile_Input_Alignment_QC.xlsx` (profile input with per-accession alignment QC columns and a `Flagged_Accessions` sheet)
+- `NS3_QC_Passed_Genotype_Mutation_Burden_Summary.csv` (per-genotype mutation burden among QC-passed input rows)
 - `NS3_Profile_Alignment_QC_Flagged_Accessions.csv` (flagged accessions and RAS positions requiring review)
 - `NS3_GT_NA_Distance_RAS.xlsx` and `NS3_Subtype_NA_Distance_RAS.xlsx` (full pairwise nucleotide-distance matrices over NS3 RAS codons only; the subtype workbook has one matrix per genotype and requires at least 10 sequences per subtype)
 - `NS3_GT_AA_Distance_RAS.xlsx` and `NS3_Subtype_AA_Distance_RAS.xlsx` (equivalent full pairwise amino-acid distance matrices over NS3 RAS positions only)
@@ -96,6 +98,7 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - `NS3_Subtype_RAS_Profiles.xlsx`
 - `NS3_Combined_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx` (per-subtype mean and median RAS AA differences from genotype consensus)
+- `NS3_GT5_5a_Profile_Coverage.xlsx`, `NS3_GT5_5a_Profile_Position_Coverage.csv`, and `NS3_GT5_5a_Profile_Position_Coverage.png` (accession-level, per-position, and charted subtype 5a coverage across full NS3 positions 1-631; the chart includes ambiguous and stop calls)
 
 ## Operating Rules
 

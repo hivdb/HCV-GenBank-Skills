@@ -247,6 +247,12 @@ announce_step 10b "Validate NS3 profile alignment coordinates" \
   --flagged-accessions-csv "$OUTPUT_DIR/NS3_Profile_Alignment_QC_Flagged_Accessions.csv" \
   > "$TEMP_ROOT/validate_ns3_profile_alignment.json"
 AA_TMP_WORKBOOK="$OUTPUT_DIR/NS3_Profile_Input_Alignment_QC.xlsx"
+announce_step 10c "Summarize QC-passed NS3 genotype mutation burden" \
+  "QC profile input: $AA_TMP_WORKBOOK" \
+  "genotype mutation-burden summary: $OUTPUT_DIR/NS3_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
+"$PYTHON_BIN" "$REPO_ROOT/scripts/build_qc_passed_genotype_mutation_burden_summary.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" \
+  --output-csv "$OUTPUT_DIR/NS3_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
 PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_completeprofiles_tabspergt.py" --input-workbook "$AA_TMP_WORKBOOK" --report-only)"
 PROFILE_INPUT_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["included_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_WITH_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_with_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"
@@ -371,6 +377,20 @@ announce_step 15a "Summarize subtype RAS differences from genotype consensus" \
   --output-xlsx "$OUTPUT_DIR/NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx" \
   --output-png "$OUTPUT_DIR/NS3_Subtype_RAS_Consensus_Difference_Trend.png" \
   > "$RAS_CONSENSUS_DIFFERENCE_JSON"
+
+announce_step 15b "Build subtype 5a profile coverage report" \
+  "profile accession set: $OUTPUT_DIR/NS3_Profile_Accessions.csv; QC-approved amino-acid sequences: $AA_TMP_WORKBOOK" \
+  "accession-level, per-position coverage, and chart: $OUTPUT_DIR/NS3_GT5_5a_Profile_Coverage.xlsx; $OUTPUT_DIR/NS3_GT5_5a_Profile_Position_Coverage.csv; $OUTPUT_DIR/NS3_GT5_5a_Profile_Position_Coverage.png"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_subtype_profile_coverage_report.py" \
+  --profile-input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
+  --genotype 5 \
+  --subtype 5a \
+  --range-start 1 \
+  --range-end 631 \
+  --output-xlsx "$OUTPUT_DIR/NS3_GT5_5a_Profile_Coverage.xlsx" \
+  --position-coverage-csv "$OUTPUT_DIR/NS3_GT5_5a_Profile_Position_Coverage.csv" \
+  --position-coverage-png "$OUTPUT_DIR/NS3_GT5_5a_Profile_Position_Coverage.png"
 
 announce_step 16 "Build paired amino-acid distance matrices" \
   "profile accession set: $OUTPUT_DIR/NS3_Profile_Accessions.csv; classified amino-acid sequences: $AA_TMP_WORKBOOK" \

@@ -246,6 +246,12 @@ announce_step 10b "Validate NS5B profile alignment coordinates" \
   --flagged-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Alignment_QC_Flagged_Accessions.csv" \
   | tee "$SKILL_TEMP_ROOT/validate_ns5b_profile_alignment.json"
 AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
+announce_step 10c "Summarize QC-passed NS5B genotype mutation burden" \
+  "QC profile input: $AA_TMP_WORKBOOK" \
+  "genotype mutation-burden summary: $OUTPUT_DIR/NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
+"$PYTHON_BIN" "$REPO_ROOT/scripts/build_qc_passed_genotype_mutation_burden_summary.py" \
+  --input-workbook "$AA_TMP_WORKBOOK" \
+  --output-csv "$OUTPUT_DIR/NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
 PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_completeprofiles_tabspergt.py" --input-workbook "$AA_TMP_WORKBOOK" --report-only)"
 PROFILE_INPUT_INCLUDED_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["included_accession_count"])' "$PROFILE_INPUT_COUNTS")"
 PROFILE_INPUT_WITH_SUBTYPE="$("$PYTHON_BIN" -c 'import json,sys; print(json.loads(sys.argv[1])["accessions_with_comet_subtype_count"])' "$PROFILE_INPUT_COUNTS")"

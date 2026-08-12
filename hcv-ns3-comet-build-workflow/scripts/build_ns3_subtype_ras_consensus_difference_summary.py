@@ -181,7 +181,11 @@ def write_workbook(
     for key in sorted(included_subtypes, key=lambda item: (int(item[0]), item[1])):
         scores = differences.get(key, [])
         range_scores = range_differences.get(key, [])
-        found = found_records[key]
+        # The combined-profile label contains the actual profile size (the
+        # maximum RAS-site coverage for the subtype).  The input accession CSV
+        # can include additional sequences that do not contribute to the RAS
+        # profile, so it must not define ProfileSequencesFound.
+        found = included_subtypes[key]
         worksheet.append([
             f"GT{key[0]}", key[1], found, len(scores), found - len(scores), len(positions),
             sum(scores), sum(scores) / len(scores) if scores else None,

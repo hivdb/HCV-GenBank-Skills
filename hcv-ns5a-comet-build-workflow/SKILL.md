@@ -80,6 +80,8 @@ The workflow writes NS5A outputs under `outputs/`, including:
 - source-feature CSV/XLSX outputs only if the commented source-feature steps are re-enabled
 - `NS5A_Subtype_AllStudies_WSeqs.xlsx`
 - `NS5A_Subtype_With_GT_AA.xlsx`
+- `NS5A_Profile_Input_Alignment_QC.xlsx` (profile input with per-accession alignment QC columns)
+- `NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv` (per-genotype mutation burden among QC-passed input rows)
 - `NS5A_GT_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5A_GT_Consensus.fasta`
