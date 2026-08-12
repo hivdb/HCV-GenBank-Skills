@@ -61,13 +61,20 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
     rows: list[dict[str, Any]] = []
     unassigned_genotype_accessions: set[str] = set()
     unassigned_subtype_accessions: set[str] = set()
+    qc_failed_accessions: set[str] = set()
     for values in ws.iter_rows(min_row=2, values_only=True):
+        accession = str(values[index["AccessionID"]]).strip()
+        # A QC workbook is the profile-input gate.  Maintain compatibility
+        # with older source workbooks that do not include QC columns.
+        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+            if accession:
+                qc_failed_accessions.add(accession)
+            continue
         aa_sequence = values[index["AASequence"]]
         start = values[index["StartAAPosition"]]
         end = values[index["EndAAPosition"]]
         if not aa_sequence or start in (None, "") or end in (None, ""):
             continue
-        accession = str(values[index["AccessionID"]]).strip()
         genotype = str(values[index["ClosestGT"]]).strip()
         subtype = str(values[index["ClosestSubtype"]]).strip()
         if genotype.casefold().startswith("unassign"):
@@ -91,6 +98,7 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
         "ignored_unassigned_genotype_accession_count": len(unassigned_genotype_accessions),
         "ignored_unassigned_subtype_accession_count": len(unassigned_subtype_accessions),
         "ignored_unassigned_accession_count": len(unassigned_genotype_accessions | unassigned_subtype_accessions),
+        "ignored_alignment_qc_accession_count": len(qc_failed_accessions),
     }
 
 

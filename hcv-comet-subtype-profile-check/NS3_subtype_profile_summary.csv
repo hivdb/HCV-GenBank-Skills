@@ -67,7 +67,8 @@ Subtype,NumAccs,common subtype,Number in profile
 6v,6,No,4
 6w,45,No,39
 6xa,4,No,3
-7a,2,No,2
+7a,2,No,1
+7b,0,No,1
 8a,0,No,8
 "unassigned_1, 1a-1b",7,No,0
 "unassigned_1, 1a-1c",1,No,0
