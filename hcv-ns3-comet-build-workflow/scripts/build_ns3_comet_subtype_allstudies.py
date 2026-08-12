@@ -46,7 +46,7 @@ def load_noncomet_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str
         subtype = str(values[index["ClosestSubtype"]]).strip().lower()
         accession = str(values[index["AccessionID"]]).strip()
         genotype = str(values[index["ClosestGT"]]).strip().lower()
-        if accession and (subtype == "1d" or genotype == "8" or subtype.startswith("8")):
+        if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
             assignments[accession.split(".", 1)[0]] = (
                 str(values[index["RefID"]]).strip(),
                 str(values[index["RefName"]]).strip(),
@@ -79,8 +79,10 @@ def main() -> int:
         accession_key = accession.split(".", 1)[0]
         subtype = assignments.get(accession) or assignments.get(accession.split(".", 1)[0])
         if subtype:
+            genotype = str(values[index["BestGT"]]).strip()
             if accession_key in noncomet_priority_subtypes:
-                subtype = noncomet_priority_subtypes[accession_key][4]
+                priority_assignment = noncomet_priority_subtypes[accession_key]
+                genotype, subtype = priority_assignment[3], priority_assignment[4]
                 source, metadata_column = "Non-Comet priority subtype override", "Non-Comet ClosestSubtype"
                 override_count += 1
             else:
@@ -89,7 +91,7 @@ def main() -> int:
                 str(values[index["RefID"]]).strip(),
                 str(values[index["RefName"]]).strip(),
                 accession,
-                str(values[index["BestGT"]]).strip(),
+                genotype,
                 subtype,
                 source,
                 metadata_column,

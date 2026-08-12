@@ -1,0 +1,143 @@
+Subtype,NumAccs,common subtype,Number in profile
+1a,3943,Yes,2043
+1b,4124,Yes,2012
+1c,40,No,8
+1d,0,No,15
+1e,181,No,8
+1g,17,No,10
+1h,44,No,4
+1l,150,No,18
+2a,347,Yes,21
+2b,328,Yes,22
+2c,283,Yes,3
+2d,16,No,1
+2e,10,No,0
+2i,37,No,0
+2j,320,No,1
+2k,57,No,2
+2m,42,No,0
+2q,53,No,0
+2r,3,No,0
+3a,2532,Yes,1100
+3b,499,No,74
+3g,14,No,7
+3h,7,No,4
+3i,15,No,13
+3k,13,No,2
+4a,428,Yes,96
+4b,2,No,1
+4c,20,No,6
+4d,539,No,73
+4f,263,No,10
+4g,2,No,1
+4g?,1,No,0
+4k,68,No,15
+4l,20,No,4
+4m,20,No,4
+4n,19,No,10
+4o,31,No,17
+4p,23,No,1
+4q,3,No,3
+4r,60,No,12
+4t,35,No,3
+4v,80,No,12
+4w,3,No,1
+5a,88,Yes,33
+6a,297,Yes,47
+6b,2,No,1
+6c,9,No,2
+6d,2,No,2
+6e,60,No,34
+6f,275,No,4
+6g,23,No,20
+6h,17,No,8
+6i,28,No,5
+6j,15,No,6
+6k,2,No,2
+6l,28,No,22
+6m,6,No,6
+6n,156,No,19
+6o,6,No,4
+6p,4,No,2
+6q,8,No,5
+6r,5,No,5
+6s,3,No,3
+6t,4,No,4
+6u,1,No,1
+6v,5,No,4
+6w,52,No,36
+6xa,67,No,3
+7a,2,No,2
+8a,0,No,6
+"unassigned_1, 1a-1b",7,No,0
+"unassigned_1, 1a-1c",1,No,0
+"unassigned_1, 1a-1l",2,No,0
+"unassigned_1, 1a-2b",22,No,0
+"unassigned_1, 1a-2k",1,No,0
+"unassigned_1, 1a-3a",4,No,0
+"unassigned_1, 1a-4a",4,No,0
+"unassigned_1, 1a-4a-4v",2,No,0
+"unassigned_1, 1a-4k-1b-4k-1b-4k",1,No,0
+"unassigned_1, 1a-4o-4v-4o",1,No,0
+"unassigned_1, 1a-4r",1,No,0
+"unassigned_1, 1b-1a",18,No,0
+"unassigned_1, 1b-2a",1,No,0
+"unassigned_1, 1b-2a-2k",2,No,0
+"unassigned_1, 1b-2b",9,No,0
+"unassigned_1, 1b-2b-6d-6b",1,No,0
+"unassigned_1, 1b-2j-2a-2b",1,No,0
+"unassigned_1, 1b-2j-2a-2j-2q-2k-2q-2k",1,No,0
+"unassigned_1, 1b-2k",3,No,0
+"unassigned_1, 1b-3a",1,No,0
+"unassigned_1, 1b-3h",2,No,0
+"unassigned_1, 1b-4r-1a-4r",1,No,0
+"unassigned_1, 1b-6b",1,No,0
+"unassigned_1, 1b-6h-6b",2,No,0
+"unassigned_1, 1b-6k-6b",1,No,0
+"unassigned_1, 1b-6k-6d-6b",1,No,0
+"unassigned_1, 1b-6w",1,No,0
+"unassigned_1, 1e-4a-4w-4f",1,No,0
+"unassigned_1, 1e-4f-4w-4f-4p",1,No,0
+"unassigned_1, 1e-4k-4n-4g-4a-4f-4d-4g",1,No,0
+"unassigned_1, 1h-4f",1,No,0
+"unassigned_1, 1l-1a",1,No,0
+"unassigned_1, 1l-1a-1b",1,No,0
+"unassigned_1, 1l-4f",1,No,0
+"unassigned_1, 2a-2k",1,No,0
+"unassigned_1, 2a-3a",1,No,0
+"unassigned_1, 2a-6v",1,No,0
+"unassigned_1, 2b-1b",1,No,0
+"unassigned_1, 2c-2b-3g-2b-2a",1,No,0
+"unassigned_1, 2c-6h-2b",1,No,0
+"unassigned_1, 2c-6h-3h",1,No,0
+"unassigned_1, 2d-2a",1,No,0
+"unassigned_1, 2i-2k",1,No,0
+"unassigned_1, 2i-2k-2b-3h",1,No,0
+"unassigned_1, 2i-2k-2c-3h",1,No,0
+"unassigned_1, 2j-5a",3,No,0
+"unassigned_1, 2j-6k",1,No,0
+"unassigned_1, 3a-1a",1,No,0
+"unassigned_1, 3a-2b",6,No,0
+"unassigned_1, 3a-3g",1,No,0
+"unassigned_1, 3a-3h",41,No,0
+"unassigned_1, 3a-6h",1,No,0
+"unassigned_1, 3b-3a",1,No,0
+"unassigned_1, 3b-3h",1,No,0
+"unassigned_1, 3h-6a",1,No,0
+"unassigned_1, 3i-3h-6h-6b",1,No,0
+"unassigned_1, 3i-3k",1,No,0
+"unassigned_1, 4a-1a",2,No,0
+"unassigned_1, 4d-4a-4n-4g-1a-3h",1,No,0
+"unassigned_1, 4d-4o",1,No,0
+"unassigned_1, 4k-4f",1,No,0
+"unassigned_1, 4v-4a-4p",1,No,0
+"unassigned_1, 4v-4g",3,No,0
+"unassigned_1, 4v-4k",2,No,0
+"unassigned_1, 4v-4m",1,No,0
+"unassigned_1, 4v-4m-4p-4t-4a-3g-2b-1a-3h",1,No,0
+"unassigned_1, 4v-4o",1,No,0
+"unassigned_1, 6a-1b",1,No,0
+"unassigned_1, 6g-3b",1,No,0
+"unassigned_1, 6n-6o-6e-6a-6o",1,No,0
+"unassigned_1, 6u-2b",1,No,0
+"unassigned_1, 6w-2b",1,No,0

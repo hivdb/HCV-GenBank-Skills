@@ -117,10 +117,10 @@ def write_excel(output_path: Path, rows: list[list[str | int]]) -> None:
 
 def write_subtype_alignment(
     gene: str, reference_path: Path, consensus_path: Path, output_path: Path
-) -> tuple[int, int]:
+) -> tuple[int, list[tuple[str, str, str, str]]]:
     consensuses = read_fasta(consensus_path)
     rows: list[tuple[str, str, str, dict[int, tuple[str, str]]]] = []
-    skipped = 0
+    missing_consensuses: list[tuple[str, str, str, str]] = []
     for header, reference in read_fasta(reference_path).items():
         fields = header_fields(header)
         genotype = fields.get("genotype", "")
@@ -128,7 +128,7 @@ def write_subtype_alignment(
         accession = fields.get("accession", "")
         consensus = consensuses.get(f"GT{genotype}_{subtype}")
         if not genotype or not subtype or consensus is None:
-            skipped += 1
+            missing_consensuses.append((gene, f"GT{genotype}", subtype, accession))
             continue
         rows.append((genotype, subtype, accession, covered_alignment_pairs(reference, consensus)))
     rows.sort(key=lambda row: (int(row[0]), row[1], row[2]))
@@ -150,7 +150,19 @@ def write_subtype_alignment(
             ]
         )
     write_excel(output_path, excel_rows)
-    return len(rows), skipped
+    return len(rows), missing_consensuses
+
+
+def write_missing_subtype_consensus_report(
+    output_path: Path, rows: list[tuple[str, str, str, str]]
+) -> None:
+    """Write all subtype references that lack a profile-derived Comet consensus."""
+    sorted_rows = sorted(rows, key=lambda row: (row[0], int(row[1].removeprefix("GT") or 0), row[2], row[3]))
+    write_excel(
+        output_path,
+        [["Gene", "Genotype", "Subtype", "ReferenceAccession"]]
+        + [list(row) for row in sorted_rows],
+    )
 
 
 def write_differences(gene: str, refs: dict[tuple[str, str], str], consensus_path: Path, output_path: Path) -> int:
@@ -184,7 +196,12 @@ def write_differences(gene: str, refs: dict[tuple[str, str], str], consensus_pat
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference-fasta", type=Path, required=True)
-    parser.add_argument("--consensus-dir", type=Path, required=True)
+    parser.add_argument(
+        "--consensus-dir",
+        type=Path,
+        default=Path("outputs/comet"),
+        help="Directory containing the current Comet consensus FASTAs (default: outputs/comet).",
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument(
         "--subtype-reference-dir",
@@ -205,17 +222,22 @@ def main() -> int:
         )
         print(f"{output}: {count} aligned reference-consensus amino-acid pairs")
     if args.subtype_reference_dir:
+        missing_consensuses: list[tuple[str, str, str, str]] = []
         for gene in GENES:
             consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
             reference_path = args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
             output = args.output_dir / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx"
-            matched, skipped = write_subtype_alignment(
+            matched, missing = write_subtype_alignment(
                 gene,
                 reference_path,
                 args.consensus_dir / f"{consensus_gene}_Subtype_Consensus.fasta",
                 output,
             )
-            print(f"{output}: {matched} matched subtype references; {skipped} without a Comet consensus")
+            missing_consensuses.extend(missing)
+            print(f"{output}: {matched} matched subtype references; {len(missing)} without a Comet consensus")
+        missing_output = args.output_dir / "HCV_Subtype_Refs_Without_Comet_Consensus.xlsx"
+        write_missing_subtype_consensus_report(missing_output, missing_consensuses)
+        print(f"{missing_output}: {len(missing_consensuses)} subtype references without a Comet consensus")
     return 0
 
 
