@@ -331,7 +331,7 @@ announce_step 15a "Summarize subtype RAS differences from genotype consensus" \
   --combined-profile-workbook "$OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
-  --gt-aa-json "$GT_AA_JSON" \
+  --genotype-consensus-fasta "$OUTPUT_DIR/NS5B_GT_Consensus.fasta" \
   --output-xlsx "$OUTPUT_DIR/NS5B_Subtype_RAS_Consensus_Difference_Summary.xlsx" \
   --output-png "$OUTPUT_DIR/NS5B_Subtype_RAS_Consensus_Difference_Trend.png" \
   > "$RAS_CONSENSUS_DIFFERENCE_JSON"

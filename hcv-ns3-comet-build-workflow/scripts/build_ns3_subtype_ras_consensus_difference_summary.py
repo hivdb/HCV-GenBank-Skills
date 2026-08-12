@@ -29,9 +29,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--combined-profile-workbook", required=True)
     parser.add_argument("--profile-input-workbook", required=True)
     parser.add_argument("--profile-accessions-csv", required=True)
-    parser.add_argument("--gt-aa-json", required=True)
+    parser.add_argument("--genotype-consensus-fasta", required=True)
     parser.add_argument("--gene", default="NS3", help="Gene token in HCV<GT><GENE> reference names.")
-    parser.add_argument("--consensus-gene", help="Reference JSON gene token; defaults to --gene.")
     parser.add_argument(
         "--output-xlsx",
         default="outputs/NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx",
@@ -73,15 +72,25 @@ def load_profile_accessions(path: Path) -> set[str]:
         }
 
 
-def load_consensus_by_genotype(path: Path, gene: str) -> dict[str, str]:
-    rows = json.loads(path.read_text(encoding="utf-8"))
+def load_consensus_by_genotype(path: Path) -> dict[str, str]:
     consensus: dict[str, str] = {}
-    for row in rows:
-        match = re.fullmatch(rf"HCV([1-8]){re.escape(gene)}", str(row.get("name", "")))
-        if match:
-            consensus[match.group(1)] = str(row.get("refSequence", "")).strip().upper()
+    header = None
+    sequence_parts: list[str] = []
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith(">"):
+            if header is not None:
+                consensus[header] = "".join(sequence_parts)
+            header = line[1:].split()[0].removeprefix("GT")
+            sequence_parts = []
+        else:
+            sequence_parts.append(line.upper())
+    if header is not None:
+        consensus[header] = "".join(sequence_parts)
     if not consensus:
-        raise RuntimeError(f"No HCV<GT>{gene} consensus sequences found in {path}")
+        raise RuntimeError(f"No genotype consensus sequences found in {path}")
     return consensus
 
 
@@ -130,13 +139,20 @@ def load_sequence_differences(
             exclusions["missing_genotype_consensus"] += 1
             continue
         calls = {int(start) + offset: amino_acid for offset, amino_acid in enumerate(sequence)}
-        if any(position not in calls or calls[position] not in VALID_AAS for position in positions):
-            exclusions["missing_or_ambiguous_AA_at_RAS_position"] += 1
-            continue
         if any(position > len(consensus) or consensus[position - 1] not in VALID_AAS for position in positions):
             exclusions["missing_or_ambiguous_consensus_AA_at_RAS_position"] += 1
             continue
-        differences[key].append(sum(calls[position] != consensus[position - 1] for position in positions))
+        # X, stop, and other non-amino-acid calls are ignored at their own
+        # positions.  They do not exclude an otherwise comparable sequence.
+        comparable_positions = [
+            position for position in positions if calls.get(position) in VALID_AAS
+        ]
+        if not comparable_positions:
+            exclusions["no_standard_AA_at_RAS_positions"] += 1
+            continue
+        differences[key].append(
+            sum(calls[position] != consensus[position - 1] for position in comparable_positions)
+        )
         position_range = range(min(positions), max(positions) + 1)
         if all(
             calls.get(position) in VALID_AAS
@@ -168,10 +184,7 @@ def write_workbook(
     worksheet.title = "Subtype_RAS_Differences"
     worksheet.append([
         "Genotype", "Subtype", "ProfileSequencesFound", "SequencesCompared",
-        "SequencesExcluded", "RASPositionCount", "TotalAADifferences",
-        "MeanAADifferencesPerSequence", "MedianAADifferencesPerSequence",
-        "RangeSequencesCompared", f"MeanAADifferencesPerSequence_Pos{min(positions)}_{max(positions)}",
-        f"MedianAADifferencesPerSequence_Pos{min(positions)}_{max(positions)}",
+        "MeanAADifferencesPerSequence",
     ])
     for cell in worksheet[1]:
         cell.font = Font(bold=True)
@@ -180,46 +193,21 @@ def write_workbook(
 
     for key in sorted(included_subtypes, key=lambda item: (int(item[0]), item[1])):
         scores = differences.get(key, [])
-        range_scores = range_differences.get(key, [])
         # The combined-profile label contains the actual profile size (the
         # maximum RAS-site coverage for the subtype).  The input accession CSV
         # can include additional sequences that do not contribute to the RAS
         # profile, so it must not define ProfileSequencesFound.
         found = included_subtypes[key]
         worksheet.append([
-            f"GT{key[0]}", key[1], found, len(scores), found - len(scores), len(positions),
-            sum(scores), sum(scores) / len(scores) if scores else None,
-            median(scores) if scores else None,
-            len(range_scores), sum(range_scores) / len(range_scores) if range_scores else None,
-            median(range_scores) if range_scores else None,
+            f"GT{key[0]}", key[1], found, len(scores),
+            sum(scores) / len(scores) if scores else None,
         ])
-    for row in worksheet.iter_rows(min_row=2, min_col=8, max_col=12):
+    for row in worksheet.iter_rows(min_row=2, min_col=5, max_col=5):
         for cell in row:
             cell.number_format = "0.00"
-    for column, width in {"A": 12, "B": 12, "C": 22, "D": 20, "E": 18, "F": 18, "G": 20, "H": 31, "I": 33, "J": 24, "K": 37, "L": 39}.items():
+    for column, width in {"A": 12, "B": 12, "C": 22, "D": 20, "E": 31}.items():
         worksheet.column_dimensions[column].width = width
-
-    metadata = workbook.create_sheet("Metadata")
-    metadata.append(["Metric", "Value"])
-    metadata.append(["RAS positions", ",".join(map(str, positions))])
-    metadata.append(["Comparison", f"Each retained profile sequence versus its HCV<GT>{gene} AA consensus"])
-    metadata.append(["Mean", "Total RAS AA differences / sequences compared"])
-    metadata.append(["Median", "Median per-sequence RAS AA difference count"])
-    metadata.append(["Range mean", f"Mean per-sequence AA differences across positions {min(positions)}-{max(positions)}"])
-    metadata.append(["Range median", f"Median per-sequence AA differences across positions {min(positions)}-{max(positions)}"])
-    metadata.append(["Range inclusion", f"Sequence must have unambiguous AA calls at every position from {min(positions)} through {max(positions)}"])
-    metadata.append(["Missing or ambiguous RAS AA", "Sequence excluded from both mean and median"])
-    exclusion_sheet = workbook.create_sheet("Excluded_Sequences")
-    exclusion_sheet.append(["Reason", "SequenceCount"])
-    for reason, count in sorted(exclusions.items()):
-        exclusion_sheet.append([reason, count])
-    exclusion_sheet.append(["total_excluded", sum(exclusions.values())])
-    for sheet in workbook.worksheets:
-        sheet.freeze_panes = "A2"
-        for column in range(1, sheet.max_column + 1):
-            sheet.column_dimensions[get_column_letter(column)].width = max(
-                sheet.column_dimensions[get_column_letter(column)].width or 0, 16
-            )
+    worksheet.freeze_panes = "A2"
     path.parent.mkdir(parents=True, exist_ok=True)
     workbook.save(path)
 
@@ -262,7 +250,7 @@ def main() -> int:
     combined_path = Path(args.combined_profile_workbook).expanduser()
     input_path = Path(args.profile_input_workbook).expanduser()
     accessions_path = Path(args.profile_accessions_csv).expanduser()
-    consensus_path = Path(args.gt_aa_json).expanduser()
+    consensus_path = Path(args.genotype_consensus_fasta).expanduser()
     output_path = Path(args.output_xlsx).expanduser()
     png_path = Path(args.output_png).expanduser() if args.output_png else output_path.with_suffix(".png")
     for path in (combined_path, input_path, accessions_path, consensus_path):
@@ -271,7 +259,7 @@ def main() -> int:
     included_subtypes, positions = load_combined_subtypes(combined_path)
     differences, range_differences, exclusions, found_records = load_sequence_differences(
         input_path, load_profile_accessions(accessions_path), included_subtypes,
-        load_consensus_by_genotype(consensus_path, args.consensus_gene or args.gene), positions,
+        load_consensus_by_genotype(consensus_path), positions,
     )
     write_workbook(output_path, args.gene, included_subtypes, positions, differences, range_differences, exclusions, found_records)
     write_trend_png(png_path, args.gene, included_subtypes, positions, differences, range_differences)
