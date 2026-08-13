@@ -332,6 +332,12 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
 "$PYTHON_BIN" "$REPO_ROOT/scripts/add_combined_profile_nonconsensus_row.py" \
   --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS5A_GT_Consensus.fasta"
+"$PYTHON_BIN" "$REPO_ROOT/scripts/build_comet_workflow_sequence_audit.py" \
+  --gene NS5A --selection-workbook "$EXCEL_FILE" --selection-sheet "$SHEET_NAME" --fasta-dir "$FASTA_POOL" \
+  --metadata-csv "$ACCESSIONS_METADATA_CSV" --comet-csv "$COMET_SUBTYPING_CSV" --qc-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" \
+  --combined-subtype-cutoff 5 --combined-subtype-cutoff-exclusive \
+  --output-xlsx "$OUTPUT_DIR/NS5A_Workflow_Sequence_Audit.xlsx"
 
 announce_step 15a "Summarize subtype RAS differences from genotype consensus" \
   "combined RAS profile: $OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx; profile sequences: $AA_TMP_WORKBOOK" \
