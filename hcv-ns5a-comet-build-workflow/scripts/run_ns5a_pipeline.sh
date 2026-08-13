@@ -329,6 +329,9 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --gene NS5A --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
   --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_RAS_Coverage_Report.xlsx"
+"$PYTHON_BIN" "$REPO_ROOT/scripts/add_combined_profile_nonconsensus_row.py" \
+  --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS5A_GT_Consensus.fasta"
 
 announce_step 15a "Summarize subtype RAS differences from genotype consensus" \
   "combined RAS profile: $OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx; profile sequences: $AA_TMP_WORKBOOK" \
