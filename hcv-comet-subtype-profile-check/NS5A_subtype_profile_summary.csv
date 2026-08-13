@@ -1,85 +1,87 @@
 Subtype,NumAccs,common subtype,Number in profile
-1a,3486,Yes,3460
-1b,2348,Yes,2283
-1c,7,No,6
+1a,8155,Yes,3948
+1b,5985,Yes,2477
+1c,15,No,7
 1d,0,No,3
-1e,8,No,7
-1g,6,No,5
-1h,5,No,4
-1l,15,No,15
-2a,82,Yes,82
-2b,183,Yes,183
-2c,18,Yes,18
-2d,12,No,12
-2e,1,No,1
-2i,2,No,1
-2j,39,No,35
-2k,10,No,10
+1e,19,No,8
+1g,13,No,5
+1h,11,No,5
+1l,20,No,15
+2a,443,Yes,147
+2b,619,Yes,376
+2c,62,Yes,38
+2d,14,No,13
+2e,7,No,1
+2i,13,No,10
+2j,71,No,43
+2k,20,No,16
 2m,5,No,5
-2q,12,No,12
+2q,22,No,15
 2r,1,No,1
-3a,2360,Yes,2188
-3b,83,No,83
-3g,7,No,7
+3a,4185,Yes,2670
+3b,111,No,86
+3g,12,No,9
 3h,11,No,11
-3i,7,No,7
-3k,3,No,2
-4a,76,Yes,76
-4b,3,No,2
-4c,4,No,4
-4d,157,No,148
-4f,17,No,13
+3i,8,No,7
+3k,14,No,2
+4a,389,Yes,189
+4b,7,No,4
+4c,13,No,6
+4d,374,No,189
+4f,49,No,16
 4g,2,No,2
 4g?,1,No,0
-4k,24,No,21
-4l,3,No,3
-4m,5,No,4
-4n,3,No,3
-4o,9,No,6
-4p,1,No,1
+4k,43,No,29
+4l,5,No,3
+4m,10,No,4
+4n,13,No,10
+4o,25,No,14
+4p,6,No,1
 4q,3,No,3
-4r,41,No,20
-4t,2,No,2
-4v,22,No,17
+4r,60,No,23
+4t,15,No,4
+4v,34,No,20
 4w,2,No,2
-5a,29,Yes,29
-6a,132,Yes,129
-6b,1,No,1
+5a,121,Yes,62
+6a,515,Yes,158
+6b,2,No,1
 6c,2,No,2
 6d,2,No,2
-6e,41,No,33
-6f,21,No,20
-6g,20,No,20
-6h,7,No,6
-6i,3,No,3
-6j,6,No,6
-6k,3,No,2
-6l,24,No,24
-6m,4,No,4
-6n,25,No,25
-6o,9,No,5
-6p,5,No,3
-6q,7,No,3
-6r,6,No,6
+6e,99,No,45
+6f,26,No,20
+6g,23,No,20
+6h,11,No,8
+6i,12,No,3
+6j,7,No,6
+6k,4,No,3
+6l,40,No,30
+6m,6,No,5
+6n,44,No,27
+6o,15,No,5
+6p,8,No,3
+6q,13,No,5
+6r,7,No,6
 6s,3,No,3
-6t,6,No,6
-6u,1,No,0
-6v,4,No,4
-6w,44,No,42
-6xa,3,No,3
-7a,2,No,1
-7b,0,No,3
+6t,8,No,6
+6u,2,No,0
+6v,7,No,5
+6w,45,No,42
+6xa,7,No,3
+7a,2,No,2
+7b,0,No,2
 8a,0,No,5
-"unassigned_1, 1a-1b",3,No,0
+"unassigned_1, 1a-1b",4,No,0
 "unassigned_1, 1a-2b",22,No,0
 "unassigned_1, 1a-2k",1,No,0
 "unassigned_1, 1a-3a",4,No,0
 "unassigned_1, 1a-4a",3,No,0
 "unassigned_1, 1a-4a-4v",2,No,0
+"unassigned_1, 1a-4d",1,No,0
 "unassigned_1, 1a-4k-1b-4k-1b-4k",1,No,0
 "unassigned_1, 1a-4o-4v-4o",1,No,0
 "unassigned_1, 1a-4r",1,No,0
 "unassigned_1, 1b-1a",3,No,0
+"unassigned_1, 1b-2a",1,No,0
 "unassigned_1, 1b-2a-2k",2,No,0
 "unassigned_1, 1b-2b",10,No,0
 "unassigned_1, 1b-2b-6d-6b",1,No,0
@@ -87,6 +89,7 @@ Subtype,NumAccs,common subtype,Number in profile
 "unassigned_1, 1b-2j-2a-2j-2q-2k-2q-2k",1,No,0
 "unassigned_1, 1b-2k",3,No,0
 "unassigned_1, 1b-3h",2,No,0
+"unassigned_1, 1b-4r-1a-4r",1,No,0
 "unassigned_1, 1b-6b",1,No,0
 "unassigned_1, 1b-6h-6b",2,No,0
 "unassigned_1, 1b-6k-6b",1,No,0
@@ -125,6 +128,7 @@ Subtype,NumAccs,common subtype,Number in profile
 "unassigned_1, 4d-4a-4n-4g-1a-3h",1,No,0
 "unassigned_1, 4d-4o",1,No,0
 "unassigned_1, 4k-4f",1,No,0
+"unassigned_1, 4r-4d",1,No,0
 "unassigned_1, 4v-4a-4p",1,No,0
 "unassigned_1, 4v-4g",3,No,0
 "unassigned_1, 4v-4k",2,No,0
