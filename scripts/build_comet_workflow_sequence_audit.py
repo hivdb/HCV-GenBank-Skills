@@ -24,17 +24,19 @@ def fasta(path):
  return [l[1:].split()[0].split('.')[0] for l in path.read_text(errors='replace').splitlines() if l.startswith('>')]
 def main():
  a=args(); sel=load_workbook(a.selection_workbook,read_only=True,data_only=True);ws=sel[a.selection_sheet];h,ix=headers(ws); rows=list(ws.iter_rows(min_row=2,values_only=True));sel.close()
- selected=[]; reasons=Counter()
+ selected=[]; check_refids=[]; reasons=Counter()
  for r in rows:
   rid=str(r[ix['RefID']] or '').strip(); pts=str(r[ix['Num Pts']] or '').strip()
   if not rid: reasons['Missing RefID']+=1
   elif pts.casefold()=='exclude': reasons['Num Pts = Exclude']+=1
   elif rid in QUASISPECIES: reasons['Known quasispecies RefID']+=1
+  elif pts.casefold()=='check': check_refids.append(rid)
   else:selected.append(rid)
- refids=set(selected); raw=[]
+ refids=set(selected); check_refids=set(check_refids)-refids; raw=[]; check_raw=[]
  for f in Path(a.fasta_dir).glob('*.fasta'):
   if f.name.split('_',1)[0] in refids:raw+=fasta(f)
- raw=set(raw)
+  elif f.name.split('_',1)[0] in check_refids:check_raw+=fasta(f)
+ raw=set(raw); check_raw=set(check_raw)-raw; raw_before_check=raw|check_raw
  with open(a.metadata_csv,newline='',encoding='utf-8-sig') as f:meta={r['Accession'].strip() for r in csv.DictReader(f) if r.get('Accession','').strip()}
  meta_kept=raw & meta
  with open(a.comet_csv,newline='',encoding='utf-8-sig') as f:
@@ -57,10 +59,11 @@ def main():
  out=Workbook();summary=out.active;summary.title='Sequence_Audit';summary.append(['Step','Sequences retained','Sequences filtered out','Filtering applied'])
  profile_missing=(qcpass&assigned)-profile
  priority_profile=profile-(qcpass&assigned)
- entries=[('Ref-selection rows',len(rows),0,'Input rows in selected worksheet'),('Ref-selection eligibility',len(selected),len(rows)-len(selected),'Exclude Num Pts = Exclude; known quasispecies RefIDs'),('Raw FASTA accessions',len(raw),0,'FASTA files matching eligible RefIDs'),('Metadata match',len(meta_kept),len(raw-meta),'Accession absent from Accessions_metadata.csv'),('COMET CSV match',len(meta_kept)-len(missing),len(missing),'Accession absent from COMET CSV'),('COMET subtype validation',len(assigned),len(unassigned),'COMET unassigned/invalid subtype'),('AA extraction',len(q_assigned),len(assigned-qacc),'No extracted AA row'),('Alignment QC pass',len(qcpass&assigned),len(q_assigned-qcpass),'AlignmentQCStatus is not PASS'),('Non-COMET priority subtype additions',len(qcpass&assigned)+len(priority_profile),0,f'{len(priority_profile)} QC-passed accessions retained by the non-COMET priority subtype rule'),('Profile accessions',len(profile),len(profile_missing),'All eligible QC-passed accessions included; none excluded by profile builder' if not profile_missing else a.profile_filter_reason),('Combined-profile subtype cutoff',cutoff_retained_count,cutoff_excluded_count,f'Exclude subtypes with {cutoff_rule} profile accessions; genotypes 7 and 8 are retained regardless ({len(cutoff_excluded)} subtype groups excluded)'),('Combined profile',sum(int(m.group(3)) for m in combined),0,f'{len(combined)} subtype rows; count is summed RAS-position coverage, not unique accessions')]
+ entries=[('Ref-selection rows',len(rows),0,'Input rows in selected worksheet'),('Ref-selection eligibility',len(selected)+len(check_refids),len(rows)-len(selected)-len(check_refids),'Exclude Num Pts = Exclude; known quasispecies RefIDs'),('Raw FASTA accessions',len(raw_before_check),0,'FASTA files matching RefIDs eligible before the Check exclusion'),('RefID Check exclusion',len(raw),len(check_raw),'RefID marked Check'),('Metadata match',len(meta_kept),len(raw-meta),'Accession absent from Accessions_metadata.csv'),('COMET CSV match',len(meta_kept)-len(missing),len(missing),'Accession absent from COMET CSV'),('COMET subtype validation',len(assigned),len(unassigned),'COMET unassigned/invalid subtype'),('AA extraction',len(q_assigned),len(assigned-qacc),'No extracted AA row'),('Alignment QC pass',len(qcpass&assigned),len(q_assigned-qcpass),'AlignmentQCStatus is not PASS'),('Non-COMET priority subtype additions',len(qcpass&assigned)+len(priority_profile),0,f'{len(priority_profile)} QC-passed accessions retained by the non-COMET priority subtype rule'),('Profile accessions',len(profile),len(profile_missing),'All eligible QC-passed accessions included; none excluded by profile builder' if not profile_missing else a.profile_filter_reason),('Combined-profile subtype cutoff',cutoff_retained_count,cutoff_excluded_count,f'Exclude subtypes with {cutoff_rule} profile accessions; genotypes 7 and 8 are retained regardless ({len(cutoff_excluded)} subtype groups excluded)'),('Combined profile',sum(int(m.group(3)) for m in combined),0,f'{len(combined)} subtype rows; count is summed RAS-position coverage, not unique accessions')]
  for x in entries:summary.append(x)
  details=out.create_sheet('Filtered_Out_Reasons');details.append(['Stage','Reason','SequenceOrRowCount'])
  for k,v in sorted(reasons.items()):details.append(['Ref-selection',k,v])
+ details.append(['RefID Check exclusion','RefID marked Check',len(check_raw)])
  details.append(['Metadata','Accession absent from Accessions_metadata.csv',len(raw-meta)])
  details.append(['COMET','Accession absent from COMET CSV',len(missing)]);details.append(['COMET','COMET unassigned/invalid subtype',len(unassigned)])
  details.append(['AA extraction','No extracted AA row',len(assigned-qacc)])
