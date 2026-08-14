@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 GENES = {"NS3": (36, 175), "NS5A": (26, 93), "NS5B": (150, 321)}
-REPO_ROOT = Path(__file__).resolve().parents[3]
-ASSIGNER = REPO_ROOT / "hcv-folder-genotype-subtype-assignment" / "scripts" / "assign_folder_genotype_subtype.py"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+ASSIGNER = REPO_ROOT / "hcv-workflow" / "hcv-folder-genotype-subtype-assignment" / "scripts" / "assign_folder_genotype_subtype.py"
 GT_REFERENCES = REPO_ROOT / "HCVData" / "HCV_GT_RefSeqs.fasta"
 SUBTYPE_REFERENCES = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
 
@@ -100,14 +100,14 @@ def main() -> None:
             "--min-aligned-nt", str(args.min_aligned_nt), "--threads", str(args.threads),
         ], "assigning genotype and subtype")
         hits_by_gene = coverage_hits(input_fasta, temp_dir / "coverage", args.threads)
-        fields = ["Accession", "ClosestGenotype", "ClosestSubtype", "ReferenceOverlapAA"]
+        fields = ["Accession", "ClosestGenotype", "ClosestSubtype", "ReferenceOverlapAA", "FullyCover"]
         assignments_by_gene = {gene: assignments(assignment_dir / f"{gene}_assignments.csv") for gene in GENES}
         output_paths = {gene: args.output_dir / f"{gene}_AllSeq_NonComet_Coverage.csv" for gene in GENES}
         with ExitStack() as stack:
             writers = {}
             for gene, output in output_paths.items():
                 handle = stack.enter_context(output.open("w", newline="", encoding="utf-8"))
-                writers[gene] = csv.DictWriter(handle, fieldnames=fields)
+                writers[gene] = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
                 writers[gene].writeheader()
             show_accession_progress(0, len(accessions))
             for completed, accession in enumerate(accessions, start=1):
@@ -115,7 +115,7 @@ def main() -> None:
                     assignment = assignments_by_gene[gene].get(accession, {})
                     hits = hits_by_gene[gene]
                     target_start_nt, target_end_nt = (start_aa - 1) * 3 + 1, end_aa * 3
-                    reference_overlap = query_overlap = ""
+                    reference_overlap = fully_cover = ""
                     if accession in hits:
                         qstart, qend, sstart, send = hits[accession]
                         reference_start, reference_end = sorted((sstart, send))
@@ -124,9 +124,12 @@ def main() -> None:
                             aa_start = (overlap_start - 1) // 3 + 1
                             aa_end = (overlap_end - 1) // 3 + 1
                             reference_overlap = f"{aa_start}-{aa_end}"
+                            if aa_start == start_aa and aa_end == end_aa:
+                                fully_cover = "Yes"
                     writers[gene].writerow({
                         "Accession": accession, "ClosestGenotype": assignment.get("genotype", ""),
                         "ClosestSubtype": assignment.get("subtype", ""), "ReferenceOverlapAA": reference_overlap,
+                        "FullyCover": fully_cover,
                     })
                 show_accession_progress(completed, len(accessions))
             print(file=sys.stderr)

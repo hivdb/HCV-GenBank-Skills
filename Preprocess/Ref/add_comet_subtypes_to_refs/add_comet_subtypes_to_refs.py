@@ -7,6 +7,8 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
+from openpyxl import load_workbook
+
 
 PRIORITY_SUBTYPES = {"1d", "7a", "7b", "8a"}
 COVERAGE_COLUMNS = {
@@ -14,7 +16,7 @@ COVERAGE_COLUMNS = {
     "NS5A": "IncludeNS5APos26_93",
     "NS5B": "IncludeNS5BPos150_321",
 }
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = REPO_ROOT / "HCVData" / "HCV-all-seq-subtype"
 
 
@@ -34,6 +36,12 @@ def main() -> None:
         help="Coverage CSV to supply priority non-COMET subtypes; repeat as needed.",
     )
     parser.add_argument("--output-csv", type=Path, default=DATA_DIR / "Ref_with_CometSubtypes.csv")
+    parser.add_argument(
+        "--blast-hists-xlsx",
+        type=Path,
+        default=DATA_DIR / "HCV_BlastHists_Apr29_with_subtype_coverage.xlsx",
+        help="Workbook whose Original_NS3, Original_NS5A, and Original_NS5B sheets are annotated.",
+    )
     args = parser.parse_args()
 
     with args.comet_csv.open(newline="", encoding="utf-8-sig") as handle:
@@ -75,25 +83,51 @@ def main() -> None:
                     before = len(subtypes_by_refid[refid])
                     subtypes_by_refid[refid].add(subtype)
                     priority_added += len(subtypes_by_refid[refid]) - before
-                if refid and (row.get("ReferenceOverlapAA") or "").strip():
+                if refid and (row.get("FullyCover") or "").strip().casefold() == "yes":
                     coverage_by_refid[refid][gene].add(accession)
 
+    annotations_by_refid: dict[str, dict[str, str | int]] = {}
     with args.ref_csv.open(newline="", encoding="utf-8-sig") as source:
         reader = csv.DictReader(source)
         if not reader.fieldnames or "RefID" not in reader.fieldnames:
             raise ValueError(f"{args.ref_csv} must contain a RefID column")
         fields = [*reader.fieldnames, "CometSubtypes", *COVERAGE_COLUMNS.values()]
         with args.output_csv.open("w", newline="", encoding="utf-8") as destination:
-            writer = csv.DictWriter(destination, fieldnames=fields)
+            writer = csv.DictWriter(destination, fieldnames=fields, lineterminator="\n")
             writer.writeheader()
             for row in reader:
-                row["CometSubtypes"] = "; ".join(sorted(subtypes_by_refid.get((row.get("RefID") or "").strip(), set())))
                 refid = (row.get("RefID") or "").strip()
+                row["CometSubtypes"] = "; ".join(sorted(subtypes_by_refid.get(refid, set())))
                 for gene, column in COVERAGE_COLUMNS.items():
                     row[column] = len(coverage_by_refid[refid][gene])
                 writer.writerow(row)
+                if refid:
+                    annotations_by_refid[refid] = {
+                        "CometSubtypes": row["CometSubtypes"] or "(unassigned)",
+                        **{column: row[column] for column in COVERAGE_COLUMNS.values()},
+                    }
+
+    workbook = load_workbook(args.blast_hists_xlsx)
+    for gene, coverage_column in COVERAGE_COLUMNS.items():
+        worksheet = workbook[f"Original_{gene}"]
+        headers = {cell.value: cell.column for cell in worksheet[1]}
+        if "RefID" not in headers:
+            raise ValueError(f"{worksheet.title} must contain a RefID column")
+        for column in ("CometSubtypes", coverage_column):
+            if column not in headers:
+                headers[column] = worksheet.max_column + 1
+                worksheet.cell(row=1, column=headers[column], value=column)
+        for row_index in range(2, worksheet.max_row + 1):
+            refid = str(worksheet.cell(row=row_index, column=headers["RefID"]).value or "").strip()
+            if not refid or refid not in annotations_by_refid:
+                continue
+            annotation = annotations_by_refid[refid]
+            worksheet.cell(row=row_index, column=headers["CometSubtypes"], value=annotation["CometSubtypes"])
+            worksheet.cell(row=row_index, column=headers[coverage_column], value=annotation[coverage_column])
+    workbook.save(args.blast_hists_xlsx)
 
     print(f"{args.output_csv} ({priority_added} RefID/subtype priority additions)")
+    print(f"{args.blast_hists_xlsx} (Original_NS3, Original_NS5A, Original_NS5B updated)")
 
 
 if __name__ == "__main__":
