@@ -55,7 +55,6 @@ def main() -> None:
             denominator[pos] += 1
             if aa != references[gt][pos - 1]: numerator[pos] += 1
     source_wb.close()
-    # Remove a previous aggregate row so repeated workflow runs remain idempotent.
     for row in range(sheet.max_row, 1, -1):
         if sheet.cell(row, 1).value in {"NonConsensusAAFraction", "PositionDiff"}: sheet.delete_rows(row)
     sheet.append(["PositionDiff", *[numerator[pos] / denominator[pos] if denominator[pos] else None for pos in positions], None])

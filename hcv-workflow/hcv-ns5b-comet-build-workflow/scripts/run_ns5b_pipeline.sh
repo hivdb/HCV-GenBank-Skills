@@ -331,9 +331,6 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --gene NS5B --combined-profile-workbook "$OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
   --output-xlsx "$OUTPUT_DIR/NS5B_Subtype_RAS_Coverage_Report.xlsx"
-"$PYTHON_BIN" "$REPO_ROOT/add_combined_profile_nonconsensus_row/add_combined_profile_nonconsensus_row.py" \
-  --combined-profile-workbook "$OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
-  --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS5B_GT_Consensus.fasta"
 "$PYTHON_BIN" "$REPO_ROOT/build_comet_workflow_sequence_audit/build_comet_workflow_sequence_audit.py" \
   --gene NS5B --selection-workbook "$EXCEL_FILE" --selection-sheet "$SHEET_NAME" --fasta-dir "$FASTA_POOL" \
   --metadata-csv "$ACCESSIONS_METADATA_CSV" --comet-csv "$COMET_SUBTYPING_CSV" --qc-workbook "$AA_TMP_WORKBOOK" \
@@ -396,6 +393,13 @@ announce_step 18 "Build RAS entropy reports" \
   --gt-output-xlsx "$OUTPUT_DIR/NS5B_GT_RAS_Entropy.xlsx" \
   --subtype-output-xlsx "$OUTPUT_DIR/NS5B_Subtype_RAS_Entropy.xlsx" \
   > "$RAS_ENTROPY_SUMMARY"
+
+announce_step 19 "Add combined-profile genotype-consensus difference row" \
+  "combined RAS profile: $OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx; QC-passed profile sequences: $AA_TMP_WORKBOOK" \
+  "updated combined RAS profile: $OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/add_combined_profile_nonconsensus_row.py" \
+  --combined-profile-workbook "$OUTPUT_DIR/NS5B_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS5B_GT_Consensus.fasta"
 
 echo "NS5B pipeline complete"
 echo "matched_fasta_report=${MATCHED_TXT#$REPO_ROOT/}"

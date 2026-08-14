@@ -1,13 +1,8 @@
-# Top-Level Directory Map
+# Script Directory Map
 
 | Folder | Purpose |
 |---|---|
-| `.git` | Git repository history and metadata. |
-| `.venv` | Local Python environment. |
-| `HCVData` | HCV input data: accession metadata, sequence and genotype/subtype references in `Reference_seqs`, COMET CSVs, reference-selection workbooks, BlastHist workbooks, and the all-sequence subtype/coverage dataset. Generated reference comparison and mutation reports are in `outputs/reference_seqs`. |
-| `hcv-workflow` | HCV NS3, NS5A, and NS5B local/COMET pipelines plus supporting workflow skills. |
-| `outputs` | Generated pipeline reports, including local-alignment and COMET results, plus the `temp` subfolder for temporary and intermediate files. |
-| `add_combined_profile_nonconsensus_row` | Adds normal-amino-acid non-consensus fractions to combined profiles. |
+| `HCVData/HCV-all-seq-subtype` | Adds COMET subtype and coverage information to reference-accession tables. |
 | `add_gt_counts_sheet` | Adds genotype count information to profile workbooks. |
 | `add_subtype_consensus_mutation_summaries` | Adds subtype reference-to-consensus mutation summaries. |
 | `align_subtype_refs_to_first` | Pairwise-aligns subtype reference FASTAs to the first record. |
@@ -29,4 +24,4 @@
 | `update_ictv_subtype_genome_json` | Updates the ICTV subtype-genome JSON. |
 | `update_ictv_subtype_reference_fastas` | Updates ICTV subtype names and reference FASTAs. |
 
-The main active areas are `HCVData`, `hcv-workflow`, the shared utility folders, and `outputs`.
+Only directories that contain scripts are listed. The `hcv-workflow` directory is intentionally excluded.
