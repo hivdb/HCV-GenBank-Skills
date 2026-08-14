@@ -32,7 +32,7 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 - `genbank-accession-list-metadata/`: Build cohort metadata and person/quasispecies summaries from accessions or a local GenBank file.
 - `genbank-gene-split-alignment/`: Split GenBank nucleotide records by best matched reference gene and write per-gene aligned FASTA files.
 - `hcv-workflow/hcv-gene-genotype-subtype-ref-alignment/`: Prepare reusable HCV genotype/subtype reference alignments and FASTA files.
-- `Preprocess/hcv-accessions-metadata-csv/`: Build accession metadata CSVs from RefID FASTA files and local GenBank archives.
+- `Preprocess/RefSeq/hcv-accessions-metadata-csv/`: Build accession metadata CSVs from RefID FASTA files and local GenBank archives.
 - `hcv-workflow/hcv-ns3-build-workflow/`: Build NS3 genotype, subtype, source-feature, complete-profile, and RAS outputs.
 - `hcv-workflow/hcv-ns5a-build-workflow/`: Build NS5A genotype, subtype, source-feature, complete-profile, and RAS outputs.
 - `hcv-workflow/hcv-ns5b-build-workflow/`: Build NS5B genotype, subtype, source-feature, complete-profile, and RAS outputs.
@@ -40,11 +40,11 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 
 ## Top-Level Scripts
 
-- `Preprocess/check_subtype_ref_edges/check_subtype_ref_edges.py`: Check subtype amino-acid reference edges against genotype amino-acid reference edges.
-- `Preprocess/collect_genbank_by_fasta/collect_genbank_by_fasta.py`: Collect local GenBank records matching accessions found in each FASTA file.
-- `Preprocess/detect_accession_hcv_genes/detect_accession_hcv_genes.py`: Detect NS3, NS5A, and NS5B presence for FASTA accessions by BLAST against `HCV-Ref-H77-Genotype1.fasta`.
+- `Preprocess/RefSeq/check_subtype_ref_edges/check_subtype_ref_edges.py`: Check subtype amino-acid reference edges against genotype amino-acid reference edges.
+- `Preprocess/RefSeq/collect_genbank_by_fasta/collect_genbank_by_fasta.py`: Collect local GenBank records matching accessions found in each FASTA file.
+- `Preprocess/RefSeq/detect_accession_hcv_genes/detect_accession_hcv_genes.py`: Detect NS3, NS5A, and NS5B presence for FASTA accessions by BLAST against `HCV-Ref-H77-Genotype1.fasta`.
 - `hcv-workflow/export_ras_consensus_mutations_csv/export_ras_consensus_mutations_csv.py`: Export detailed and aggregated RAS consensus mutation CSVs from GT and subtype profile workbooks.
-- `Preprocess/extract_gt_refs_aa_to_fasta/extract_gt_refs_aa_to_fasta.py`: Convert genotype amino-acid references from JSON into FASTA.
+- `Preprocess/RefSeq/extract_gt_refs_aa_to_fasta/extract_gt_refs_aa_to_fasta.py`: Convert genotype amino-acid references from JSON into FASTA.
 - `hcv-workflow/extract_subtype_consensus_boundaries/extract_subtype_consensus_boundaries.py`: Extract first and last amino acids from subtype consensus FASTA files into a CSV.
 
 Skill-specific scripts live inside each skill's `scripts/` directory.
@@ -57,7 +57,7 @@ Skill-specific scripts live inside each skill's `scripts/` directory.
 ├── genbank-gene-split-alignment/
 ├── genbank-reference-alignment/
 ├── genbank-single-accession-extractor/
-├── Preprocess/hcv-accessions-metadata-csv/
+├── Preprocess/RefSeq/hcv-accessions-metadata-csv/
 ├── hcv-workflow/hcv-gene-genotype-subtype-ref-alignment/
 ├── hcv-workflow/hcv-metadata-subtype-consensus-workflow/
 ├── hcv-workflow/hcv-ns3-build-workflow/

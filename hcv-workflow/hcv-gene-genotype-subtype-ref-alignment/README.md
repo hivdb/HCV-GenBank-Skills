@@ -10,7 +10,7 @@ amino-acid references.
 To rebuild `HCVData/Reference_seqs/HCV_Subtype_Refs_NS3_AA.fasta`,
 `HCV_Subtype_Refs_NS5A_NTD_AA.fasta`, and
 `HCV_Subtype_Refs_NS5B_AA.fasta`, use
-`Preprocess/rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py` from the repository
+`Preprocess/RefSeq/rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py` from the repository
 root.  It uses each accession's GenBank protein annotation and then extracts
 the gene AA sequence by alignment to `HCV-Ref-H77-Genotype1.fasta`.
 

@@ -80,7 +80,7 @@ def script_temp_dir() -> Path:
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[4]
 
 
 def resolve_config_path(value: str) -> Path:
