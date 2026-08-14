@@ -5,3 +5,4 @@ __pycache__/
 .env
 pipeline.local.toml
 HCVData/
+HCV-all-seq-subtype/all.fasta
