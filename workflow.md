@@ -306,7 +306,7 @@ Outputs:
 
 Related notes:
 
-- `notes/ns3_gt_distance_workflow_2026-05-11.md`
+- `hcv-ns3-build-workflow/notes/ns3_gt_distance_workflow_2026-05-11.md`
 
 ### Step 3: Assign subtype to each accession
 
@@ -351,7 +351,7 @@ Outputs:
 
 Related notes:
 
-- `notes/ns3_subtype_distance_workflow_2026-05-11.md`
+- `hcv-ns3-build-workflow/notes/ns3_subtype_distance_workflow_2026-05-11.md`
 
 ## Overall Pipeline
 
@@ -380,8 +380,8 @@ I added `NS5A` counterparts to the existing `NS3` scripts:
 
 Associated workflow notes:
 
-- `notes/ns5a_gt_distance_workflow_2026-05-13.md`
-- `notes/ns5a_subtype_distance_workflow_2026-05-13.md`
+- `hcv-ns5a-build-workflow/notes/ns5a_gt_distance_workflow_2026-05-13.md`
+- `hcv-ns5a-build-workflow/notes/ns5a_subtype_distance_workflow_2026-05-13.md`
 
 ## New NS5B Workflow
 
@@ -402,8 +402,8 @@ I added `NS5B` counterparts to the existing `NS3` and `NS5A` scripts:
 
 Associated workflow notes:
 
-- `notes/ns5b_gt_distance_workflow_2026-05-13.md`
-- `notes/ns5b_subtype_distance_workflow_2026-05-13.md`
+- `hcv-ns5b-build-workflow/notes/ns5b_gt_distance_workflow_2026-05-13.md`
+- `hcv-ns5b-build-workflow/notes/ns5b_subtype_distance_workflow_2026-05-13.md`
 
 ## Scope
 

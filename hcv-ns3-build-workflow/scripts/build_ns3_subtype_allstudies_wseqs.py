@@ -700,7 +700,7 @@ def main() -> int:
     write_xlsx(output_path, output_rows)
     # Historical extra output kept for reference only.
     # (job_dir / "workflow_request.txt").write_text(
-    #     Path("notes/ns3_subtype_distance_workflow_2026-05-11.md").read_text(encoding="utf-8"),
+    #     Path("hcv-ns3-build-workflow/notes/ns3_subtype_distance_workflow_2026-05-11.md").read_text(encoding="utf-8"),
     #     encoding="utf-8",
     # )
     summary = {

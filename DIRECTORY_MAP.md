@@ -6,7 +6,6 @@
 | `.venv` | Local Python environment. |
 | `HCVData` | HCV input data: accession metadata, sequence and genotype/subtype references in `Reference_seqs`, COMET CSVs, reference-selection workbooks, BlastHist workbooks, and the all-sequence subtype/coverage dataset. Generated reference comparison and mutation reports are in `outputs/reference_seqs`. |
 | `outputs` | Generated pipeline reports, including local-alignment and COMET results, plus the `temp` subfolder for temporary and intermediate files. |
-| `notes` | Workflow and distance-analysis notes. |
 | `add_combined_profile_nonconsensus_row` | Adds normal-amino-acid non-consensus fractions to combined profiles. |
 | `add_gt_counts_sheet` | Adds genotype count information to profile workbooks. |
 | `add_subtype_consensus_mutation_summaries` | Adds subtype reference-to-consensus mutation summaries. |
