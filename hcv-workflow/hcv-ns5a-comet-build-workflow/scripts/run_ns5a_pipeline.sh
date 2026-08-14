@@ -404,6 +404,11 @@ announce_step 19 "Add combined-profile genotype-consensus difference row" \
   --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS5A_GT_Consensus.fasta"
 
+announce_step 20 "Publish shared ICTV reference/consensus comparison report" \
+  "all COMET subtype profiles and reference comparison workbooks" \
+  "shared report: outputs/shared_report/ICTV_ref_local_cons_compare"
+"$PYTHON_BIN" "$SCRIPT_DIR/add_subtype_consensus_mutation_summaries.py"
+
 echo "NS5A pipeline complete"
 echo "matched_fasta_report=${MATCHED_TXT#$REPO_ROOT/}"
 echo "included_fasta_dir=${INCLUDED_FASTA_DIR#$REPO_ROOT/}"

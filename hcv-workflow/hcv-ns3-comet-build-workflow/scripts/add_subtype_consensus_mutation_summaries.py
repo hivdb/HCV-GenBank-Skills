@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Add reference-to-consensus mutation summaries to subtype comparison workbooks."""
 from __future__ import annotations
+import argparse
 import re
+import shutil
 from pathlib import Path
 from docx import Document
 from openpyxl import load_workbook
@@ -41,8 +43,38 @@ def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) ->
     (root/'README_Subtype_Consensus_Mutations.md').write_text('\n'.join(lines),encoding='utf-8')
     document.save(root/'README_Subtype_Consensus_Mutations.docx')
 
+def publish_shared_report(source: Path, destination: Path) -> None:
+    """Copy the complete report set after all three COMET workflows are available."""
+    destination.mkdir(parents=True, exist_ok=True)
+    filenames = [
+        'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx',
+        'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5A_NTD.xlsx',
+        'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5B.xlsx',
+        'README_Subtype_Consensus_Mutations.md',
+        'README_Subtype_Consensus_Mutations.docx',
+    ]
+    for filename in filenames:
+        shutil.copy2(source / filename, destination / filename)
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--shared-report-dir', type=Path,
+        default=Path('outputs/shared_report/ICTV_ref_local_cons_compare'),
+        help='Destination for copies of the final three-gene report set.',
+    )
+    args = parser.parse_args()
     output_root=Path('outputs/reference_seqs'); comet=Path('outputs/comet')
+    required = [
+        *(output_root / f'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx'
+          for gene in ('NS3', 'NS5A_NTD', 'NS5B')),
+        *(comet / f'{gene}_Subtype_RAS_Profiles.xlsx' for gene in ('NS3', 'NS5A', 'NS5B')),
+    ]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        print('shared_report_status=waiting_for_all_comet_workflows')
+        print('missing_inputs=' + ';'.join(missing))
+        return
     readme: dict[str,dict[str,set[str]]] = {}
     for gene,token in [('NS3','NS3'),('NS5A_NTD','NS5A'),('NS5B','NS5B')]:
         path=output_root/f'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx'
@@ -66,5 +98,6 @@ def main() -> None:
                 readme.setdefault(gene,{}).setdefault(f'GT{gt}_{subtype}',set()).update(plain)
         ws.column_dimensions[ws.cell(1,col).column_letter].width=50; wb.save(path)
     write_summary_documents(output_root, readme)
+    publish_shared_report(output_root, args.shared_report_dir)
 
 if __name__=='__main__': main()

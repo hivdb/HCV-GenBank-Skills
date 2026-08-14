@@ -3,7 +3,6 @@
 | Folder | Purpose |
 |---|---|
 | `HCVData/HCV-all-seq-subtype` | Adds COMET subtype and coverage information to reference-accession tables. |
-| `add_subtype_consensus_mutation_summaries` | Adds subtype reference-to-consensus mutation summaries. |
 | `align_subtype_refs_to_first` | Pairwise-aligns subtype reference FASTAs to the first record. |
 | `build_comet_subtype_ras_coverage_report` | Builds COMET subtype RAS coverage reports. |
 | `build_comet_workflow_sequence_audit` | Builds COMET workflow sequence and filtering audits. |
