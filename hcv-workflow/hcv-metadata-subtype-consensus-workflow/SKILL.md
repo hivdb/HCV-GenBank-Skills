@@ -18,7 +18,7 @@ python hcv-workflow/hcv-metadata-subtype-consensus-workflow/run_metadata_subtype
 Common inputs:
 
 ```bash
---metadata-csv outputs/temp/build_accessions_metadata_csv/Accessions_metadata.csv
+--metadata-csv outputs/build_accessions_metadata_csv/Accessions_metadata.csv
 --output-root outputs/temp/metadata_subtype_consensus_workflow
 --subtype-json HCV_Subtype_Refs_By_Genome_NA.json
 --gt-aa-json HCV_GT_Refs_By_Gene_AA.json

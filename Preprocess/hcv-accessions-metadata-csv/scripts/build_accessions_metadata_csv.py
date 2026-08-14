@@ -475,7 +475,7 @@ def main() -> int:
     output_csv = (
         Path(args.output_csv).expanduser()
         if args.output_csv
-        else script_temp_dir() / "Accessions_metadata.csv"
+        else repo_root() / "outputs" / "build_accessions_metadata_csv" / "Accessions_metadata.csv"
     )
     workers = max(1, args.workers)
 

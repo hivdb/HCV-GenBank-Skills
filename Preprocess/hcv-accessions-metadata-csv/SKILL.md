@@ -23,7 +23,7 @@ Explicit inputs:
 python Preprocess/hcv-accessions-metadata-csv/scripts/build_accessions_metadata_csv.py \
   --fasta-dir /path/to/refid_fastas \
   --genbank-dir /path/to/genbank_seq_files \
-  --output-csv outputs/temp/build_accessions_metadata_csv/Accessions_metadata.csv
+  --output-csv outputs/build_accessions_metadata_csv/Accessions_metadata.csv
 ```
 
 ## Inputs
@@ -37,7 +37,7 @@ python Preprocess/hcv-accessions-metadata-csv/scripts/build_accessions_metadata_
 
 Default output:
 
-- `outputs/temp/build_accessions_metadata_csv/Accessions_metadata.csv`
+- `outputs/build_accessions_metadata_csv/Accessions_metadata.csv`
 
 The CSV includes:
 

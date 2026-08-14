@@ -18,7 +18,7 @@ from openpyxl import Workbook
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_METADATA_CSV = REPO_ROOT / "outputs/temp/build_accessions_metadata_csv/Accessions_metadata.csv"
+DEFAULT_METADATA_CSV = REPO_ROOT / "outputs/build_accessions_metadata_csv/Accessions_metadata.csv"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs/temp/metadata_subtype_consensus_workflow"
 DEFAULT_SUBTYPE_JSON = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
 DEFAULT_GT_AA_JSON = REPO_ROOT / "HCVData" / "HCV_GT_Refs_By_Gene_AA.json"
