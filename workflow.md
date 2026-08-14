@@ -5,7 +5,7 @@
 ### 1. Discover matched FASTA files for `NS3_May11`
 
 ```bash
-uv run python hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py \
+uv run python hcv-workflow/hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py \
   --excel-file /path/to/HCV_BlastHits_2026_04_29.xlsx \
   --sheet NS3_May11 \
   --fasta-dir /path/to/FASTA \
@@ -29,7 +29,7 @@ done < outputs/refid_fasta_<workbook_stem>_NS3_May11/matched_fasta_files.txt
 Then run:
 
 ```bash
-./.venv/bin/python hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py \
+./.venv/bin/python hcv-workflow/hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py \
   --excel-file /path/to/HCV_BlastHits_2026_04_29.xlsx \
   --sheet NS3_May11 \
   --fasta-dir /path/to/local_stage/hcv_fasta_stage_selected \
@@ -66,7 +66,7 @@ PY
 ### 4. Assign `NS3` subtype
 
 ```bash
-./.venv/bin/python hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py \
+./.venv/bin/python hcv-workflow/hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py \
   --combined-workbook outputs/<workbook_stem>_NS3_May11_ns3_gt_distance/NS3_Alignments_combined.xlsx \
   --fasta-dir /path/to/local_stage/hcv_fasta_stage_selected \
   --subtype-json HCV_Subtype_Refs_By_Genome_NA.json
@@ -75,7 +75,7 @@ PY
 ### 5. Build NS3 GT resistance profile PNG
 
 ```bash
-./.venv/bin/python hcv-ns3-build-workflow/build_ns3_gt_ras_profiles/build_ns3_gt_ras_profiles.py \
+./.venv/bin/python hcv-workflow/hcv-ns3-build-workflow/build_ns3_gt_ras_profiles/build_ns3_gt_ras_profiles.py \
   --gt-profile-workbook /path/to/NS3_GT_AA_Profiles.xlsx \
   --gt-aa-json HCV_GT_Refs_By_Gene_AA.json
 ```
@@ -88,7 +88,7 @@ This script writes:
 ### 6. Build NS5A GT resistance profile PNG
 
 ```bash
-./.venv/bin/python hcv-ns5a-build-workflow/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py \
+./.venv/bin/python hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py \
   --gt-profile-workbook /path/to/NS5A_GT_AA_Profiles.xlsx \
   --gt-aa-json HCV_GT_Refs_By_Gene_AA.json
 ```
@@ -100,7 +100,7 @@ Default NS5A positions:
 Override them if needed:
 
 ```bash
-./.venv/bin/python hcv-ns5a-build-workflow/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py \
+./.venv/bin/python hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py \
   --gt-profile-workbook /path/to/NS5A_GT_AA_Profiles.xlsx \
   --gt-aa-json HCV_GT_Refs_By_Gene_AA.json \
   --positions 24,28,30,31,32,58,92,93
@@ -114,7 +114,7 @@ This script writes:
 ### 7. Build NS5B GT resistance profile PNG
 
 ```bash
-./.venv/bin/python hcv-ns5b-build-workflow/build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py \
+./.venv/bin/python hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py \
   --gt-profile-workbook /path/to/NS5B_GT_AA_Profiles.xlsx \
   --gt-aa-json HCV_GT_Refs_By_Gene_AA.json
 ```
@@ -126,7 +126,7 @@ Default NS5B positions:
 Override them if needed:
 
 ```bash
-./.venv/bin/python hcv-ns5b-build-workflow/build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py \
+./.venv/bin/python hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py \
   --gt-profile-workbook /path/to/NS5B_GT_AA_Profiles.xlsx \
   --gt-aa-json HCV_GT_Refs_By_Gene_AA.json \
   --positions 159,282,316,320,321,414,446,553,554,556,559,561
@@ -140,7 +140,7 @@ This script writes:
 ### 8. Build HCV gene and subtype reference sets
 
 ```bash
-./.venv/bin/python hcv-gene-genotype-subtype-ref-alignment/build_hcv_gene_subtype_refs/build_hcv_gene_subtype_refs.py \
+./.venv/bin/python hcv-workflow/hcv-gene-genotype-subtype-ref-alignment/build_hcv_gene_subtype_refs/build_hcv_gene_subtype_refs.py \
   --gt-gene-na-fasta HCV_GT_RefSeqs.fasta \
   --subtype-genome-na-json HCV_Subtype_Refs_By_Genome_NA.json
 ```
@@ -156,18 +156,18 @@ Important detail:
 
 ### NS3
 
-1. Run `hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py` with:
+1. Run `hcv-workflow/hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py` with:
    - `--sheet NS3_May11`
    - `--numpatients-column NumPts`
    - `--positive-column NS3Count`
 2. Stage the matched FASTA files into a local temp directory.
-3. Run `hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py`.
+3. Run `hcv-workflow/hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py`.
 4. Convert `ns3_gt_distance_master.csv` to `NS3_Alignments_combined.xlsx`.
-5. Run `hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py`.
-6. Run `hcv-ns3-build-workflow/build_ns3_subtype_with_gt_aa/build_ns3_subtype_with_gt_aa.py`.
-7. Run `hcv-ns3-build-workflow/build_ns3_completeprofiles_tabspergt/build_ns3_completeprofiles_tabspergt.py`.
-8. Run `hcv-ns3-build-workflow/build_ns3_gt_ras_profiles/build_ns3_gt_ras_profiles.py`.
-9. Run `hcv-ns3-build-workflow/build_ns3_subtype_ras_profiles/build_ns3_subtype_ras_profiles.py`.
+5. Run `hcv-workflow/hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py`.
+6. Run `hcv-workflow/hcv-ns3-build-workflow/build_ns3_subtype_with_gt_aa/build_ns3_subtype_with_gt_aa.py`.
+7. Run `hcv-workflow/hcv-ns3-build-workflow/build_ns3_completeprofiles_tabspergt/build_ns3_completeprofiles_tabspergt.py`.
+8. Run `hcv-workflow/hcv-ns3-build-workflow/build_ns3_gt_ras_profiles/build_ns3_gt_ras_profiles.py`.
+9. Run `hcv-workflow/hcv-ns3-build-workflow/build_ns3_subtype_ras_profiles/build_ns3_subtype_ras_profiles.py`.
 
 Main outputs:
 
@@ -183,18 +183,18 @@ Main outputs:
 
 Treat `NS5A_NTD` on the AA/profile side as `NS5A` for workflow purposes.
 
-1. Run `hcv-ns5a-build-workflow/find_refid_fastas/find_refid_fastas.py` with:
+1. Run `hcv-workflow/hcv-ns5a-build-workflow/find_refid_fastas/find_refid_fastas.py` with:
    - `--sheet NS5A_PtGT0_Check`
    - `--numpatients-column NumPts`
    - `--positive-column NS5ACount`
 2. Stage the matched FASTA files into a local temp directory.
-3. Run `hcv-ns5a-build-workflow/build_ns5a_gt_allstudies/build_ns5a_gt_allstudies.py`.
+3. Run `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_gt_allstudies/build_ns5a_gt_allstudies.py`.
 4. Convert `ns5a_gt_distance_master.csv` to `NS5A_Alignments_combined.xlsx`.
-5. Run `hcv-ns5a-build-workflow/build_ns5a_subtype_allstudies_wseqs/build_ns5a_subtype_allstudies_wseqs.py`.
-6. Run `hcv-ns5a-build-workflow/build_ns5a_subtype_with_gt_aa/build_ns5a_subtype_with_gt_aa.py`.
-7. Run `hcv-ns5a-build-workflow/build_ns5a_completeprofiles_tabspergt/build_ns5a_completeprofiles_tabspergt.py`.
-8. Run `hcv-ns5a-build-workflow/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py`.
-9. Run `hcv-ns5a-build-workflow/build_ns5a_subtype_ras_profiles/build_ns5a_subtype_ras_profiles.py`.
+5. Run `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_subtype_allstudies_wseqs/build_ns5a_subtype_allstudies_wseqs.py`.
+6. Run `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_subtype_with_gt_aa/build_ns5a_subtype_with_gt_aa.py`.
+7. Run `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_completeprofiles_tabspergt/build_ns5a_completeprofiles_tabspergt.py`.
+8. Run `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py`.
+9. Run `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_subtype_ras_profiles/build_ns5a_subtype_ras_profiles.py`.
 
 Main outputs:
 
@@ -208,18 +208,18 @@ Main outputs:
 
 ### NS5B
 
-1. Run `hcv-ns5b-build-workflow/find_refid_fastas/find_refid_fastas.py` with:
+1. Run `hcv-workflow/hcv-ns5b-build-workflow/find_refid_fastas/find_refid_fastas.py` with:
    - `--sheet NS5B_PtGT0_Check`
    - `--numpatients-column NumPts`
    - `--positive-column NS5BCount`
 2. Stage the matched FASTA files into a local temp directory.
-3. Run `hcv-ns5b-build-workflow/build_ns5b_gt_allstudies/build_ns5b_gt_allstudies.py`.
+3. Run `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_gt_allstudies/build_ns5b_gt_allstudies.py`.
 4. Convert `ns5b_gt_distance_master.csv` to `NS5B_Alignments_combined.xlsx`.
-5. Run `hcv-ns5b-build-workflow/build_ns5b_subtype_allstudies_wseqs/build_ns5b_subtype_allstudies_wseqs.py`.
-6. Run `hcv-ns5b-build-workflow/build_ns5b_subtype_with_gt_aa/build_ns5b_subtype_with_gt_aa.py`.
-7. Run `hcv-ns5b-build-workflow/build_ns5b_completeprofiles_tabspergt/build_ns5b_completeprofiles_tabspergt.py`.
-8. Run `hcv-ns5b-build-workflow/build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py`.
-9. Run `hcv-ns5b-build-workflow/build_ns5b_subtype_ras_profiles/build_ns5b_subtype_ras_profiles.py`.
+5. Run `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_subtype_allstudies_wseqs/build_ns5b_subtype_allstudies_wseqs.py`.
+6. Run `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_subtype_with_gt_aa/build_ns5b_subtype_with_gt_aa.py`.
+7. Run `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_completeprofiles_tabspergt/build_ns5b_completeprofiles_tabspergt.py`.
+8. Run `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py`.
+9. Run `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_subtype_ras_profiles/build_ns5b_subtype_ras_profiles.py`.
 
 Main outputs:
 
@@ -245,9 +245,9 @@ Its job is to:
 
 The scripts are:
 
-- `hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py`
-- `hcv-ns5a-build-workflow/find_refid_fastas/find_refid_fastas.py`
-- `hcv-ns5b-build-workflow/find_refid_fastas/find_refid_fastas.py`
+- `hcv-workflow/hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py`
+- `hcv-workflow/hcv-ns5a-build-workflow/find_refid_fastas/find_refid_fastas.py`
+- `hcv-workflow/hcv-ns5b-build-workflow/find_refid_fastas/find_refid_fastas.py`
 
 Important detail:
 
@@ -263,7 +263,7 @@ The implemented calling workflow in this repository is an `NS3`-specific downstr
 
 Use the local script for the gene workflow being run, for example:
 
-- `hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py`
+- `hcv-workflow/hcv-ns3-build-workflow/find_refid_fastas/find_refid_fastas.py`
 
 Purpose:
 
@@ -275,7 +275,7 @@ This step only selects files. It does not classify sequences.
 
 Use:
 
-- `hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py`
+- `hcv-workflow/hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py`
 
 Purpose:
 
@@ -306,13 +306,13 @@ Outputs:
 
 Related notes:
 
-- `hcv-ns3-build-workflow/notes/ns3_gt_distance_workflow_2026-05-11.md`
+- `hcv-workflow/hcv-ns3-build-workflow/notes/ns3_gt_distance_workflow_2026-05-11.md`
 
 ### Step 3: Assign subtype to each accession
 
 Use:
 
-- `hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py`
+- `hcv-workflow/hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py`
 
 Purpose:
 
@@ -351,27 +351,27 @@ Outputs:
 
 Related notes:
 
-- `hcv-ns3-build-workflow/notes/ns3_subtype_distance_workflow_2026-05-11.md`
+- `hcv-workflow/hcv-ns3-build-workflow/notes/ns3_subtype_distance_workflow_2026-05-11.md`
 
 ## Overall Pipeline
 
 The concrete workflow I found is:
 
 1. The selected NS build workflow runs its bundled `find_refid_fastas/find_refid_fastas.py` first to find study FASTA files from filtered spreadsheet rows.
-2. `hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py` assigns `NS3` genotype to each accession.
-3. `hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py` assigns `NS3` subtype to each accession using genotype-matched subtype references.
+2. `hcv-workflow/hcv-ns3-build-workflow/build_ns3_gt_allstudies/build_ns3_gt_allstudies.py` assigns `NS3` genotype to each accession.
+3. `hcv-workflow/hcv-ns3-build-workflow/build_ns3_subtype_allstudies_wseqs/build_ns3_subtype_allstudies_wseqs.py` assigns `NS3` subtype to each accession using genotype-matched subtype references.
 
 ## New NS5A Workflow
 
 I added `NS5A` counterparts to the existing `NS3` scripts:
 
-1. `hcv-ns5a-build-workflow/build_ns5a_gt_allstudies/build_ns5a_gt_allstudies.py`
+1. `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_gt_allstudies/build_ns5a_gt_allstudies.py`
    - aligns study sequences against `GT1` to `GT8` `NS5A` references from `HCV_GT_RefSeqs.fasta`
    - assigns `BestGT`
    - writes per-study Excel progress files under `NS5A_Alignments.xlsx`
    - writes a master CSV
 
-2. `hcv-ns5a-build-workflow/build_ns5a_subtype_allstudies_wseqs/build_ns5a_subtype_allstudies_wseqs.py`
+2. `hcv-workflow/hcv-ns5a-build-workflow/build_ns5a_subtype_allstudies_wseqs/build_ns5a_subtype_allstudies_wseqs.py`
    - reads the combined `NS5A` genotype workbook
    - uses each accession's assigned genotype to restrict subtype comparisons
    - aligns against genotype-matched subtype genome references from `HCV_Subtype_Refs_By_Genome_NA.json`
@@ -380,20 +380,20 @@ I added `NS5A` counterparts to the existing `NS3` scripts:
 
 Associated workflow notes:
 
-- `hcv-ns5a-build-workflow/notes/ns5a_gt_distance_workflow_2026-05-13.md`
-- `hcv-ns5a-build-workflow/notes/ns5a_subtype_distance_workflow_2026-05-13.md`
+- `hcv-workflow/hcv-ns5a-build-workflow/notes/ns5a_gt_distance_workflow_2026-05-13.md`
+- `hcv-workflow/hcv-ns5a-build-workflow/notes/ns5a_subtype_distance_workflow_2026-05-13.md`
 
 ## New NS5B Workflow
 
 I added `NS5B` counterparts to the existing `NS3` and `NS5A` scripts:
 
-1. `hcv-ns5b-build-workflow/build_ns5b_gt_allstudies/build_ns5b_gt_allstudies.py`
+1. `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_gt_allstudies/build_ns5b_gt_allstudies.py`
    - aligns study sequences against `GT1` to `GT8` `NS5B` references from `HCV_GT_RefSeqs.fasta`
    - assigns `BestGT`
    - writes per-study Excel progress files under `NS5B_Alignments.xlsx`
    - writes a master CSV
 
-2. `hcv-ns5b-build-workflow/build_ns5b_subtype_allstudies_wseqs/build_ns5b_subtype_allstudies_wseqs.py`
+2. `hcv-workflow/hcv-ns5b-build-workflow/build_ns5b_subtype_allstudies_wseqs/build_ns5b_subtype_allstudies_wseqs.py`
    - reads the combined `NS5B` genotype workbook
    - uses each accession's assigned genotype to restrict subtype comparisons
    - aligns against genotype-matched subtype genome references from `HCV_Subtype_Refs_By_Genome_NA.json`
@@ -402,8 +402,8 @@ I added `NS5B` counterparts to the existing `NS3` and `NS5A` scripts:
 
 Associated workflow notes:
 
-- `hcv-ns5b-build-workflow/notes/ns5b_gt_distance_workflow_2026-05-13.md`
-- `hcv-ns5b-build-workflow/notes/ns5b_subtype_distance_workflow_2026-05-13.md`
+- `hcv-workflow/hcv-ns5b-build-workflow/notes/ns5b_gt_distance_workflow_2026-05-13.md`
+- `hcv-workflow/hcv-ns5b-build-workflow/notes/ns5b_subtype_distance_workflow_2026-05-13.md`
 
 ## Scope
 
