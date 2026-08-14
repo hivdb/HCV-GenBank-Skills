@@ -4,7 +4,6 @@
 |---|---|
 | `HCVData/HCV-all-seq-subtype` | Adds COMET subtype and coverage information to reference-accession tables. |
 | `Preprocess/align_subtype_refs_to_first` | Pairwise-aligns subtype reference FASTAs to the first record. |
-| `build_qc_passed_genotype_mutation_burden_summary` | Summarizes QC-passed genotype mutation burden. |
 | `check_subtype_ref_edges` | Checks subtype reference edge cases and consistency. |
 | `collect_genbank_by_fasta` | Collects GenBank records matching FASTA accessions. |
 | `detect_accession_hcv_genes` | Detects NS3, NS5A, and NS5B gene coverage. |

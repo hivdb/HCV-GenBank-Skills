@@ -254,7 +254,7 @@ AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5B_Profile_Input_Alignment_QC.xlsx"
 announce_step 10c "Summarize QC-passed NS5B genotype mutation burden" \
   "QC profile input: $AA_TMP_WORKBOOK" \
   "genotype mutation-burden summary: $OUTPUT_DIR/NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
-"$PYTHON_BIN" "$REPO_ROOT/build_qc_passed_genotype_mutation_burden_summary/build_qc_passed_genotype_mutation_burden_summary.py" \
+"$PYTHON_BIN" "$SCRIPT_DIR/build_qc_passed_genotype_mutation_burden_summary.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-csv "$OUTPUT_DIR/NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
 PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_completeprofiles_tabspergt.py" --input-workbook "$AA_TMP_WORKBOOK" --report-only)"
