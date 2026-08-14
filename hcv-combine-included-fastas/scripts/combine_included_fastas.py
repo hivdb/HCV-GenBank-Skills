@@ -18,17 +18,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ns3-dir",
         type=Path,
-        default=REPO_ROOT / "temp/hcv-ns3-build-workflow/run_ns3_pipeline/included_refid_fastas",
+        default=REPO_ROOT / "outputs/temp/hcv-ns3-build-workflow/run_ns3_pipeline/included_refid_fastas",
     )
     parser.add_argument(
         "--ns5a-dir",
         type=Path,
-        default=REPO_ROOT / "temp/hcv-ns5a-build-workflow/run_ns5a_pipeline/included_refid_fastas",
+        default=REPO_ROOT / "outputs/temp/hcv-ns5a-build-workflow/run_ns5a_pipeline/included_refid_fastas",
     )
     parser.add_argument(
         "--ns5b-dir",
         type=Path,
-        default=REPO_ROOT / "temp/hcv-ns5b-build-workflow/run_ns5b_pipeline/included_refid_fastas",
+        default=REPO_ROOT / "outputs/temp/hcv-ns5b-build-workflow/run_ns5b_pipeline/included_refid_fastas",
     )
     parser.add_argument("--output-dir", type=Path, default=SKILL_ROOT / "assets")
     return parser.parse_args()

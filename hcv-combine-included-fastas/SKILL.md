@@ -13,8 +13,8 @@ python hcv-combine-included-fastas/scripts/combine_included_fastas.py
 
 The defaults read these folders under the repository root:
 
-- `temp/hcv-ns3-build-workflow/run_ns3_pipeline/included_refid_fastas`
-- `temp/hcv-ns5a-build-workflow/run_ns5a_pipeline/included_refid_fastas`
-- `temp/hcv-ns5b-build-workflow/run_ns5b_pipeline/included_refid_fastas`
+- `outputs/temp/hcv-ns3-build-workflow/run_ns3_pipeline/included_refid_fastas`
+- `outputs/temp/hcv-ns5a-build-workflow/run_ns5a_pipeline/included_refid_fastas`
+- `outputs/temp/hcv-ns5b-build-workflow/run_ns5b_pipeline/included_refid_fastas`
 
 The script accepts `--ns3-dir`, `--ns5a-dir`, `--ns5b-dir`, and `--output-dir` when a run uses different locations. It concatenates sorted `*.fasta` files without changing FASTA headers or sequences, and reports per-gene input-file and record counts.

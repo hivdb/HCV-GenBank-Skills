@@ -7,8 +7,7 @@
 | `HCVData` | HCV input data: accession metadata, sequence and genotype/subtype references, COMET CSVs, reference-selection workbooks, BlastHist workbooks, and the all-sequence subtype/coverage dataset. |
 | `Reference_seqs` | Genotype/subtype reference FASTAs, consensus comparisons, and mutation reports. |
 | `input_data` | Input staging folder; currently essentially empty. |
-| `outputs` | Generated pipeline reports, including local-alignment and COMET results. |
-| `temp` | Temporary and intermediate generated files. |
+| `outputs` | Generated pipeline reports, including local-alignment and COMET results, plus the `temp` subfolder for temporary and intermediate files. |
 | `notes` | Workflow and distance-analysis notes. |
 | `scripts` | Shared scripts for consensus, audits, profile comparison, and reporting. |
 | `genbank-accession-list-metadata` | Skill/workflow for turning GenBank accession lists into metadata and cohort summaries. |

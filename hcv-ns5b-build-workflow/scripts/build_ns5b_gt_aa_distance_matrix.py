@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-xlsx", default="outputs/NS5B_GT_AA_Distance_Pos150_321.xlsx")
     parser.add_argument(
         "--details-xlsx",
-        default="temp/ns5b_gt_aa_distance_matrix/NS5B_GT_AA_Distance_Pos150_321_details.xlsx",
+        default="outputs/temp/ns5b_gt_aa_distance_matrix/NS5B_GT_AA_Distance_Pos150_321_details.xlsx",
         help="Workbook for supporting sheets that are not kept in the main output",
     )
     parser.add_argument("--start", type=int, default=150, help="1-based aligned start position")

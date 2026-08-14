@@ -18,8 +18,8 @@ python hcv-metadata-subtype-consensus-workflow/scripts/run_metadata_subtype_cons
 Common inputs:
 
 ```bash
---metadata-csv temp/build_accessions_metadata_csv/Accessions_metadata.csv
---output-root temp/metadata_subtype_consensus_workflow
+--metadata-csv outputs/temp/build_accessions_metadata_csv/Accessions_metadata.csv
+--output-root outputs/temp/metadata_subtype_consensus_workflow
 --subtype-json HCV_Subtype_Refs_By_Genome_NA.json
 --gt-aa-json HCV_GT_Refs_By_Gene_AA.json
 --gt-aa-fasta HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta

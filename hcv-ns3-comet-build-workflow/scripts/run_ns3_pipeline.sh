@@ -50,7 +50,7 @@ ACCESSIONS_METADATA_CSV="${ACCESSIONS_METADATA_CSV:-$REPO_ROOT/HCVData/Accession
 COMET_SUBTYPING_CSV="${COMET_SUBTYPING_CSV:-$REPO_ROOT/HCVData/Comet Subtyping/NS3.csv}"
 NONCOMET_SUBTYPE_WORKBOOK="${NONCOMET_SUBTYPE_WORKBOOK:-$REPO_ROOT/outputs/local_alignment/NS3_Subtype_AllStudies_WSeqs.xlsx}"
 SKILL_NAME="hcv-ns3-comet-build-workflow"
-TEMP_ROOT="${TEMP_ROOT:-$REPO_ROOT/temp/$SKILL_NAME/$(basename "$0" .sh)}"
+TEMP_ROOT="${TEMP_ROOT:-$REPO_ROOT/outputs/temp/$SKILL_NAME/$(basename "$0" .sh)}"
 
 if [[ -z "$EXCEL_FILE" || -z "$FASTA_POOL" || -z "$SHEET_NAME" ]]; then
   usage
@@ -65,7 +65,7 @@ MATCHED_TXT="$OUTPUT_DIR/NS3_matched_fasta_files.txt"
 INCLUDED_FASTA_DIR="$TEMP_ROOT/included_refid_fastas"
 DISCOVERY_TMP="$TEMP_ROOT/find_refid_fastas"
 DISCOVERY_JSON="$DISCOVERY_TMP/discovery_ns3.json"
-SKILL_TEMP_ROOT="$REPO_ROOT/temp/$SKILL_NAME"
+SKILL_TEMP_ROOT="$REPO_ROOT/outputs/temp/$SKILL_NAME"
 GT_ALLSTUDIES_JSON="$SKILL_TEMP_ROOT/build_ns3_gt_allstudies/last_run_summary.json"
 SOURCEFEATURES_JSON="$SKILL_TEMP_ROOT/build_ns3_sourcefeatures_csv/last_run_summary.json"
 SOURCEFEATURES_GROUPED_JSON="$SKILL_TEMP_ROOT/build_ns3_sourcefeatures_grouped_csv/last_run_summary.json"
