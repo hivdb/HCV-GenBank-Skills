@@ -30,7 +30,7 @@ python hcv-workflow/hcv-accessions-metadata-csv/build_accessions_metadata_csv/bu
 
 - `--fasta-dir`: directory of FASTA files whose names begin with `RefID`
 - `--genbank-dir`: local GenBank flatfile archive directory containing `.seq` files
-- `HCV.fasta` in the repository root for NS3/NS5A/NS5B BLAST gene detection
+- `HCVData/HCV-Ref-H77-Genotype1.fasta` for NS3/NS5A/NS5B BLAST gene detection
 - optional `pipeline.local.toml` in the repository root for defaults
 
 ## Outputs
@@ -64,7 +64,7 @@ Before running this skill, warn the user that it requires:
 - RefID-organized FASTA files
 - local GenBank `.seq` archive files
 - BLAST command-line tools: `makeblastdb`, `blastp`, and `blastx`
-- root `HCV.fasta`
+- `HCVData/HCV-Ref-H77-Genotype1.fasta`
 
 If any are missing, stop and tell the user which previous setup step is needed.
 

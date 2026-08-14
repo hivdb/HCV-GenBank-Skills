@@ -22,7 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Read all FASTA records from a folder, detect whether each accession has NS3, NS5A, "
-            "and NS5B by BLAST against HCV.fasta, and write a CSV summary."
+            "and NS5B by BLAST against HCV-Ref-H77-Genotype1.fasta, and write a CSV summary."
         )
     )
     parser.add_argument(
@@ -32,8 +32,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--hcv-fasta",
-        default="HCVData/HCV.fasta",
-        help="Path to HCV.fasta containing NS3, NS5A, and NS5B references",
+        default="HCVData/HCV-Ref-H77-Genotype1.fasta",
+        help="Path to the H77 genotype-1 FASTA containing NS3, NS5A, and NS5B references",
     )
     parser.add_argument(
         "--output-csv",

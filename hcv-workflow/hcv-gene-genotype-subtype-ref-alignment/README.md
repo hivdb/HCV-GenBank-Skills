@@ -12,7 +12,7 @@ To rebuild `HCVData/Reference_seqs/HCV_Subtype_Refs_NS3_AA.fasta`,
 `HCV_Subtype_Refs_NS5B_AA.fasta`, use
 `rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py` from the repository
 root.  It uses each accession's GenBank protein annotation and then extracts
-the gene AA sequence by alignment to `HCV.fasta`.
+the gene AA sequence by alignment to `HCV-Ref-H77-Genotype1.fasta`.
 
 Keep this folder's NA-alignment script only for legacy NA extraction,
 diagnostics, and alignment-quality reporting.

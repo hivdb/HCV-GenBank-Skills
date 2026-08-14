@@ -29,7 +29,7 @@ MIN_COVERAGE = 0.8
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference-dir", type=Path, default=Path("HCVData/Reference_seqs"))
-    parser.add_argument("--hcv-fasta", type=Path, default=Path("HCVData/HCV.fasta"))
+    parser.add_argument("--hcv-fasta", type=Path, default=Path("HCVData/HCV-Ref-H77-Genotype1.fasta"))
     parser.add_argument(
         "--gt-reference-fasta",
         type=Path,
@@ -96,7 +96,7 @@ def hcv_gene_references(path: Path) -> dict[str, str]:
     refs = {record.id.upper(): str(record.seq).upper() for record in SeqIO.parse(path, "fasta")}
     missing = [gene for gene in ("NS3", "NS5A", "NS5B") if gene not in refs]
     if missing:
-        raise RuntimeError(f"Missing HCV.fasta gene references: {', '.join(missing)}")
+        raise RuntimeError(f"Missing H77 genotype-1 FASTA gene references: {', '.join(missing)}")
     refs["NS5A_NTD"] = refs["NS5A"][:213]
     return refs
 
