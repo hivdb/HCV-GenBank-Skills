@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reference-dir",
         type=Path,
-        default=Path("Reference_seqs"),
+        default=Path("HCVData/Reference_seqs"),
         help="Directory containing HCV_Subtype_Refs_<GENE>_AA.fasta files.",
     )
     parser.add_argument(

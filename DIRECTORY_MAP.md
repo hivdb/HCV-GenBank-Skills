@@ -4,8 +4,7 @@
 |---|---|
 | `.git` | Git repository history and metadata. |
 | `.venv` | Local Python environment. |
-| `HCVData` | HCV input data: accession metadata, sequence and genotype/subtype references, COMET CSVs, reference-selection workbooks, BlastHist workbooks, and the all-sequence subtype/coverage dataset. |
-| `Reference_seqs` | Genotype/subtype reference FASTAs; generated comparison and mutation reports are in `outputs/reference_seqs`. |
+| `HCVData` | HCV input data: accession metadata, sequence and genotype/subtype references in `Reference_seqs`, COMET CSVs, reference-selection workbooks, BlastHist workbooks, and the all-sequence subtype/coverage dataset. Generated reference comparison and mutation reports are in `outputs/reference_seqs`. |
 | `input_data` | Input staging folder; currently essentially empty. |
 | `outputs` | Generated pipeline reports, including local-alignment and COMET results, plus the `temp` subfolder for temporary and intermediate files. |
 | `notes` | Workflow and distance-analysis notes. |
@@ -30,4 +29,4 @@
 | `hcv-ns5b-build-workflow` | Local NS5B reference/profile workflow. |
 | `hcv-ns5b-comet-build-workflow` | COMET-based NS5B reference/profile workflow. |
 
-The main active areas are `HCVData`, `Reference_seqs`, the six per-gene workflow folders, and `outputs`.
+The main active areas are `HCVData`, the six per-gene workflow folders, and `outputs`.
