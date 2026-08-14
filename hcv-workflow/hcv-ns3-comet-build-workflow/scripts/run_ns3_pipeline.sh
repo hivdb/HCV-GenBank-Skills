@@ -334,6 +334,14 @@ announce_step 12 "Export consensus FASTA files" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
 
+announce_step 12b "Compare NS3 COMET consensus to references" \
+  "COMET consensus FASTAs: $OUTPUT_DIR/NS3_GT_Consensus.fasta; $OUTPUT_DIR/NS3_Subtype_Consensus.fasta" \
+  "reference comparison workbooks: outputs/reference_seqs"
+"$PYTHON_BIN" "$SCRIPT_DIR/export_gt_reference_consensus_differences.py" \
+  --gene NS3 \
+  --reference-fasta "$REPO_ROOT/HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta" \
+  --subtype-reference-dir "$REPO_ROOT/HCVData/Reference_seqs"
+
 announce_step 12a "Compare subtype consensus to subtype references" \
   "subtype profile: $OUTPUT_DIR/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx; references: $SUBTYPE_JSON" \
   "RAS-only distance report: $OUTPUT_DIR/NS3_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"

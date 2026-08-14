@@ -166,6 +166,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference-fasta", type=Path, required=True)
     parser.add_argument(
+        "--gene",
+        choices=GENES,
+        action="append",
+        help="Gene to process. Repeat to process several; default processes all genes.",
+    )
+    parser.add_argument(
         "--consensus-dir",
         type=Path,
         default=Path("outputs/comet"),
@@ -185,7 +191,8 @@ def main() -> int:
     args = parser.parse_args()
 
     refs = load_references(args.reference_fasta)
-    for gene in GENES:
+    genes = args.gene or GENES
+    for gene in genes:
         consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
         output = args.output_dir / f"HCV_GT_Ref_vs_Comet_GT_Consensus_Differences_{gene}.xlsx"
         count = write_differences(
@@ -197,7 +204,7 @@ def main() -> int:
         print(f"{output}: {count} aligned reference-consensus amino-acid pairs")
     if args.subtype_reference_dir:
         missing_consensuses: list[tuple[str, str, str, str]] = []
-        for gene in GENES:
+        for gene in genes:
             consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
             reference_path = args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
             output = args.output_dir / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx"
@@ -209,7 +216,8 @@ def main() -> int:
             )
             missing_consensuses.extend(missing)
             print(f"{output}: {matched} matched subtype references; {len(missing)} without a Comet consensus")
-        missing_output = args.output_dir / "HCV_Subtype_Refs_Without_Comet_Consensus.xlsx"
+        suffix = "" if len(genes) == len(GENES) else f"_{genes[0]}"
+        missing_output = args.output_dir / f"HCV_Subtype_Refs_Without_Comet_Consensus{suffix}.xlsx"
         write_missing_subtype_consensus_report(missing_output, missing_consensuses)
         print(f"{missing_output}: {len(missing_consensuses)} subtype references without a Comet consensus")
     return 0

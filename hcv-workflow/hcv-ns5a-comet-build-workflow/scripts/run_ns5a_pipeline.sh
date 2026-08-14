@@ -296,6 +296,14 @@ announce_step 12 "Export consensus FASTA files" \
   --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" \
   --output-dir "$OUTPUT_DIR" \
   > /dev/null
+
+announce_step 12b "Compare NS5A COMET consensus to references" \
+  "COMET consensus FASTAs: $OUTPUT_DIR/NS5A_GT_Consensus.fasta; $OUTPUT_DIR/NS5A_Subtype_Consensus.fasta" \
+  "reference comparison workbooks: outputs/reference_seqs"
+"$PYTHON_BIN" "$SCRIPT_DIR/export_gt_reference_consensus_differences.py" \
+  --gene NS5A_NTD \
+  --reference-fasta "$REPO_ROOT/HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta" \
+  --subtype-reference-dir "$REPO_ROOT/HCVData/Reference_seqs"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_subtype_consensus_reference_distance.py" --subtype-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx" --subtype-json "$SUBTYPE_JSON" --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"
 
 announce_step 13 "Build genotype RAS profile" \
