@@ -3,12 +3,7 @@
 | Folder | Purpose |
 |---|---|
 | `HCVData` | Contains the all-sequence subtype/coverage table utility. |
-| `Preprocess` | Contains reference alignment/validation, RefID filter documentation, GenBank-record collection, and gene-detection utilities. |
-| `export_ras_consensus_mutations_csv` | Exports RAS consensus mutations as CSV. |
-| `export_ref_selection_accessions_missing_from_comet` | Exports selected-reference accessions absent from COMET CSVs. |
-| `extract_gt_refs_aa_to_fasta` | Extracts genotype amino-acid references to FASTA. |
-| `extract_subtype_consensus_boundaries` | Extracts subtype consensus coordinate boundaries. |
-| `rebuild_subtype_reference_aas_from_genbank` | Rebuilds subtype amino-acid references from GenBank proteins. |
+| `Preprocess` | Contains reference alignment/validation/rebuild, reference extraction, reference-selection/RefID filtering reports, GenBank-record collection, and gene-detection utilities. |
 | `replace_comet_profile_coverage_range_with_mean_diff` | Replaces combined-profile coverage ranges with non-X coverage. |
 | `update_ictv_subtype_genome_json` | Updates the ICTV subtype-genome JSON. |
 | `update_ictv_subtype_reference_fastas` | Updates ICTV subtype names and reference FASTAs. |

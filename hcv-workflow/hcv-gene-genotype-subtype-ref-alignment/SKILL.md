@@ -12,7 +12,7 @@ This is a one-time preprocessing step for later high-throughput genotype/subtype
 > **Important:** Do not use this NA-alignment workflow to create the
 > production per-gene subtype AA reference FASTAs. Aligning subtype nucleotide
 > genomes to genotype nucleotide references is not sufficiently reliable for
-> that purpose. Use `rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py`
+> that purpose. Use `Preprocess/rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py`
 > from the repository root, which derives gene AA sequences from GenBank
 > protein annotations, instead. This workflow remains useful for legacy NA
 > extraction, diagnostics, and alignment-quality reporting.

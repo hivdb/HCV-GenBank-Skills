@@ -6,7 +6,7 @@ import csv
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO_ROOT / "outputs"
 INPUT_FASTAS = {
     "NS3": OUTPUT_DIR / "NS3_Subtype_Consensus.fasta",
