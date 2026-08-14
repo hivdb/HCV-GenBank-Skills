@@ -40,7 +40,6 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 
 ## Top-Level Scripts
 
-- `add_gt_counts_sheet/add_gt_counts_sheet.py`: Add a genotype-count summary worksheet to a combined genotype workbook.
 - `check_subtype_ref_edges/check_subtype_ref_edges.py`: Check subtype amino-acid reference edges against genotype amino-acid reference edges.
 - `collect_genbank_by_fasta/collect_genbank_by_fasta.py`: Collect local GenBank records matching accessions found in each FASTA file.
 - `detect_accession_hcv_genes/detect_accession_hcv_genes.py`: Detect NS3, NS5A, and NS5B presence for FASTA accessions by BLAST against `HCV.fasta`.

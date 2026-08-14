@@ -198,6 +198,11 @@ echo "Action: write the Comet genotype for each retained accession; paired dista
   --output-dir "$OUTPUT_DIR" \
   > "$GT_ALLSTUDIES_JSON"
 
+announce_step 8a "Add genotype-count summary" \
+  "genotype workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx" \
+  "updated workbook: $OUTPUT_DIR/NS3_GT_AllStudies.xlsx (Genotype_Counts sheet)"
+"$PYTHON_BIN" "$SCRIPT_DIR/add_gt_counts_sheet.py" --workbook "$OUTPUT_DIR/NS3_GT_AllStudies.xlsx"
+
 echo "Skipping disabled NS3 source-feature extraction and grouped-summary steps"
 # if [[ -n "$GENBANK_DIR" ]]; then
 #   "$PYTHON_BIN" "$SCRIPT_DIR/build_ns3_sourcefeatures_csv.py" \

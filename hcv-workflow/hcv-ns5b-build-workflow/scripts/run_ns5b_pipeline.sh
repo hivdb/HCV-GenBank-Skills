@@ -181,6 +181,11 @@ echo "Result: group sequences by RefID/study, assign the best genotype, and reco
   --numpatients-column 'Num Pts' \
   > "$GT_ALLSTUDIES_JSON"
 
+announce_step 7a "Add genotype-count summary" \
+  "genotype workbook: $OUTPUT_DIR/NS5B_GT_AllStudies.xlsx" \
+  "updated workbook: $OUTPUT_DIR/NS5B_GT_AllStudies.xlsx (Genotype_Counts sheet)"
+"$PYTHON_BIN" "$SCRIPT_DIR/add_gt_counts_sheet.py" --workbook "$OUTPUT_DIR/NS5B_GT_AllStudies.xlsx"
+
 echo "Skipping disabled NS5B source-feature extraction and grouped-summary steps"
 # if [[ -n "$GENBANK_DIR" ]]; then
 #   "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_sourcefeatures_csv.py" \
