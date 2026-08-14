@@ -2,9 +2,8 @@
 
 | Folder | Purpose |
 |---|---|
-| `HCVData/HCV-all-seq-subtype` | Adds COMET subtype and coverage information to reference-accession tables. |
-| `Preprocess/align_subtype_refs_to_first` | Pairwise-aligns subtype reference FASTAs to the first record. |
-| `check_subtype_ref_edges` | Checks subtype reference edge cases and consistency. |
+| `HCVData` | Contains the all-sequence subtype/coverage table utility. |
+| `Preprocess` | Contains subtype-reference pairwise alignment and reference-edge validation utilities. |
 | `collect_genbank_by_fasta` | Collects GenBank records matching FASTA accessions. |
 | `detect_accession_hcv_genes` | Detects NS3, NS5A, and NS5B gene coverage. |
 | `export_check_refid_filter_summary` | Exports RefID `Check` filtering summaries. |
@@ -19,4 +18,4 @@
 | `update_ictv_subtype_genome_json` | Updates the ICTV subtype-genome JSON. |
 | `update_ictv_subtype_reference_fastas` | Updates ICTV subtype names and reference FASTAs. |
 
-Only directories that contain scripts are listed. The `hcv-workflow` directory is intentionally excluded.
+Only top-level directories that contain scripts are listed. The `hcv-workflow` directory is intentionally excluded.

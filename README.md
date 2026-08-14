@@ -40,7 +40,7 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 
 ## Top-Level Scripts
 
-- `check_subtype_ref_edges/check_subtype_ref_edges.py`: Check subtype amino-acid reference edges against genotype amino-acid reference edges.
+- `Preprocess/check_subtype_ref_edges/check_subtype_ref_edges.py`: Check subtype amino-acid reference edges against genotype amino-acid reference edges.
 - `collect_genbank_by_fasta/collect_genbank_by_fasta.py`: Collect local GenBank records matching accessions found in each FASTA file.
 - `detect_accession_hcv_genes/detect_accession_hcv_genes.py`: Detect NS3, NS5A, and NS5B presence for FASTA accessions by BLAST against `HCV-Ref-H77-Genotype1.fasta`.
 - `export_ras_consensus_mutations_csv/export_ras_consensus_mutations_csv.py`: Export detailed and aggregated RAS consensus mutation CSVs from GT and subtype profile workbooks.
