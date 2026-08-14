@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tool", default="hcv-subtype-reference-rebuild")
     parser.add_argument("--refresh-genbank", action="store_true")
     parser.add_argument("--gene", choices=GENES, action="append", help="Process only this gene; repeat as needed.")
-    parser.add_argument("--report-xlsx", type=Path, default=Path("Reference_seqs/HCV_Subtype_Reference_Rebuild_QC.xlsx"))
+    parser.add_argument("--report-xlsx", type=Path, default=Path("outputs/reference_seqs/HCV_Subtype_Reference_Rebuild_QC.xlsx"))
     return parser.parse_args()
 
 

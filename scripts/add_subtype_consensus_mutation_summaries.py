@@ -42,10 +42,10 @@ def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) ->
     document.save(root/'README_Subtype_Consensus_Mutations.docx')
 
 def main() -> None:
-    root=Path('Reference_seqs'); comet=Path('outputs/comet')
+    output_root=Path('outputs/reference_seqs'); comet=Path('outputs/comet')
     readme: dict[str,dict[str,set[str]]] = {}
     for gene,token in [('NS3','NS3'),('NS5A_NTD','NS5A'),('NS5B','NS5B')]:
-        path=root/f'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx'
+        path=output_root/f'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx'
         values=profiles(comet/f'{token}_Subtype_RAS_Profiles.xlsx')
         wb=load_workbook(path); ws=wb.active
         col=next((cell.column for cell in ws[2] if cell.value=='Mutations'), ws.max_column+1)
@@ -65,6 +65,6 @@ def main() -> None:
                 parts.pop(); ws.cell(row,col).value=CellRichText(*parts)
                 readme.setdefault(gene,{}).setdefault(f'GT{gt}_{subtype}',set()).update(plain)
         ws.column_dimensions[ws.cell(1,col).column_letter].width=50; wb.save(path)
-    write_summary_documents(root, readme)
+    write_summary_documents(output_root, readme)
 
 if __name__=='__main__': main()
