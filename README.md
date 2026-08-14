@@ -32,7 +32,7 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 - `genbank-accession-list-metadata/`: Build cohort metadata and person/quasispecies summaries from accessions or a local GenBank file.
 - `genbank-gene-split-alignment/`: Split GenBank nucleotide records by best matched reference gene and write per-gene aligned FASTA files.
 - `hcv-workflow/hcv-gene-genotype-subtype-ref-alignment/`: Prepare reusable HCV genotype/subtype reference alignments and FASTA files.
-- `hcv-workflow/hcv-accessions-metadata-csv/`: Build accession metadata CSVs from RefID FASTA files and local GenBank archives.
+- `Preprocess/hcv-accessions-metadata-csv/`: Build accession metadata CSVs from RefID FASTA files and local GenBank archives.
 - `hcv-workflow/hcv-ns3-build-workflow/`: Build NS3 genotype, subtype, source-feature, complete-profile, and RAS outputs.
 - `hcv-workflow/hcv-ns5a-build-workflow/`: Build NS5A genotype, subtype, source-feature, complete-profile, and RAS outputs.
 - `hcv-workflow/hcv-ns5b-build-workflow/`: Build NS5B genotype, subtype, source-feature, complete-profile, and RAS outputs.
@@ -57,7 +57,7 @@ Skill-specific scripts live inside each skill's `scripts/` directory.
 ├── genbank-gene-split-alignment/
 ├── genbank-reference-alignment/
 ├── genbank-single-accession-extractor/
-├── hcv-workflow/hcv-accessions-metadata-csv/
+├── Preprocess/hcv-accessions-metadata-csv/
 ├── hcv-workflow/hcv-gene-genotype-subtype-ref-alignment/
 ├── hcv-workflow/hcv-metadata-subtype-consensus-workflow/
 ├── hcv-workflow/hcv-ns3-build-workflow/
