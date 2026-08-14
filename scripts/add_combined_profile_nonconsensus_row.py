@@ -34,7 +34,7 @@ def main() -> None:
     a = p.parse_args()
     with open(a.profile_accessions_csv, newline="", encoding="utf-8-sig") as f:
         allowed = {(r["accession"].strip(), r["genotype"].strip(), r["subtype"].strip().lower()) for r in csv.DictReader(f) if r.get("accession", "").strip()}
-    out = load_workbook(a.combined_profile_workbook); sheet = out.active
+    out = load_workbook(a.combined_profile_workbook, rich_text=True); sheet = out.active
     positions = [int(str(c.value)[1:]) for c in sheet[1] if re.fullmatch(r"P\d+", str(c.value or ""))]
     included = {(m.group("gt"), m.group("subtype").lower()) for (value,) in sheet.iter_rows(min_row=2, max_col=1, values_only=True) if (m := SUBTYPE_RE.match(str(value or "")))}
     references = fasta(Path(a.genotype_consensus_fasta))

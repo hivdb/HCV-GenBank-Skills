@@ -30,7 +30,7 @@ def main() -> int:
     with Path(args.profile_accessions_csv).open(newline="", encoding="utf-8-sig") as handle:
         allowed = {row["accession"].strip() for row in csv.DictReader(handle) if row.get("accession", "").strip()}
 
-    combined = load_workbook(combined_path)
+    combined = load_workbook(combined_path, rich_text=True)
     worksheet = combined.active
     positions = [int(str(cell.value)[1:]) for cell in worksheet[1] if re.fullmatch(r"P\d+", str(cell.value or ""))]
 
