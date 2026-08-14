@@ -378,10 +378,6 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --subtype-ras-profile-workbook "$OUTPUT_DIR/NS3_Subtype_RAS_Profiles.xlsx" \
   --output-xlsx "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
   > "$COMBINED_RAS_JSON"
-"$PYTHON_BIN" "$REPO_ROOT/replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py" \
-  --combined-profile-workbook "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
-  --profile-input-workbook "$AA_TMP_WORKBOOK" \
-  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_comet_subtype_ras_coverage_report.py" \
   --gene NS3 --combined-profile-workbook "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
@@ -446,7 +442,15 @@ announce_step 19 "Add combined-profile genotype-consensus difference row" \
   --combined-profile-workbook "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS3_GT_Consensus.fasta"
 
-announce_step 20 "Publish shared ICTV reference/consensus comparison report" \
+announce_step 20 "Update combined-profile non-X coverage labels" \
+  "combined RAS profile: $OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx; QC-passed profile sequences: $AA_TMP_WORKBOOK" \
+  "updated combined RAS profile: $OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx"
+"$PYTHON_BIN" "$SCRIPT_DIR/replace_comet_profile_coverage_range_with_mean_diff.py" \
+  --combined-profile-workbook "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
+  --profile-input-workbook "$AA_TMP_WORKBOOK" \
+  --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv"
+
+announce_step 21 "Publish shared ICTV reference/consensus comparison report" \
   "all COMET subtype profiles and reference comparison workbooks" \
   "shared report: outputs/shared_report/ICTV_ref_local_cons_compare"
 "$PYTHON_BIN" "$SCRIPT_DIR/add_subtype_consensus_mutation_summaries.py"
