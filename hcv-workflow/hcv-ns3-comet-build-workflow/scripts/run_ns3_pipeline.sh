@@ -374,7 +374,7 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --combined-profile-workbook "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv"
-"$PYTHON_BIN" "$REPO_ROOT/build_comet_subtype_ras_coverage_report/build_comet_subtype_ras_coverage_report.py" \
+"$PYTHON_BIN" "$SCRIPT_DIR/build_comet_subtype_ras_coverage_report.py" \
   --gene NS3 --combined-profile-workbook "$OUTPUT_DIR/NS3_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS3_Profile_Accessions.csv" \
   --output-xlsx "$OUTPUT_DIR/NS3_Subtype_RAS_Coverage_Report.xlsx"
