@@ -43,9 +43,9 @@ WORKFLOW_TEMP_ROOTS = {
 }
 
 CURRENT_SELECTION_WORKBOOKS = {
-    "NS3": Path("Ref-selection/___IncludedNS3Refs.xlsx"),
-    "NS5A": Path("Ref-selection/___IncludedNS5ARefs.xlsx"),
-    "NS5B": Path("Ref-selection/___IncludedNS5BRefs.xlsx"),
+    "NS3": Path("HCVData/Ref-selection/___IncludedNS3Refs.xlsx"),
+    "NS5A": Path("HCVData/Ref-selection/___IncludedNS5ARefs.xlsx"),
+    "NS5B": Path("HCVData/Ref-selection/___IncludedNS5BRefs.xlsx"),
 }
 
 

@@ -15,8 +15,8 @@ from pathlib import Path
 GENES = {"NS3": (36, 175), "NS5A": (26, 93), "NS5B": (150, 321)}
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ASSIGNER = REPO_ROOT / "hcv-folder-genotype-subtype-assignment" / "scripts" / "assign_folder_genotype_subtype.py"
-GT_REFERENCES = REPO_ROOT / "HCV_GT_RefSeqs.fasta"
-SUBTYPE_REFERENCES = REPO_ROOT / "HCV_Subtype_Refs_By_Genome_NA.json"
+GT_REFERENCES = REPO_ROOT / "HCVData" / "HCV_GT_RefSeqs.fasta"
+SUBTYPE_REFERENCES = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
 
 
 def fasta_accessions(path: Path) -> list[str]:

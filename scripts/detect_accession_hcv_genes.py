@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--hcv-fasta",
-        default="HCV.fasta",
+        default="HCVData/HCV.fasta",
         help="Path to HCV.fasta containing NS3, NS5A, and NS5B references",
     )
     parser.add_argument(

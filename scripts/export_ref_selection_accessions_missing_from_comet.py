@@ -42,10 +42,10 @@ def fasta_records(path: Path):
 
 
 def main() -> None:
-    fasta_dir = ROOT / 'HCVData' / 'FASTA'; comet_dir = ROOT / 'Comet Subtyping'; output_dir = ROOT / 'outputs' / 'comet'
+    fasta_dir = ROOT / 'HCVData' / 'FASTA'; comet_dir = ROOT / 'HCVData' / 'Comet Subtyping'; output_dir = ROOT / 'outputs' / 'comet'
     output_dir.mkdir(parents=True, exist_ok=True)
     for gene, (workbook_name, sheet_name) in JOBS.items():
-        refids, selection_headers, selection_rows = selected_refids(ROOT / 'Ref-selection' / workbook_name, sheet_name)
+        refids, selection_headers, selection_rows = selected_refids(ROOT / 'HCVData' / 'Ref-selection' / workbook_name, sheet_name)
         all_records = [record for fasta in fasta_dir.glob('*.fasta') if fasta.name.split('_', 1)[0] in refids for record in fasta_records(fasta)]
         with (comet_dir / f'{gene}.csv').open(newline='', encoding='utf-8-sig') as handle:
             comet_accessions = {row['name'].strip().split('.')[0] for row in csv.DictReader(handle) if row.get('name', '').strip()}

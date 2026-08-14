@@ -402,7 +402,7 @@ def merge_gene_hits(*hit_maps: dict[str, set[str]]) -> dict[str, set[str]]:
 
 
 def detect_genes_by_blast(sequence_by_accession: dict[str, str], temp_dir: Path) -> dict[str, set[str]]:
-    reference_fasta = repo_root() / "HCV.fasta"
+    reference_fasta = repo_root() / "HCVData" / "HCV.fasta"
     if not reference_fasta.is_file():
         raise RuntimeError(f"HCV reference FASTA not found: {reference_fasta}")
 

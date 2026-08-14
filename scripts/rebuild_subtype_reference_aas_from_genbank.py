@@ -29,7 +29,7 @@ MIN_COVERAGE = 0.8
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference-dir", type=Path, default=Path("Reference_seqs"))
-    parser.add_argument("--hcv-fasta", type=Path, default=Path("HCV.fasta"))
+    parser.add_argument("--hcv-fasta", type=Path, default=Path("HCVData/HCV.fasta"))
     parser.add_argument(
         "--gt-reference-fasta",
         type=Path,
