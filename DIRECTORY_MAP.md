@@ -5,14 +5,9 @@
 | `.git` | Git repository history and metadata. |
 | `.venv` | Local Python environment. |
 | `HCVData` | HCV input data: accession metadata, sequence and genotype/subtype references in `Reference_seqs`, COMET CSVs, reference-selection workbooks, BlastHist workbooks, and the all-sequence subtype/coverage dataset. Generated reference comparison and mutation reports are in `outputs/reference_seqs`. |
-| `input_data` | Input staging folder; currently essentially empty. |
 | `outputs` | Generated pipeline reports, including local-alignment and COMET results, plus the `temp` subfolder for temporary and intermediate files. |
 | `notes` | Workflow and distance-analysis notes. |
 | `scripts` | Shared scripts for consensus, audits, profile comparison, and reporting. |
-| `genbank-accession-list-metadata` | Skill/workflow for turning GenBank accession lists into metadata and cohort summaries. |
-| `genbank-gene-split-alignment` | Extracts GenBank sequences, aligns them, and splits results by gene. |
-| `genbank-reference-alignment` | Aligns one or more accessions against reference FASTAs. |
-| `genbank-single-accession-extractor` | Downloads or reads one accession and extracts sequence plus source metadata. |
 | `hcv-accessions-metadata-csv` | Creates RefID/accession metadata tables from FASTA and local GenBank data. |
 | `hcv-all-seq-noncomet-coverage-audit` | Non-COMET genotype/subtype assignment and target-position coverage audit for `all.fasta`. |
 | `hcv-combine-included-fastas` | Combines selected reference FASTAs into gene-level files. |
