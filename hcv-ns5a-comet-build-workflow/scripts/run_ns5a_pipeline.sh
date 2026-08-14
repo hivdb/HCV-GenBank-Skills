@@ -249,7 +249,7 @@ AA_TMP_WORKBOOK="$OUTPUT_DIR/NS5A_Profile_Input_Alignment_QC.xlsx"
 announce_step 10c "Summarize QC-passed NS5A genotype mutation burden" \
   "QC profile input: $AA_TMP_WORKBOOK" \
   "genotype mutation-burden summary: $OUTPUT_DIR/NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
-"$PYTHON_BIN" "$REPO_ROOT/scripts/build_qc_passed_genotype_mutation_burden_summary/build_qc_passed_genotype_mutation_burden_summary.py" \
+"$PYTHON_BIN" "$REPO_ROOT/build_qc_passed_genotype_mutation_burden_summary/build_qc_passed_genotype_mutation_burden_summary.py" \
   --input-workbook "$AA_TMP_WORKBOOK" \
   --output-csv "$OUTPUT_DIR/NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv"
 PROFILE_INPUT_COUNTS="$("$PYTHON_BIN" "$SCRIPT_DIR/build_ns5a_completeprofiles_tabspergt.py" --input-workbook "$AA_TMP_WORKBOOK" --report-only)"
@@ -277,7 +277,7 @@ PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json
 echo "complete_profile_included_accession_count=$PROFILE_INCLUDED_ACCESSIONS"
 echo "complete_profile_accessions_with_subtype_count=$PROFILE_WITH_SUBTYPE_ACCESSIONS"
 
-"$PYTHON_BIN" "$REPO_ROOT/scripts/export_noncomet_priority_profile_accessions/export_noncomet_priority_profile_accessions.py" \
+"$PYTHON_BIN" "$REPO_ROOT/export_noncomet_priority_profile_accessions/export_noncomet_priority_profile_accessions.py" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
   --comet-subtype-csv "$COMET_SUBTYPING_CSV" \
   --noncomet-subtype-workbook "$NONCOMET_SUBTYPE_WORKBOOK" \
@@ -321,18 +321,18 @@ echo "Result: subtype cells retain amino-acid variants strictly above 10%; each 
   --subtype-ras-profile-workbook "$OUTPUT_DIR/NS5A_Subtype_RAS_Profiles.xlsx" \
   --output-xlsx "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" \
   > "$COMBINED_RAS_JSON"
-"$PYTHON_BIN" "$REPO_ROOT/scripts/replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py" \
+"$PYTHON_BIN" "$REPO_ROOT/replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py" \
   --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv"
-"$PYTHON_BIN" "$REPO_ROOT/scripts/build_comet_subtype_ras_coverage_report/build_comet_subtype_ras_coverage_report.py" \
+"$PYTHON_BIN" "$REPO_ROOT/build_comet_subtype_ras_coverage_report/build_comet_subtype_ras_coverage_report.py" \
   --gene NS5A --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" \
   --profile-input-workbook "$AA_TMP_WORKBOOK" --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" \
   --output-xlsx "$OUTPUT_DIR/NS5A_Subtype_RAS_Coverage_Report.xlsx"
-"$PYTHON_BIN" "$REPO_ROOT/scripts/add_combined_profile_nonconsensus_row/add_combined_profile_nonconsensus_row.py" \
+"$PYTHON_BIN" "$REPO_ROOT/add_combined_profile_nonconsensus_row/add_combined_profile_nonconsensus_row.py" \
   --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" --profile-input-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --genotype-consensus-fasta "$OUTPUT_DIR/NS5A_GT_Consensus.fasta"
-"$PYTHON_BIN" "$REPO_ROOT/scripts/build_comet_workflow_sequence_audit/build_comet_workflow_sequence_audit.py" \
+"$PYTHON_BIN" "$REPO_ROOT/build_comet_workflow_sequence_audit/build_comet_workflow_sequence_audit.py" \
   --gene NS5A --selection-workbook "$EXCEL_FILE" --selection-sheet "$SHEET_NAME" --fasta-dir "$FASTA_POOL" \
   --metadata-csv "$ACCESSIONS_METADATA_CSV" --comet-csv "$COMET_SUBTYPING_CSV" --qc-workbook "$AA_TMP_WORKBOOK" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5A_Profile_Accessions.csv" --combined-profile-workbook "$OUTPUT_DIR/NS5A_Combined_RAS_Profiles.xlsx" \

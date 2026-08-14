@@ -8,7 +8,7 @@ description: Combine the staged included_refid_fastas files from the HCV NS3, NS
 Run the bundled script to concatenate the current filtered study FASTAs. It writes `NS3.fasta`, `NS5A.fasta`, and `NS5B.fasta` in `assets/` by default.
 
 ```bash
-python hcv-combine-included-fastas/scripts/combine_included_fastas/combine_included_fastas.py
+python hcv-combine-included-fastas/combine_included_fastas/combine_included_fastas.py
 ```
 
 The defaults read these folders under the repository root:

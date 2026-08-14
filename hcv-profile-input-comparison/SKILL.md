@@ -12,7 +12,7 @@ Generate the three Comet profile-input CSVs from their retained amino-acid sourc
 Run after the normal and Comet workflows finish:
 
 ```bash
-.venv/bin/python hcv-profile-input-comparison/scripts/build_and_compare_profile_inputs/build_and_compare_profile_inputs.py --repo-root .
+.venv/bin/python hcv-profile-input-comparison/build_and_compare_profile_inputs/build_and_compare_profile_inputs.py --repo-root .
 ```
 
 The script reads `outputs/comet/<GENE>_Profile_Input_Source.xlsx` and writes the profile-input, comparison, and accession-level differences CSVs under `outputs/comet-local-diff/`.

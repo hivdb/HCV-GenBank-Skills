@@ -8,7 +8,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 KNOWN_QUASISPECIES = {"19", "31", "32", "34", "70", "81", "115", "262", "1044", "2043", "2071", "2129", "2139", "2175", "2195", "2212", "2216", "2225", "2324"}
 JOBS = {
     "NS3": ("___IncludedNS3Refs.xlsx", "NS3_PtGT0_Check"),

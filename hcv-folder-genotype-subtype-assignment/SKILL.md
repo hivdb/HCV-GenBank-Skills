@@ -5,10 +5,10 @@ description: Assign HCV genotype then genotype-matched subtype for every sequenc
 
 # HCV Folder Genotype/Subtype Assignment
 
-Run `scripts/assign_folder_genotype_subtype/assign_folder_genotype_subtype.py` when the user supplies the input folder.
+Run `assign_folder_genotype_subtype/assign_folder_genotype_subtype.py` when the user supplies the input folder.
 
 ```bash
-uv run python hcv-folder-genotype-subtype-assignment/scripts/assign_folder_genotype_subtype/assign_folder_genotype_subtype.py \
+uv run python hcv-folder-genotype-subtype-assignment/assign_folder_genotype_subtype/assign_folder_genotype_subtype.py \
   --fasta-dir /path/to/fasta_folder
 ```
 

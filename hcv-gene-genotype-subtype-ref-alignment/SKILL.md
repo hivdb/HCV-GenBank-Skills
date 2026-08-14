@@ -12,7 +12,7 @@ This is a one-time preprocessing step for later high-throughput genotype/subtype
 > **Important:** Do not use this NA-alignment workflow to create the
 > production per-gene subtype AA reference FASTAs. Aligning subtype nucleotide
 > genomes to genotype nucleotide references is not sufficiently reliable for
-> that purpose. Use `scripts/rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py`
+> that purpose. Use `rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py`
 > from the repository root, which derives gene AA sequences from GenBank
 > protein annotations, instead. This workflow remains useful for legacy NA
 > extraction, diagnostics, and alignment-quality reporting.
@@ -27,7 +27,7 @@ This is a one-time preprocessing step for later high-throughput genotype/subtype
 2. Run the bundled script:
 
 ```bash
-python3 hcv-gene-genotype-subtype-ref-alignment/scripts/build_hcv_gene_subtype_refs/build_hcv_gene_subtype_refs.py --gt-gene-na-fasta /path/to/HCV_GT_RefSeqs.fasta --subtype-genome-na-json /path/to/HCV_Subtype_Refs_By_Genome_NA.json
+python3 hcv-gene-genotype-subtype-ref-alignment/build_hcv_gene_subtype_refs/build_hcv_gene_subtype_refs.py --gt-gene-na-fasta /path/to/HCV_GT_RefSeqs.fasta --subtype-genome-na-json /path/to/HCV_Subtype_Refs_By_Genome_NA.json
 ```
 
 3. Review the outputs.

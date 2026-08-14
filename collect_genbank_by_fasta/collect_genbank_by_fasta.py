@@ -70,7 +70,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent.parent
+    return Path(__file__).resolve().parent.parent
 
 
 def default_temp_dir(output_dir: Path) -> Path:
