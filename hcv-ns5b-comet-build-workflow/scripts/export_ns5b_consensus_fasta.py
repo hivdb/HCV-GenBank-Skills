@@ -64,12 +64,12 @@ def load_gt_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], dict[st
             if current is None or candidate[0] > current[0] or (candidate[0] == current[0] and candidate[1] < current[1]):
                 best_by_position[position] = candidate
 
-        ordered_positions = sorted(best_by_position)
-        if not ordered_positions:
+        if not best_by_position:
             raise RuntimeError(f"Worksheet {sheet_name} in {workbook_path} has no position rows")
-        sequence = "".join(best_by_position[position][1] for position in ordered_positions)
+        # Preserve fixed NS5B coordinates; missing calls must not shift later AAs.
+        sequence = "".join(best_by_position.get(position, (0.0, "X"))[1] for position in range(1, REFERENCE_AA_LENGTH + 1))
         entries.append((gt_label, sequence))
-        positions_by_gt[gt_label] = ordered_positions
+        positions_by_gt[gt_label] = sorted(best_by_position)
     wb.close()
     if not entries:
         raise RuntimeError(f"No GT blocks found in {workbook_path}")
@@ -106,13 +106,14 @@ def load_subtype_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], di
                 per_position[position] = candidate
 
         for subtype in sorted(best_by_subtype_position):
-            ordered_positions = sorted(best_by_subtype_position[subtype])
-            if not ordered_positions:
+            positions = best_by_subtype_position[subtype]
+            if not positions:
                 continue
-            sequence = "".join(best_by_subtype_position[subtype][position][1] for position in ordered_positions)
+            # Preserve fixed NS5B coordinates; X denotes an unavailable position.
+            sequence = "".join(positions.get(position, (0.0, "X"))[1] for position in range(1, REFERENCE_AA_LENGTH + 1))
             header_label = f"{gt_label}_{subtype}"
             entries.append((header_label, sequence))
-            positions_by_subtype[header_label] = ordered_positions
+            positions_by_subtype[header_label] = sorted(positions)
     wb.close()
     if not entries:
         raise RuntimeError(f"No subtype rows found in {workbook_path}")

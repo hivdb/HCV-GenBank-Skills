@@ -3,6 +3,7 @@
 from __future__ import annotations
 import re
 from pathlib import Path
+from docx import Document
 from openpyxl import load_workbook
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
@@ -21,6 +22,24 @@ def profiles(path: Path) -> dict[tuple[str,str,int,str],str]:
             pos=int(str(header[column])[1:])
             for aa,pct in VARIANT.findall(str(value or '')): result[(m.group(1),m.group(2).lower(),pos,aa)]=pct
     wb.close(); return result
+
+def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) -> None:
+    title = 'Subtype reference-to-COMET-consensus mutations'
+    note = 'Only subtypes with one or more RAS-position differences are listed. Percentages are from the final combined profile; NA means the mutation was not displayed there.'
+    lines=[f'# {title}', '', note, '']
+    document = Document()
+    document.add_heading(title, level=0)
+    document.add_paragraph(note)
+    for gene in ('NS3','NS5A_NTD','NS5B'):
+        lines.extend([f'## {gene}', ''])
+        document.add_heading(gene, level=1)
+        for subtype, mutations in sorted(readme.get(gene,{}).items(), key=lambda item: (int(item[0][2]), item[0])):
+            summary = f'{subtype}: {", ".join(sorted(mutations))}'
+            lines.append(f'- {summary}')
+            document.add_paragraph(summary, style='List Bullet')
+        lines.append('')
+    (root/'README_Subtype_Consensus_Mutations.md').write_text('\n'.join(lines),encoding='utf-8')
+    document.save(root/'README_Subtype_Consensus_Mutations.docx')
 
 def main() -> None:
     root=Path('Reference_seqs'); comet=Path('outputs/comet')
@@ -46,12 +65,6 @@ def main() -> None:
                 parts.pop(); ws.cell(row,col).value=CellRichText(*parts)
                 readme.setdefault(gene,{}).setdefault(f'GT{gt}_{subtype}',set()).update(plain)
         ws.column_dimensions[ws.cell(1,col).column_letter].width=50; wb.save(path)
-    lines=['# Subtype reference-to-COMET-consensus mutations', '', 'Only subtypes with one or more RAS-position differences are listed. Percentages are from the final combined profile; `NA` means the mutation was not displayed there.', '']
-    for gene in ('NS3','NS5A_NTD','NS5B'):
-        lines.extend([f'## {gene}', ''])
-        for subtype, mutations in sorted(readme.get(gene,{}).items(), key=lambda item: (int(item[0][2]), item[0])):
-            lines.append(f'- {subtype}: {", ".join(sorted(mutations))}')
-        lines.append('')
-    (root/'README_Subtype_Consensus_Mutations.md').write_text('\n'.join(lines),encoding='utf-8')
+    write_summary_documents(root, readme)
 
 if __name__=='__main__': main()

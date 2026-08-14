@@ -7,7 +7,6 @@ import argparse
 import re
 from pathlib import Path
 
-from Bio import Align
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
@@ -53,43 +52,13 @@ def load_references(path: Path) -> dict[tuple[str, str], str]:
     return references
 
 
-def alignment_strings(reference: str, consensus: str, coordinates: object) -> tuple[str, str]:
-    reference_chunks: list[str] = []
-    consensus_chunks: list[str] = []
-    ref_points = coordinates[0]  # type: ignore[index]
-    consensus_points = coordinates[1]  # type: ignore[index]
-    for index in range(len(ref_points) - 1):
-        ref_start, ref_end = int(ref_points[index]), int(ref_points[index + 1])
-        con_start, con_end = int(consensus_points[index]), int(consensus_points[index + 1])
-        ref_span, con_span = ref_end - ref_start, con_end - con_start
-        if ref_span and con_span:
-            reference_chunks.append(reference[ref_start:ref_end])
-            consensus_chunks.append(consensus[con_start:con_end])
-        elif ref_span:
-            reference_chunks.append(reference[ref_start:ref_end])
-            consensus_chunks.append("-" * ref_span)
-        elif con_span:
-            reference_chunks.append("-" * con_span)
-            consensus_chunks.append(consensus[con_start:con_end])
-    return "".join(reference_chunks), "".join(consensus_chunks)
-
-
 def covered_alignment_pairs(reference: str, consensus: str) -> dict[int, tuple[str, str]]:
-    aligner = Align.PairwiseAligner(mode="global")
-    aligner.match_score = 2.0
-    aligner.mismatch_score = -1.0
-    aligner.open_gap_score = -5.0
-    aligner.extend_gap_score = -1.0
-    alignment = aligner.align(reference, consensus)[0]
-    aligned_reference, aligned_consensus = alignment_strings(reference, consensus, alignment.coordinates)
-    pairs: dict[int, tuple[str, str]] = {}
-    reference_position = 0
-    for reference_aa, consensus_aa in zip(aligned_reference, aligned_consensus):
-        if reference_aa != "-":
-            reference_position += 1
-        if reference_aa in VALID_AAS and consensus_aa in VALID_AAS:
-            pairs[reference_position] = (reference_aa, consensus_aa)
-    return pairs
+    """Compare fixed gene coordinates; inputs are already position-aligned."""
+    return {
+        position: (reference_aa, consensus_aa)
+        for position, (reference_aa, consensus_aa) in enumerate(zip(reference, consensus), start=1)
+        if reference_aa in VALID_AAS and consensus_aa in VALID_AAS
+    }
 
 
 def header_fields(header: str) -> dict[str, str]:

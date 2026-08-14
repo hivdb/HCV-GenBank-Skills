@@ -18,13 +18,14 @@ def fasta(path):
 def write(path, rows):
  with path.open('w') as o:
   for h,s in rows:o.write(f'>{h}\n{s}\n')
-def blast(query, db, output):
- subprocess.run(['blastn','-query',str(query),'-db',str(db),'-dust','no','-task','blastn','-evalue','1e-6','-max_hsps','1','-max_target_seqs','1000','-outfmt',OUTFMT,'-out',str(output)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+def blast(query, db, output, threads):
+ subprocess.run(['blastn','-query',str(query),'-db',str(db),'-dust','no','-task','blastn','-num_threads',str(threads),'-evalue','1e-6','-max_hsps','1','-max_target_seqs','1000','-outfmt',OUTFMT,'-out',str(output)],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  return [x.split('\t') for x in output.read_text().splitlines() if x]
 def db(path,prefix):
  subprocess.run(['makeblastdb','-in',str(path),'-dbtype','nucl','-out',str(prefix),'-parse_seqids'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 def main():
- p=argparse.ArgumentParser();p.add_argument('--fasta-dir',required=True);p.add_argument('--output-dir',default='outputs/folder_assignments');p.add_argument('--gt-reference-fasta',default='HCV_GT_RefSeqs.fasta');p.add_argument('--subtype-json',default='HCV_Subtype_Refs_By_Genome_NA.json');p.add_argument('--min-aligned-nt',type=int,default=200);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--fasta-dir',required=True);p.add_argument('--output-dir',default='outputs/folder_assignments');p.add_argument('--gt-reference-fasta',default='HCV_GT_RefSeqs.fasta');p.add_argument('--subtype-json',default='HCV_Subtype_Refs_By_Genome_NA.json');p.add_argument('--min-aligned-nt',type=int,default=200);p.add_argument('--threads',type=int,default=1);a=p.parse_args()
+ if a.threads < 1: raise SystemExit('--threads must be at least 1')
  out=Path(a.output_dir);out.mkdir(parents=True,exist_ok=True); records=[]
  for f in sorted(Path(a.fasta_dir).rglob('*')):
   if f.is_file() and f.suffix.lower() in EXT:
@@ -35,7 +36,7 @@ def main():
   m=re.match(r'HCV([1-8])(NS3|NS5A|NS5B)',h.split()[0])
   if m: refs.append((f'{m.group(2)}|{m.group(1)}',s))
  with tempfile.TemporaryDirectory() as d:
-  d=Path(d); q=d/'q.fa';write(q,[(r[0],r[4]) for r in records]);rf=d/'gt.fa';write(rf,refs);gdb=d/'gt';db(rf,gdb);hits=blast(q,gdb,d/'gt.tsv')
+  d=Path(d); q=d/'q.fa';write(q,[(r[0],r[4]) for r in records]);rf=d/'gt.fa';write(rf,refs);gdb=d/'gt';db(rf,gdb);hits=blast(q,gdb,d/'gt.tsv',a.threads)
   best={}
   for x in hits:
    gene,gt=x[1].rsplit('|',2)[-2:]; key=(x[0],gene); score=(float(x[7]),int(x[2]))
@@ -50,7 +51,7 @@ def main():
    for (qid,g),(_,gt,x) in best.items():
     if g==gene:groups[gt].append(qid)
    for gt,qids in groups.items():
-    sf=d/f'{gene}_{gt}.fa'; meta={f'S{i}':v for i,v in enumerate(bygt[gt])};write(sf,[(k,v[2]) for k,v in meta.items()]);sdb=d/f'{gene}_{gt}';db(sf,sdb);qq=d/f'{gene}_{gt}_q.fa';write(qq,[(q,records[int(q)][4]) for q in qids]);sh=blast(qq,sdb,d/f'{gene}_{gt}.tsv'); sb={}
+    sf=d/f'{gene}_{gt}.fa'; meta={f'S{i}':v for i,v in enumerate(bygt[gt])};write(sf,[(k,v[2]) for k,v in meta.items()]);sdb=d/f'{gene}_{gt}';db(sf,sdb);qq=d/f'{gene}_{gt}_q.fa';write(qq,[(q,records[int(q)][4]) for q in qids]);sh=blast(qq,sdb,d/f'{gene}_{gt}.tsv',a.threads); sb={}
     for x in sh:
      score=(float(x[7]),int(x[2]));
      x[1]=x[1].rsplit('|',1)[-1]

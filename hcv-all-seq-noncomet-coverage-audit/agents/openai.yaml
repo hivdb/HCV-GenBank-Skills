@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV All-Sequence Coverage Audit"
+  short_description: "Assign non-COMET types and report coverage."
+  default_prompt: "Use $hcv-all-seq-noncomet-coverage-audit to audit an HCV FASTA collection for non-COMET assignments and target-range coverage."
