@@ -3,8 +3,7 @@
 | Folder | Purpose |
 |---|---|
 | `HCVData` | Contains the all-sequence subtype/coverage table utility. |
-| `Preprocess` | Contains subtype-reference pairwise alignment and reference-edge validation utilities. |
-| `collect_genbank_by_fasta` | Collects GenBank records matching FASTA accessions. |
+| `Preprocess` | Contains subtype-reference alignment/validation and GenBank-record collection utilities. |
 | `detect_accession_hcv_genes` | Detects NS3, NS5A, and NS5B gene coverage. |
 | `export_check_refid_filter_summary` | Exports RefID `Check` filtering summaries. |
 | `export_gt_reference_consensus_differences` | Exports reference-to-COMET-consensus comparisons. |
