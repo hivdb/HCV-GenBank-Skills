@@ -3,8 +3,7 @@
 | Folder | Purpose |
 |---|---|
 | `HCVData` | Contains the all-sequence subtype/coverage table utility. |
-| `Preprocess` | Contains subtype-reference alignment/validation, GenBank-record collection, and gene-detection utilities. |
-| `export_check_refid_filter_summary` | Exports RefID `Check` filtering summaries. |
+| `Preprocess` | Contains reference alignment/validation, RefID filter documentation, GenBank-record collection, and gene-detection utilities. |
 | `export_gt_reference_consensus_differences` | Exports reference-to-COMET-consensus comparisons. |
 | `export_noncomet_priority_profile_accessions` | Exports non-COMET priority profile accessions. |
 | `export_ras_consensus_mutations_csv` | Exports RAS consensus mutations as CSV. |
