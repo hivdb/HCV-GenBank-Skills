@@ -4,7 +4,6 @@
 |---|---|
 | `HCVData` | Contains the all-sequence subtype/coverage table utility. |
 | `Preprocess` | Contains reference alignment/validation, RefID filter documentation, GenBank-record collection, and gene-detection utilities. |
-| `export_noncomet_priority_profile_accessions` | Exports non-COMET priority profile accessions. |
 | `export_ras_consensus_mutations_csv` | Exports RAS consensus mutations as CSV. |
 | `export_ref_selection_accessions_missing_from_comet` | Exports selected-reference accessions absent from COMET CSVs. |
 | `extract_gt_refs_aa_to_fasta` | Extracts genotype amino-acid references to FASTA. |

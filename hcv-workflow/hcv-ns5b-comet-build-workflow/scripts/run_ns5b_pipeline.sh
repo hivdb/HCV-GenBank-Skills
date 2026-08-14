@@ -284,7 +284,7 @@ PROFILE_WITH_SUBTYPE_ACCESSIONS="$("$PYTHON_BIN" -c 'import json,sys; print(json
 echo "complete_profile_included_accession_count=$PROFILE_INCLUDED_ACCESSIONS"
 echo "complete_profile_accessions_with_subtype_count=$PROFILE_WITH_SUBTYPE_ACCESSIONS"
 
-"$PYTHON_BIN" "$REPO_ROOT/export_noncomet_priority_profile_accessions/export_noncomet_priority_profile_accessions.py" \
+"$PYTHON_BIN" "$SCRIPT_DIR/export_noncomet_priority_profile_accessions.py" \
   --profile-accessions-csv "$OUTPUT_DIR/NS5B_Profile_Accessions.csv" \
   --comet-subtype-csv "$COMET_SUBTYPING_CSV" \
   --noncomet-subtype-workbook "$NONCOMET_SUBTYPE_WORKBOOK" \
