@@ -14,6 +14,8 @@ COVERAGE_COLUMNS = {
     "NS5A": "IncludeNS5APos26_93",
     "NS5B": "IncludeNS5BPos150_321",
 }
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = REPO_ROOT / "HCVData" / "HCV-all-seq-subtype"
 
 
 def accession_key(value: str | None) -> str:
@@ -22,16 +24,16 @@ def accession_key(value: str | None) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ref-csv", type=Path, default=Path("Ref.csv"))
-    parser.add_argument("--accessions-csv", type=Path, default=Path("Accessions.csv"))
-    parser.add_argument("--comet-csv", type=Path, default=Path("all_comet_subtype.csv"))
+    parser.add_argument("--ref-csv", type=Path, default=DATA_DIR / "Ref.csv")
+    parser.add_argument("--accessions-csv", type=Path, default=DATA_DIR / "Accessions.csv")
+    parser.add_argument("--comet-csv", type=Path, default=DATA_DIR / "all_comet_subtype.csv")
     parser.add_argument(
         "--coverage-csv",
         type=Path,
         action="append",
         help="Coverage CSV to supply priority non-COMET subtypes; repeat as needed.",
     )
-    parser.add_argument("--output-csv", type=Path, default=Path("Ref_with_CometSubtypes.csv"))
+    parser.add_argument("--output-csv", type=Path, default=DATA_DIR / "Ref_with_CometSubtypes.csv")
     args = parser.parse_args()
 
     with args.comet_csv.open(newline="", encoding="utf-8-sig") as handle:
@@ -54,9 +56,9 @@ def main() -> None:
                 subtypes_by_refid[refid].add(subtype)
 
     coverage_paths = args.coverage_csv or [
-        Path("NS3_AllSeq_NonComet_Coverage.csv"),
-        Path("NS5A_AllSeq_NonComet_Coverage.csv"),
-        Path("NS5B_AllSeq_NonComet_Coverage.csv"),
+        DATA_DIR / "NS3_AllSeq_NonComet_Coverage.csv",
+        DATA_DIR / "NS5A_AllSeq_NonComet_Coverage.csv",
+        DATA_DIR / "NS5B_AllSeq_NonComet_Coverage.csv",
     ]
     priority_added = 0
     coverage_by_refid: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
