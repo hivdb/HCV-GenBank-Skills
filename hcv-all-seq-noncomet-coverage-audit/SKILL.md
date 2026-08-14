@@ -8,7 +8,7 @@ description: Assign non-COMET HCV genotype and closest within-genotype subtype f
 Run the bundled script from the repository root. It calls the repository's non-COMET folder assignment workflow, then writes one CSV per gene in the requested output directory.
 
 ```bash
-.venv/bin/python hcv-all-seq-noncomet-coverage-audit/scripts/audit_all_fasta_coverage.py \
+.venv/bin/python hcv-all-seq-noncomet-coverage-audit/scripts/audit_all_fasta_coverage/audit_all_fasta_coverage.py \
   --input-fasta HCV-all-seq-subtype/all.fasta \
   --output-dir outputs/local_alignment \
   --threads 4

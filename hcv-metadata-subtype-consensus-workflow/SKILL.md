@@ -12,7 +12,7 @@ Use this skill for the metadata-driven subtype consensus workflow. It starts fro
 Run:
 
 ```bash
-python hcv-metadata-subtype-consensus-workflow/scripts/run_metadata_subtype_consensus_workflow.py --fasta-dir /path/to/fasta_dir
+python hcv-metadata-subtype-consensus-workflow/scripts/run_metadata_subtype_consensus_workflow/run_metadata_subtype_consensus_workflow.py --fasta-dir /path/to/fasta_dir
 ```
 
 Common inputs:
@@ -30,7 +30,7 @@ Common inputs:
 To only rebuild consensus-to-genotype alignment text reports from existing consensus FASTAs:
 
 ```bash
-python hcv-metadata-subtype-consensus-workflow/scripts/run_metadata_subtype_consensus_workflow.py --only-consensus-alignments
+python hcv-metadata-subtype-consensus-workflow/scripts/run_metadata_subtype_consensus_workflow/run_metadata_subtype_consensus_workflow.py --only-consensus-alignments
 ```
 
 ## Dependency Warning

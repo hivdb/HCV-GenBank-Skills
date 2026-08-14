@@ -12,7 +12,7 @@ Use this skill to create the accession metadata CSV consumed by downstream HCV m
 Run:
 
 ```bash
-python hcv-accessions-metadata-csv/scripts/build_accessions_metadata_csv.py --pipeline-name ns3
+python hcv-accessions-metadata-csv/scripts/build_accessions_metadata_csv/build_accessions_metadata_csv.py --pipeline-name ns3
 ```
 
 The script can load `fasta_pool` and `genbank_dir` from `pipeline.local.toml` using `--pipeline-name`.
@@ -20,7 +20,7 @@ The script can load `fasta_pool` and `genbank_dir` from `pipeline.local.toml` us
 Explicit inputs:
 
 ```bash
-python hcv-accessions-metadata-csv/scripts/build_accessions_metadata_csv.py \
+python hcv-accessions-metadata-csv/scripts/build_accessions_metadata_csv/build_accessions_metadata_csv.py \
   --fasta-dir /path/to/refid_fastas \
   --genbank-dir /path/to/genbank_seq_files \
   --output-csv outputs/temp/build_accessions_metadata_csv/Accessions_metadata.csv

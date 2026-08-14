@@ -13,20 +13,20 @@ See `NS5A_workflow.svg` in this skill folder.
 
 ## Script Order
 
-1. `scripts/find_refid_fastas.py`
+1. `scripts/find_refid_fastas/find_refid_fastas.py`
 2. copy matched FASTA files to `included_refid_fastas/`
-3. `scripts/filter_accessions_metadata_by_fasta.py`
-4. `scripts/split_refid_metadata_csv.py`
-5. `scripts/filter_refid_fastas_by_metadata.py`
-6. `scripts/build_ns5a_gt_allstudies.py`
-7. `scripts/build_ns5a_sourcefeatures_csv.py` is currently commented out in the wrapper
-8. `scripts/build_ns5a_sourcefeatures_grouped_csv.py` is currently commented out in the wrapper
-9. `scripts/build_ns5a_subtype_allstudies_wseqs.py`
-10. `scripts/build_ns5a_subtype_with_gt_aa.py`
-11. `scripts/build_ns5a_completeprofiles_tabspergt.py`
-12. `scripts/export_ns5a_consensus_fasta.py`
-13. `scripts/build_ns5a_gt_ras_profiles.py`
-14. `scripts/build_ns5a_subtype_ras_profiles.py`
+3. `scripts/filter_accessions_metadata_by_fasta/filter_accessions_metadata_by_fasta.py`
+4. `scripts/split_refid_metadata_csv/split_refid_metadata_csv.py`
+5. `scripts/filter_refid_fastas_by_metadata/filter_refid_fastas_by_metadata.py`
+6. `scripts/build_ns5a_gt_allstudies/build_ns5a_gt_allstudies.py`
+7. `scripts/build_ns5a_sourcefeatures_csv/build_ns5a_sourcefeatures_csv.py` is currently commented out in the wrapper
+8. `scripts/build_ns5a_sourcefeatures_grouped_csv/build_ns5a_sourcefeatures_grouped_csv.py` is currently commented out in the wrapper
+9. `scripts/build_ns5a_subtype_allstudies_wseqs/build_ns5a_subtype_allstudies_wseqs.py`
+10. `scripts/build_ns5a_subtype_with_gt_aa/build_ns5a_subtype_with_gt_aa.py`
+11. `scripts/build_ns5a_completeprofiles_tabspergt/build_ns5a_completeprofiles_tabspergt.py`
+12. `scripts/export_ns5a_consensus_fasta/export_ns5a_consensus_fasta.py`
+13. `scripts/build_ns5a_gt_ras_profiles/build_ns5a_gt_ras_profiles.py`
+14. `scripts/build_ns5a_subtype_ras_profiles/build_ns5a_subtype_ras_profiles.py`
 
 Prefer the wrapper when running the full workflow:
 
@@ -43,7 +43,7 @@ Configuration stays in the repository base folder. The wrapper loads:
 3. built-in fallbacks
 
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
-The TOML loader is bundled at `scripts/load_pipeline_defaults.py` and is called with the explicit root config path.
+The TOML loader is bundled at `scripts/load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
 Set `sheet_name` in the `[ns5a]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
 Temporary files and step summaries are written under `outputs/temp/hcv-ns5a-comet-build-workflow/`.
 
