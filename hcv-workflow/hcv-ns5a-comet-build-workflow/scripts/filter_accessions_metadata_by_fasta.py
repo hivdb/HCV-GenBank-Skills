@@ -14,6 +14,15 @@ GENOTYPE_TOKEN_RE = re.compile(r"\bgenotype\s*[:=]?\s*([1-8](?:[A-Za-z][A-Za-z0-
 SUBTYPE_TOKEN_RE = re.compile(r"\bsubtype\s*[:=]?\s*([1-8]?[A-Za-z][A-Za-z0-9]*)\b", re.IGNORECASE)
 HCV_SUBTYPE_RE = re.compile(r"\bHCV[-\s]*([1-8][A-Za-z][A-Za-z0-9]*)\b", re.IGNORECASE)
 BARE_GT_SUBTYPE_RE = re.compile(r"^\s*([1-8][A-Za-z][A-Za-z0-9]*)\s*$", re.IGNORECASE)
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def display_path(path: Path) -> str:
+    """Use a repository-relative path in workflow output when available."""
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def parse_args() -> argparse.Namespace:
@@ -212,9 +221,9 @@ def main() -> int:
     print(f"metadata_accession_count={len(metadata_accessions)}")
     print(f"filtered_row_count={len(filtered_rows)}")
     print(f"missing_accession_count={len(missing_accessions)}")
-    print(f"filtered_csv={filtered_csv.resolve()}")
-    print(f"genotype_subtype_csv={genotype_subtype_csv.resolve()}")
-    print(f"missing_accessions_file={missing_txt.resolve()}")
+    print(f"filtered_csv={display_path(filtered_csv)}")
+    print(f"genotype_subtype_csv={display_path(genotype_subtype_csv)}")
+    print(f"missing_accessions_file={display_path(missing_txt)}")
     return 0
 
 
