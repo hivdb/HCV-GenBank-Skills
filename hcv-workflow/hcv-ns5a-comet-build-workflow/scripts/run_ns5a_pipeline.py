@@ -73,7 +73,15 @@ def path_value(value: str, *, default: Path | None = None) -> Path:
     path = Path(value).expanduser() if value else default
     if path is None:
         raise RuntimeError("A required path value is missing")
-    return path if path.is_absolute() else REPO_ROOT / path
+    if path.is_absolute():
+        return path
+    repository_path = REPO_ROOT / path
+    hcvdata_path = REPO_ROOT / "HCVData" / path
+    # The shared TOML stores reference-data filenames without an HCVData/ prefix.
+    # Prefer an explicit repository-relative path, then resolve those data files under HCVData/.
+    if not repository_path.exists() and hcvdata_path.exists():
+        return hcvdata_path
+    return repository_path
 
 
 def executable_value(value: str) -> str:
@@ -157,13 +165,38 @@ class Pipeline:
         ):
             (self.skill_temp_root / name).mkdir(parents=True, exist_ok=True)
 
-    def run(self, script: str, *arguments: str, stdout_path: Path | None = None) -> str:
+    def run(
+        self,
+        script: str,
+        *arguments: str,
+        stdout_path: Path | None = None,
+        stream_output: bool = False,
+    ) -> str:
         command = [self.python_bin, repository_relative(SCRIPT_DIR / script), *(repository_relative(argument) for argument in arguments)]
         if stdout_path is None:
             subprocess.run(command, check=True, cwd=REPO_ROOT)
             return ""
         stdout_path.parent.mkdir(parents=True, exist_ok=True)
-        result = subprocess.run(command, check=True, text=True, capture_output=True, cwd=REPO_ROOT)
+        if stream_output:
+            output_lines: list[str] = []
+            with stdout_path.open("w", encoding="utf-8") as handle:
+                process = subprocess.Popen(command, cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE)
+                assert process.stdout is not None
+                for line in process.stdout:
+                    print(line, end="")
+                    handle.write(line)
+                    output_lines.append(line)
+                if process.wait() != 0:
+                    raise subprocess.CalledProcessError(process.returncode, command)
+            return "".join(output_lines)
+        try:
+            result = subprocess.run(command, check=True, text=True, capture_output=True, cwd=REPO_ROOT)
+        except subprocess.CalledProcessError as error:
+            if error.stdout:
+                print(error.stdout, end="", file=sys.stderr)
+            if error.stderr:
+                print(error.stderr, end="", file=sys.stderr)
+            raise
         stdout_path.write_text(result.stdout, encoding="utf-8")
         if result.stderr:
             print(result.stderr, end="", file=sys.stderr)
@@ -183,6 +216,7 @@ class Pipeline:
         gt_ras = self.output_dir / "NS5A_GT_RAS_Profiles.xlsx"
         subtype_ras = self.output_dir / "NS5A_Subtype_RAS_Profiles.xlsx"
         combined_ras = self.output_dir / "NS5A_Combined_RAS_Profiles.xlsx"
+        annotated_combined_ras = self.output_dir / "NS5A_Combined_RAS_Profiles_Annotated.xlsx"
         comet_gt_csv = self.temp_root / "comet_ns5a_genotype_assignments.csv"
         comet_subtype_csv = self.temp_root / "comet_ns5a_subtype_assignments.csv"
 
@@ -201,7 +235,7 @@ class Pipeline:
             self.run("prepare_comet_ns5a_assignments.py", "--comet-csv", self.comet_csv, "--fasta-dir", self.included_fasta_dir, "--genotype-output-csv", comet_gt_csv, "--subtype-output-csv", comet_subtype_csv, "--not-found-output-csv", self.temp_root / "comet_ns5a_not_found_or_unassigned.csv", "--not-found-fasta-output", self.temp_root / "comet_ns5a_not_found_or_unassigned.fasta", "--remove-unassigned")
 
         def extract_aa() -> None:
-            self.run("build_ns5a_subtype_with_gt_aa.py", "--subtype-workbook", subtype_workbook, "--fasta-dir", self.fasta_pool, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.output_dir, "--output-workbook", self.output_dir / "NS5A_Profile_Input_Source.xlsx", stdout_path=summary("build_ns5a_subtype_with_gt_aa"))
+            self.run("build_ns5a_subtype_with_gt_aa.py", "--subtype-workbook", subtype_workbook, "--fasta-dir", self.fasta_pool, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.output_dir, "--output-workbook", self.output_dir / "NS5A_Profile_Input_Source.xlsx", stdout_path=summary("build_ns5a_subtype_with_gt_aa"), stream_output=True)
 
         def report_profile_counts() -> None:
             output = self.run("build_ns5a_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--report-only", stdout_path=self.temp_root / "profile_input_counts.json")
@@ -243,8 +277,8 @@ class Pipeline:
             Step("build-subtype-aa-distance", "build subtype amino-acid distance matrices", lambda: self.run("build_ns5a_subtype_aa_distance_matrices.py", "--input-fasta", subtype_consensus, "--subtype-profile-workbook", subtype_profile, "--min-subtype-sequences", "10", "--output-xlsx", self.output_dir / "NS5A_Subtype_AA_Distance_Pos24_93.xlsx", "--temp-dir", summary("build_ns5a_subtype_aa_distance_matrices").parent, "--start", "24", "--end", "93", stdout_path=summary("build_ns5a_subtype_aa_distance_matrices", "last_run_summary.txt"))),
             Step("build-paired-distance-matrices", "build paired AA and NA RAS/range distance matrices", paired_distances),
             Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns5a_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.output_dir / "NS5A_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.output_dir / "NS5A_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build_ns5a_ras_entropy", "last_run_summary.txt"))),
-            Step("add-nonconsensus-row", "add combined-profile genotype-consensus difference rows", lambda: self.run("add_combined_profile_nonconsensus_row.py", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus)),
-            Step("update-coverage-labels", "replace combined-profile coverage labels", lambda: self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv)),
+            Step("add-nonconsensus-row", "create annotated combined profile with MeanDiff and PositionDiff", lambda: self.run("add_combined_profile_nonconsensus_row.py", "--combined-profile-workbook", combined_ras, "--output-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus)),
+            Step("update-coverage-labels", "replace annotated combined-profile coverage labels", lambda: self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv)),
             Step("publish-ictv-report", "publish the shared ICTV comparison report", lambda: self.run("add_subtype_consensus_mutation_summaries.py")),
         ]
 

@@ -10,6 +10,7 @@ Use this skill for the full NS5A high-throughput build workflow. The first step 
 ## Workflow Chart
 
 See `NS5A_workflow.svg` in this skill folder.
+See `scripts/comet_ns5a_workflow_steps.csv` for the named Python-runner steps and their function scripts.
 
 ## Workflow Steps and Python Calls
 
@@ -72,7 +73,7 @@ Run the workflow in this order. For an individual step, invoke its listed script
    - Python: `build_ns5a_na_distance_matrices.py` (run once for each position set)
 24. Build genotype and subtype RAS entropy reports.
    - Python: `build_ns5a_ras_entropy.py`
-25. Add genotype-consensus difference rows to the combined RAS profile.
+25. Create an annotated combined RAS profile with `MeanDiff` and `PositionDiff` values.
    - Python: `add_combined_profile_nonconsensus_row.py`
 26. Replace combined-profile non-X coverage labels with mean-difference labels.
    - Python: `replace_comet_profile_coverage_range_with_mean_diff.py`
@@ -114,7 +115,7 @@ Temporary files and step summaries are written under `outputs/temp/hcv-ns5a-come
 The discovery step keeps every row with a `RefID` from the configured `IncludedNS5ARefs_StatusInclude.xlsx` selection workbook; it does not apply a `Num Pts` filter.
 After discovery, the Python runner copies all matched RefID FASTA files into `outputs/temp/hcv-ns5a-comet-build-workflow/run_ns5a_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
-The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `17` accession is listed in `17.csv`; `29` source_isolate contains `SCRN`; `50` source_isolate contains `week 0`; `85` accession is listed in `85.csv`; `123` source_isolate does not contain `TF`; `142` source_isolate contains `baseline`; `165` accession is listed in `165.csv`; `192` source_isolate contains `day1`; `288` source_isolate contains `pre`; `346` source_isolate contains `baseline/D0`; `535` accession is listed in `535.csv`; `600` source_isolate does not contain `failure`; `661` source_isolation_source equals `plasma`.
+The per-RefID metadata split step reads its rules from `scripts/refid_metadata_filters.csv`; edit that CSV to add or change rules. It writes CSVs only for RefIDs defined there, under `refid_metadata/`. Rules using `in_accession_list` load their accession-list CSV (such as `17.csv`) from the temporary metadata folder beside `included_accessions_metadata.csv`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
 The COMET subtype step gives priority to non-COMET genotype and subtype assignments for retained accessions called `1d` and for genotype 7 or 8 accessions. It also adds priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
 
@@ -141,6 +142,8 @@ The workflow writes NS5A outputs under `outputs/`, including:
 - `NS5A_Subtype_Consensus.fasta`
 - `NS5A_GT_RAS_Profiles.xlsx`
 - `NS5A_Subtype_RAS_Profiles.xlsx`
+- `NS5A_Combined_RAS_Profiles.xlsx` (base combined profile)
+- `NS5A_Combined_RAS_Profiles_Annotated.xlsx` (derived profile with `MeanDiff`, `PositionDiff`, and updated coverage labels)
 - paired AA/NA RAS and position-range distance workbooks under `outputs/`
 
 ## Operating Rules

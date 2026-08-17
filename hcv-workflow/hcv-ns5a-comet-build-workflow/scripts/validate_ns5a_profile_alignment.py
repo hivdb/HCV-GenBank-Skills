@@ -10,7 +10,7 @@ from pathlib import Path
 
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[3]
-    shared_validator = repo_root / "hcv-ns3-comet-build-workflow" / "scripts" / "validate_ns3_profile_alignment.py"
+    shared_validator = repo_root / "hcv-workflow" / "hcv-ns3-comet-build-workflow" / "scripts" / "validate_ns3_profile_alignment.py"
     command = [
         sys.executable, str(shared_validator), *sys.argv[1:], "--reference-gene", "NS5A_NTD",
         "--ras-positions", "24,26,28,29,30,31,32,38,58,62,92,93",

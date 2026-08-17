@@ -363,38 +363,54 @@ def main() -> int:
     rows_by_gt: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in subtype_rows:
         rows_by_gt[row["ClosestGT"]].append(row)
+    print(f"extract_aa_input_rows={len(subtype_rows)}", flush=True)
 
     output_rows: list[dict[str, Any]] = []
+    sequences_by_refid: dict[str, dict[str, str]] = {}
     for gt, rows in sorted(rows_by_gt.items(), key=lambda item: int(item[0])):
+        print(f"extract_aa_genotype=GT{gt},candidate_rows={len(rows)}", flush=True)
+        print(f"extract_aa_genotype=GT{gt},stage=building_blast_database", flush=True)
         db_prefix = build_gt_db(job_dir, gt, gt_refs[gt])
         reference_aa = gt_refs[gt]
         query_entries: list[tuple[str, str]] = []
         sequence_by_qseqid: dict[str, str] = {}
 
-        for row in rows:
+        for prepared, row in enumerate(rows, start=1):
             fasta_path = refid_to_fasta.get(row["RefID"])
-            if fasta_path is None:
-                continue
-            sequence_by_accession = {accession_from_header(h): seq for h, seq in parse_fasta(fasta_path)}
-            sequence = sequence_by_accession.get(row["AccessionID"])
-            if not sequence:
-                continue
-            qseqid = f"{row['RefID']}|{row['AccessionID']}"
-            query_entries.append((qseqid, sequence))
-            sequence_by_qseqid[qseqid] = sequence
+            if fasta_path is not None:
+                sequence_by_accession = sequences_by_refid.get(row["RefID"])
+                if sequence_by_accession is None:
+                    sequence_by_accession = {accession_from_header(h): seq for h, seq in parse_fasta(fasta_path)}
+                    sequences_by_refid[row["RefID"]] = sequence_by_accession
+                sequence = sequence_by_accession.get(row["AccessionID"])
+                if sequence:
+                    qseqid = f"{row['RefID']}|{row['AccessionID']}"
+                    query_entries.append((qseqid, sequence))
+                    sequence_by_qseqid[qseqid] = sequence
+            if prepared % 100 == 0 or prepared == len(rows):
+                print(
+                    f"extract_aa_prepare=GT{gt},processed={prepared}/{len(rows)},"
+                    f"blastx_queries={len(query_entries)},cached_refid_fastas={len(sequences_by_refid)}",
+                    flush=True,
+                )
 
         if not query_entries:
+            print(f"extract_aa_genotype=GT{gt},status=no_matching_fasta_sequences", flush=True)
             continue
 
+        print(f"extract_aa_genotype=GT{gt},stage=running_blastx,blastx_queries={len(query_entries)}", flush=True)
         query_fasta = job_dir / f"ns5a_queries_gt{gt}.fasta"
         write_fasta(query_fasta, query_entries)
         hits = run_blastx(query_fasta, db_prefix, job_dir / f"ns5a_gt{gt}.blast.tsv")
+        print(f"extract_aa_genotype=GT{gt},stage=selecting_hits,blastx_hits={len(hits)}", flush=True)
         best_hits = choose_best_hits(hits, args.min_aa_overlap)
 
-        for row in rows:
+        for processed, row in enumerate(rows, start=1):
             qseqid = f"{row['RefID']}|{row['AccessionID']}"
             hit = best_hits.get(qseqid)
             if hit is None:
+                if processed % 100 == 0 or processed == len(rows):
+                    print(f"extract_aa_progress=GT{gt},processed={processed}/{len(rows)},rows_with_aa={len(output_rows)}", flush=True)
                 continue
             start_aa, end_aa, aa_sequence, na_sequence = extract_aa(sequence_by_qseqid[qseqid], hit, reference_aa)
             output_row = dict(row)
@@ -403,6 +419,8 @@ def main() -> int:
             output_row["AASequence"] = aa_sequence
             output_row["NASequence"] = na_sequence
             output_rows.append(output_row)
+            if processed % 100 == 0 or processed == len(rows):
+                print(f"extract_aa_progress=GT{gt},processed={processed}/{len(rows)},rows_with_aa={len(output_rows)}", flush=True)
         try:
             query_fasta.unlink()
         except OSError:

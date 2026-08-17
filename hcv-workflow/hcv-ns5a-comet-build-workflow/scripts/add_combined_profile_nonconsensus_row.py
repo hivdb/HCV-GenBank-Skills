@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Append per-position normal-AA non-consensus fractions to a combined profile."""
+"""Create an annotated combined profile with MeanDiff and PositionDiff values."""
 from __future__ import annotations
 
 import argparse
@@ -13,6 +13,8 @@ from openpyxl.styles import Font, PatternFill
 
 NORMAL_AAS = set("ACDEFGHIKLMNPQRSTVWY")
 SUBTYPE_RE = re.compile(r"^GT(?P<gt>\d+)_(?P<subtype>\S+) \(")
+GT_RE = re.compile(r"^GT(?P<gt>\d+)(?:\s|_)")
+VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
 
 
 def fasta(path: Path) -> dict[str, str]:
@@ -27,14 +29,44 @@ def fasta(path: Path) -> dict[str, str]:
     return result
 
 
+def most_frequent_variant(value: object) -> tuple[str, str] | None:
+    variants = VARIANT_RE.findall(str(value or ""))
+    return max(variants, key=lambda item: float(item[1])) if variants else None
+
+
+def add_mean_diff_column(sheet) -> None:
+    """Add MeanDiff for subtype rows using the preceding genotype consensus row."""
+    for column in range(sheet.max_column, 0, -1):
+        if sheet.cell(1, column).value == "MeanDiff":
+            sheet.delete_cols(column)
+    mean_diff_column = sheet.max_column + 1
+    sheet.cell(1, mean_diff_column, "MeanDiff")
+    genotype_variants: list[tuple[str, str] | None] | None = None
+    for row in range(2, sheet.max_row + 1):
+        label = str(sheet.cell(row, 1).value or "")
+        if GT_RE.match(label) and not SUBTYPE_RE.match(label):
+            genotype_variants = [most_frequent_variant(sheet.cell(row, column).value) for column in range(2, mean_diff_column)]
+        elif SUBTYPE_RE.match(label) and genotype_variants is not None:
+            displayed_percent = sum(
+                float(frequency)
+                for column, gt_variant in zip(range(2, mean_diff_column), genotype_variants)
+                for amino_acid, frequency in VARIANT_RE.findall(str(sheet.cell(row, column).value or ""))
+                if gt_variant is None or amino_acid != gt_variant[0]
+            )
+            cell = sheet.cell(row, mean_diff_column, displayed_percent / 100.0)
+            cell.number_format = "0.0"
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--combined-profile-workbook", required=True); p.add_argument("--profile-input-workbook", required=True)
+    p.add_argument("--combined-profile-workbook", required=True); p.add_argument("--output-workbook", required=True)
+    p.add_argument("--profile-input-workbook", required=True)
     p.add_argument("--profile-accessions-csv", required=True); p.add_argument("--genotype-consensus-fasta", required=True)
     a = p.parse_args()
     with open(a.profile_accessions_csv, newline="", encoding="utf-8-sig") as f:
         allowed = {(r["accession"].strip(), r["genotype"].strip(), r["subtype"].strip().lower()) for r in csv.DictReader(f) if r.get("accession", "").strip()}
     out = load_workbook(a.combined_profile_workbook, rich_text=True); sheet = out.active
+    add_mean_diff_column(sheet)
     positions = [int(str(c.value)[1:]) for c in sheet[1] if re.fullmatch(r"P\d+", str(c.value or ""))]
     included = {(m.group("gt"), m.group("subtype").lower()) for (value,) in sheet.iter_rows(min_row=2, max_col=1, values_only=True) if (m := SUBTYPE_RE.match(str(value or "")))}
     references = fasta(Path(a.genotype_consensus_fasta))
@@ -60,7 +92,10 @@ def main() -> None:
     sheet.append(["PositionDiff", *[numerator[pos] / denominator[pos] if denominator[pos] else None for pos in positions], None])
     for cell in sheet[sheet.max_row]:
         cell.fill = PatternFill(fill_type="solid", fgColor="FFF2CC"); cell.font = Font(bold=True); cell.number_format = "0.0%"
-    out.save(a.combined_profile_workbook)
+    output_path = Path(a.output_workbook)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    out.save(output_path)
+    print(f"annotated_combined_profile={output_path}")
 
 
 if __name__ == "__main__": main()

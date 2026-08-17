@@ -91,17 +91,6 @@ def most_frequent_variant_to_rich_text(value: object) -> CellRichText | str:
     return CellRichText(amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency))
 
 
-def mean_diff(value_rows: list[object], gt_variants: list[tuple[str, str] | None], threshold: float) -> float:
-    """Sum displayed non-consensus amino-acid percentages and express as a decimal."""
-    displayed_percent = sum(
-        float(frequency)
-        for value, gt_variant in zip(value_rows, gt_variants)
-        for amino_acid, frequency in VARIANT_RE.findall(str(value or ""))
-        if float(frequency) >= threshold and (gt_variant is None or amino_acid != gt_variant[0])
-    )
-    return displayed_percent / 100.0
-
-
 def write_combined_workbook(
     output_path: Path,
     positions: list[object],
@@ -128,7 +117,7 @@ def write_combined_workbook(
     gt_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
     bold = Font(bold=True)
 
-    worksheet.append([*positions, "MeanDiff"])
+    worksheet.append(positions)
     for cell in worksheet[1]:
         cell.fill = header_fill
         cell.font = bold
@@ -137,7 +126,7 @@ def write_combined_workbook(
     for genotype in sorted(gt_by_number, key=int):
         gt_row = gt_by_number[genotype]
         worksheet.append(
-            [gt_row[0]] + [most_frequent_variant_to_rich_text(value) for value in gt_row[1:]] + [None]
+            [gt_row[0]] + [most_frequent_variant_to_rich_text(value) for value in gt_row[1:]]
         )
         output_rows += 1
         for cell in worksheet[worksheet.max_row]:
@@ -157,10 +146,8 @@ def write_combined_workbook(
                     )
                     for value, gt_variant in zip(subtype_values, gt_amino_acids)
                 ]
-                + [mean_diff(subtype_values, gt_amino_acids, threshold)]
             )
             output_rows += 1
-            worksheet.cell(worksheet.max_row, worksheet.max_column).number_format = "0.0"
         worksheet.append([])
 
     for row in worksheet.iter_rows():
