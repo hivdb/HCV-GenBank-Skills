@@ -90,11 +90,17 @@ def write_subtype_alignment(
     consensuses = read_fasta(consensus_path)
     rows: list[tuple[str, str, str, dict[int, tuple[str, str]]]] = []
     missing_consensuses: list[tuple[str, str, str, str]] = []
+    seen_subtypes: set[tuple[str, str]] = set()
     for header, reference in read_fasta(reference_path).items():
         fields = header_fields(header)
         genotype = fields.get("genotype", "")
         subtype = fields.get("subtype", "")
         accession = fields.get("accession", "")
+        subtype_key = (genotype, subtype)
+        if genotype and subtype and subtype_key in seen_subtypes:
+            continue
+        if genotype and subtype:
+            seen_subtypes.add(subtype_key)
         consensus = consensuses.get(f"GT{genotype}_{subtype}")
         if not genotype or not subtype or consensus is None:
             missing_consensuses.append((gene, f"GT{genotype}", subtype, accession))
