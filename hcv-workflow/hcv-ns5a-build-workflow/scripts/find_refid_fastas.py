@@ -47,8 +47,7 @@ KNOWN_QUASISPECIES_REFIDS = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Read one Excel worksheet, exclude rows where the patient-count column is 'Exclude', "
-            "collect RefIDs, and find matching FASTA files by filename prefix."
+            "Read one Excel worksheet, collect RefIDs, and find matching FASTA files by filename prefix."
         )
     )
     parser.add_argument("--excel-file", required=True, help="Path to the Excel workbook")
@@ -58,8 +57,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refid-column", default="RefID", help="Column name holding RefID values")
     parser.add_argument(
         "--numpatients-column",
-        default="NumPatients",
-        help="Column name holding the NumPatients values",
+        default="",
+        help="Optional column whose value 'Exclude' removes a row",
     )
     parser.add_argument(
         "--positive-column",
@@ -75,9 +74,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--exclude-known-quasispecies-refids",
-        action="store_true",
-        default=True,
-        help="Exclude the built-in RefID set used by downstream genotype/subtype workflows (default: enabled)",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Exclude the built-in RefID set used by downstream genotype/subtype workflows (default: disabled)",
     )
     return parser.parse_args()
 
@@ -140,14 +139,14 @@ def load_matching_refids(
 
     if refid_column not in header_index:
         raise RuntimeError(f"Column '{refid_column}' was not found in worksheet '{sheet_name}'")
-    if numpatients_column not in header_index:
+    if numpatients_column and numpatients_column not in header_index:
         raise RuntimeError(f"Column '{numpatients_column}' was not found in worksheet '{sheet_name}'")
     for column in positive_columns:
         if column not in header_index:
             raise RuntimeError(f"Column '{column}' was not found in worksheet '{sheet_name}'")
 
     refid_idx = header_index[refid_column]
-    numpatients_idx = header_index[numpatients_column]
+    numpatients_idx = header_index.get(numpatients_column)
     positive_indices = {column: header_index[column] for column in positive_columns}
 
     matching_refids: list[str] = []
@@ -162,8 +161,8 @@ def load_matching_refids(
 
     for row in rows[1:]:
         scanned_rows += 1
-        numpatients_value = row[numpatients_idx] if numpatients_idx < len(row) else None
-        if is_excluded_patient_value(numpatients_value):
+        numpatients_value = row[numpatients_idx] if numpatients_idx is not None and numpatients_idx < len(row) else None
+        if numpatients_column and is_excluded_patient_value(numpatients_value):
             skipped_excluded_numpatients += 1
             continue
 
@@ -191,13 +190,11 @@ def load_matching_refids(
         qualifying_rows += 1
         matching_refids.append(refid)
         result_rows.append(row)
-        matching_rows.append(
-            {
-                "refid": refid,
-                numpatients_column: "" if numpatients_value is None else str(numpatients_value).strip(),
-                **positive_values,
-            }
-        )
+        matching_rows.append({
+            "refid": refid,
+            **({numpatients_column: "" if numpatients_value is None else str(numpatients_value).strip()} if numpatients_column else {}),
+            **positive_values,
+        })
 
     diagnostics = {
         "worksheet": sheet_name,
@@ -314,7 +311,8 @@ def main() -> int:
     }
     write_json(job_dir / "summary.json", summary)
 
-    print(json.dumps(summary, indent=2, ensure_ascii=True))
+    print(f"Input rows: {diagnostics['rows_scanned']}")
+    print(f"FASTA files found: {len(matched_files)}")
     return 0
 
 

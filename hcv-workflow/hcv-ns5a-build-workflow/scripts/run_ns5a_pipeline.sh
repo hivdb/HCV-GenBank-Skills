@@ -118,7 +118,6 @@ announce_step 2 "Find RefID FASTA files" \
   --sheet "$SHEET_NAME" \
   --fasta-dir "$FASTA_POOL" \
   --output-dir "$DISCOVERY_TMP" \
-  --numpatients-column 'Num Pts' \
   > "$DISCOVERY_JSON"
 
 DISCOVERY_DIR="$(find "$DISCOVERY_TMP" -maxdepth 1 -type d -name 'refid_fasta_*' | head -n 1)"

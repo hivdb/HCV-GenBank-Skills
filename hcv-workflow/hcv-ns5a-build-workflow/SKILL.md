@@ -58,7 +58,7 @@ Temporary files and step summaries are written under `outputs/temp/hcv-ns5a-buil
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 - optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
-The discovery step keeps rows where `RefID` is present and `Num Pts` is not `Exclude`. It does not filter on `NS5ACount` or `Notes`.
+The discovery step keeps every row with a `RefID` from the configured `IncludedNS5ARefs_StatusInclude.xlsx` selection workbook; it does not apply a `Num Pts` filter.
 After discovery, the wrapper copies all matched RefID FASTA files into `outputs/temp/hcv-ns5a-build-workflow/run_ns5a_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `17` accession is listed in `17.csv`; `29` source_isolate contains `SCRN`; `50` source_isolate contains `week 0`; `85` accession is listed in `85.csv`; `123` source_isolate does not contain `TF`; `142` source_isolate contains `baseline`; `165` accession is listed in `165.csv`; `192` source_isolate contains `day1`; `288` source_isolate contains `pre`; `346` source_isolate contains `baseline/D0`; `535` accession is listed in `535.csv`; `600` source_isolate does not contain `failure`; `661` source_isolation_source equals `plasma`.
