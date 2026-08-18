@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 from collections import Counter
 from pathlib import Path
 
@@ -18,6 +19,11 @@ def parse_args() -> argparse.Namespace:
         help="Path to the combined Excel workbook.",
     )
     parser.add_argument(
+        "--output-workbook",
+        type=Path,
+        help="Optional destination. When set, copy --workbook first so this step does not modify an earlier step's output.",
+    )
+    parser.add_argument(
         "--data-sheet",
         default=None,
         help="Worksheet containing the sequence-level rows. Defaults to the first sheet.",
@@ -33,6 +39,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     workbook_path = args.workbook
+    if args.output_workbook:
+        workbook_path = args.output_workbook
+        workbook_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(args.workbook, workbook_path)
 
     wb = load_workbook(workbook_path)
     ws = wb[args.data_sheet] if args.data_sheet else wb[wb.sheetnames[0]]

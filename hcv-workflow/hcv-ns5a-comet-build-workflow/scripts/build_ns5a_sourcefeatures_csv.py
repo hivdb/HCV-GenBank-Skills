@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import csv
 import os
 import re
@@ -46,7 +47,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/temp") / "hcv-ns5a-comet-build-workflow" / Path(__file__).stem
+    path = Path(os.environ.get("NS5A_COMET_TEMP_ROOT", "outputs/temp/hcv-ns5a-comet-build-workflow")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 

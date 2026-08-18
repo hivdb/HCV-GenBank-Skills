@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import re
+import shutil
 from collections import defaultdict
 from pathlib import Path
 
@@ -20,12 +21,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--combined-profile-workbook", required=True)
     parser.add_argument("--profile-input-workbook", required=True)
     parser.add_argument("--profile-accessions-csv", required=True)
+    parser.add_argument("--output-workbook", help="Optional destination; copy the input workbook before updating it.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     combined_path = Path(args.combined_profile_workbook)
+    if args.output_workbook:
+        destination = Path(args.output_workbook)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(combined_path, destination)
+        combined_path = destination
     input_path = Path(args.profile_input_workbook)
     with Path(args.profile_accessions_csv).open(newline="", encoding="utf-8-sig") as handle:
         allowed = {row["accession"].strip() for row in csv.DictReader(handle) if row.get("accession", "").strip()}

@@ -138,32 +138,45 @@ class Pipeline:
         self.sheet_name = value("sheet_name", "SHEET_NAME")
         self.fasta_pool = path_value(value("fasta_pool", "FASTA_POOL"))
         self.genbank_dir = path_value(value("genbank_dir", "GENBANK_DIR"))
-        self.output_dir = path_value(value("output_dir", "OUTPUT_DIR", "outputs/comet"))
+        self.output_root = path_value(value("output_dir", "OUTPUT_DIR", "outputs/comet-NS5A"))
         self.reference_fasta = path_value(value("reference_fasta", "REFERENCE_FASTA", "HCVData/HCV_GT_RefSeqs.fasta"))
         self.subtype_json = path_value(value("subtype_json", "SUBTYPE_JSON", "HCVData/HCV_Subtype_Refs_By_Genome_NA.json"))
         self.gt_aa_json = path_value(value("gt_aa_json", "GT_AA_JSON", "HCVData/HCV_GT_Refs_By_Gene_AA.json"))
         self.metadata_csv = path_value(value("accessions_metadata_csv", "ACCESSIONS_METADATA_CSV", "HCVData/Accessions_metadata.csv"))
         self.comet_csv = path_value(value("comet_subtyping_csv", "COMET_SUBTYPING_CSV", "HCVData/Comet Subtyping/NS5A.csv"))
         self.noncomet_workbook = path_value(value("noncomet_subtype_workbook", "NONCOMET_SUBTYPE_WORKBOOK", "outputs/local_alignment/NS5A_Subtype_AllStudies_WSeqs.xlsx"))
-        self.temp_root = path_value(value("temp_root", "TEMP_ROOT", f"outputs/temp/{SKILL_NAME}/run_ns5a_pipeline"))
-        self.included_fasta_dir = self.temp_root / "included_refid_fastas"
-        self.discovery_tmp = self.temp_root / "find_refid_fastas"
-        self.skill_temp_root = REPO_ROOT / "outputs/temp" / SKILL_NAME
-        self.refid_metadata_dir = self.temp_root / "refid_metadata"
-        self.matched_txt = self.output_dir / "NS5A_matched_fasta_files.txt"
-        self.aa_workbook = self.output_dir / "NS5A_Profile_Input_Alignment_QC.xlsx"
-        self.profile_accessions_csv = self.output_dir / "NS5A_Profile_Accessions.csv"
+        # A run is self-contained: each numbered directory is the output of one
+        # named runner stage.  Keep the supplied TEMP_ROOT option only for
+        # backwards-compatible argument parsing; run artifacts now live here.
+        self.step_dirs = {
+            name: self.output_root / f"{number:02d}_{name}"
+            for number, name in enumerate((
+                "prepare-workdirs", "discover-refid-fastas", "stage-refid-fastas",
+                "filter-accession-metadata", "split-refid-metadata", "filter-refid-fastas",
+                "prepare-comet-assignments", "build-genotype-workbook", "add-genotype-counts",
+                "build-source-features", "build-grouped-source-features", "build-subtype-workbook",
+                "extract-profile-aa", "validate-profile-alignment", "summarize-qc-mutation-burden",
+                "report-profile-input-counts", "build-complete-profiles",
+                "export-noncomet-priority-accessions", "export-consensus-fastas",
+                "compare-reference-consensus", "build-genotype-ras-profile",
+                "build-subtype-ras-profile", "build-combined-ras-reports",
+                "summarize-subtype-ras-differences", "build-genotype-aa-distance",
+                "build-subtype-aa-distance", "build-paired-distance-matrices",
+                "build-ras-entropy", "add-nonconsensus-row", "update-coverage-labels",
+                "publish-ictv-report",
+            ), start=1)
+        }
+        self.temp_root = self.step_dirs["prepare-comet-assignments"]
+        self.included_fasta_dir = self.step_dirs["stage-refid-fastas"] / "included_refid_fastas"
+        self.discovery_tmp = self.step_dirs["discover-refid-fastas"]
+        self.refid_metadata_dir = self.step_dirs["split-refid-metadata"] / "refid_metadata"
+        self.matched_txt = self.discovery_tmp / "NS5A_matched_fasta_files.txt"
+        self.aa_workbook = self.step_dirs["validate-profile-alignment"] / "NS5A_Profile_Input_Alignment_QC.xlsx"
+        self.profile_accessions_csv = self.step_dirs["build-complete-profiles"] / "NS5A_Profile_Accessions.csv"
     def ensure_summary_directories(self) -> None:
-        self.temp_root.mkdir(parents=True, exist_ok=True)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        for name in (
-            "build_ns5a_gt_allstudies", "build_ns5a_sourcefeatures_csv", "build_ns5a_sourcefeatures_grouped_csv",
-            "build_ns5a_subtype_allstudies_wseqs", "build_ns5a_subtype_with_gt_aa", "build_ns5a_completeprofiles_tabspergt",
-            "build_ns5a_gt_ras_profiles", "build_ns5a_subtype_ras_profiles", "build_ns5a_combined_ras_profiles",
-            "build_ns5a_subtype_ras_consensus_difference_summary", "build_ns5a_gt_aa_distance_matrix",
-            "build_ns5a_subtype_aa_distance_matrices",
-        ):
-            (self.skill_temp_root / name).mkdir(parents=True, exist_ok=True)
+        # Directories are created by their owning stage.  In particular, do not
+        # create OUTPUT_ROOT before prepare-workdirs has a chance to clean it.
+        return None
 
     def run(
         self,
@@ -173,14 +186,15 @@ class Pipeline:
         stream_output: bool = False,
     ) -> str:
         command = [self.python_bin, repository_relative(SCRIPT_DIR / script), *(repository_relative(argument) for argument in arguments)]
+        environment = {**os.environ, "NS5A_COMET_TEMP_ROOT": str(self.output_root / "_temp")}
         if stdout_path is None:
-            subprocess.run(command, check=True, cwd=REPO_ROOT)
+            subprocess.run(command, check=True, cwd=REPO_ROOT, env=environment)
             return ""
         stdout_path.parent.mkdir(parents=True, exist_ok=True)
         if stream_output:
             output_lines: list[str] = []
             with stdout_path.open("w", encoding="utf-8") as handle:
-                process = subprocess.Popen(command, cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE)
+                process = subprocess.Popen(command, cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, env=environment)
                 assert process.stdout is not None
                 for line in process.stdout:
                     print(line, end="")
@@ -190,7 +204,7 @@ class Pipeline:
                     raise subprocess.CalledProcessError(process.returncode, command)
             return "".join(output_lines)
         try:
-            result = subprocess.run(command, check=True, text=True, capture_output=True, cwd=REPO_ROOT)
+            result = subprocess.run(command, check=True, text=True, capture_output=True, cwd=REPO_ROOT, env=environment)
         except subprocess.CalledProcessError as error:
             if error.stdout:
                 print(error.stdout, end="", file=sys.stderr)
@@ -206,22 +220,23 @@ class Pipeline:
         print(f"\n=== {name}: {description} ===")
 
     def steps(self) -> list[Step]:
-        summary = lambda directory, filename="last_run_summary.json": self.skill_temp_root / directory / filename
-        gt_workbook = self.output_dir / "NS5A_GT_AllStudies.xlsx"
-        subtype_workbook = self.output_dir / "NS5A_Subtype_AllStudies_WSeqs.xlsx"
-        gt_profile = self.output_dir / "NS5A_GT_CompleteProfiles_TabsPerGT.xlsx"
-        subtype_profile = self.output_dir / "NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx"
-        gt_consensus = self.output_dir / "NS5A_GT_Consensus.fasta"
-        subtype_consensus = self.output_dir / "NS5A_Subtype_Consensus.fasta"
-        gt_ras = self.output_dir / "NS5A_GT_RAS_Profiles.xlsx"
-        subtype_ras = self.output_dir / "NS5A_Subtype_RAS_Profiles.xlsx"
-        combined_ras = self.output_dir / "NS5A_Combined_RAS_Profiles.xlsx"
-        annotated_combined_ras = self.output_dir / "NS5A_Combined_RAS_Profiles_Annotated.xlsx"
+        summary = lambda stage, filename="last_run_summary.json": self.step_dirs[stage] / filename
+        gt_workbook = self.step_dirs["add-genotype-counts"] / "NS5A_GT_AllStudies.xlsx"
+        subtype_workbook = self.step_dirs["build-subtype-workbook"] / "NS5A_Subtype_AllStudies_WSeqs.xlsx"
+        gt_profile = self.step_dirs["build-complete-profiles"] / "NS5A_GT_CompleteProfiles_TabsPerGT.xlsx"
+        subtype_profile = self.step_dirs["build-complete-profiles"] / "NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx"
+        gt_consensus = self.step_dirs["export-consensus-fastas"] / "NS5A_GT_Consensus.fasta"
+        subtype_consensus = self.step_dirs["export-consensus-fastas"] / "NS5A_Subtype_Consensus.fasta"
+        gt_ras = self.step_dirs["build-genotype-ras-profile"] / "NS5A_GT_RAS_Profiles.xlsx"
+        subtype_ras = self.step_dirs["build-subtype-ras-profile"] / "NS5A_Subtype_RAS_Profiles.xlsx"
+        combined_ras = self.step_dirs["build-combined-ras-reports"] / "NS5A_Combined_RAS_Profiles.xlsx"
+        annotated_combined_ras = self.step_dirs["add-nonconsensus-row"] / "NS5A_Combined_RAS_Profiles_Annotated.xlsx"
         comet_gt_csv = self.temp_root / "comet_ns5a_genotype_assignments.csv"
         comet_subtype_csv = self.temp_root / "comet_ns5a_subtype_assignments.csv"
 
         def prepare() -> None:
-            self.run("prepare_ns5a_pipeline_workdirs.py", "--clean-dir", self.included_fasta_dir, "--clean-dir", self.discovery_tmp, "--remove-file", summary("build_ns5a_sourcefeatures_csv", "NS5A_SourceFeatures.csv"), "--remove-file", summary("build_ns5a_sourcefeatures_grouped_csv", "NS5A_SourceFeatures_Grouped.csv"))
+            self.run("prepare_ns5a_pipeline_workdirs.py", "--clean-dir", self.output_root)
+            self.step_dirs["prepare-workdirs"].mkdir(parents=True, exist_ok=True)
 
         def discover() -> None:
             output = self.run("find_refid_fastas.py", "--excel-file", self.excel_file, "--sheet", self.sheet_name, "--fasta-dir", self.fasta_pool, "--output-dir", self.discovery_tmp, stdout_path=self.discovery_tmp / "discovery_ns5a.json")
@@ -234,11 +249,18 @@ class Pipeline:
         def prepare_comet() -> None:
             self.run("prepare_comet_ns5a_assignments.py", "--comet-csv", self.comet_csv, "--fasta-dir", self.included_fasta_dir, "--genotype-output-csv", comet_gt_csv, "--subtype-output-csv", comet_subtype_csv, "--not-found-output-csv", self.temp_root / "comet_ns5a_not_found_or_unassigned.csv", "--not-found-fasta-output", self.temp_root / "comet_ns5a_not_found_or_unassigned.fasta", "--remove-unassigned")
 
+        def stage_refid_fastas() -> None:
+            # The stager deliberately requires its destination to exist.  The
+            # destination is now owned by this stage rather than the cleaner.
+            self.included_fasta_dir.mkdir(parents=True, exist_ok=True)
+            self.run("stage_matched_refid_fastas.py", "--matched-files", self.matched_txt, "--output-dir", self.included_fasta_dir)
+
         def extract_aa() -> None:
-            self.run("build_ns5a_subtype_with_gt_aa.py", "--subtype-workbook", subtype_workbook, "--fasta-dir", self.fasta_pool, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.output_dir, "--output-workbook", self.output_dir / "NS5A_Profile_Input_Source.xlsx", stdout_path=summary("build_ns5a_subtype_with_gt_aa"), stream_output=True)
+            stage = self.step_dirs["extract-profile-aa"]
+            self.run("build_ns5a_subtype_with_gt_aa.py", "--subtype-workbook", subtype_workbook, "--fasta-dir", self.fasta_pool, "--gt-aa-json", self.gt_aa_json, "--output-dir", stage, "--output-workbook", stage / "NS5A_Profile_Input_Source.xlsx", stdout_path=summary("extract-profile-aa"), stream_output=True)
 
         def report_profile_counts() -> None:
-            output = self.run("build_ns5a_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--report-only", stdout_path=self.temp_root / "profile_input_counts.json")
+            output = self.run("build_ns5a_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--report-only", stdout_path=summary("report-profile-input-counts", "profile_input_counts.json"))
             print(output, end="")
 
         def paired_distances() -> None:
@@ -246,40 +268,41 @@ class Pipeline:
                 upper = sequence_type.upper()
                 script = f"build_ns5a_{sequence_type}_distance_matrices.py"
                 for positions, suffix in ((RAS_POSITIONS, "RAS"), (RANGE_POSITIONS, "Pos24_93")):
-                    self.run(script, "--input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--sequence-type", sequence_type, "--positions", positions, "--gt-output-xlsx", self.output_dir / f"NS5A_GT_{upper}_Distance_{suffix}.xlsx", "--subtype-output-xlsx", self.output_dir / f"NS5A_Subtype_{upper}_Distance_{suffix}.xlsx", "--min-subtype-sequences", "10")
+                    stage = self.step_dirs["build-paired-distance-matrices"]
+                    self.run(script, "--input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--sequence-type", sequence_type, "--positions", positions, "--gt-output-xlsx", stage / f"NS5A_GT_{upper}_Distance_{suffix}.xlsx", "--subtype-output-xlsx", stage / f"NS5A_Subtype_{upper}_Distance_{suffix}.xlsx", "--min-subtype-sequences", "10")
 
         return [
             Step("prepare-workdirs", "recreate run directories and clear stale source-feature files", prepare),
             Step("discover-refid-fastas", "discover selected RefID FASTA files", discover),
-            Step("stage-refid-fastas", "copy discovered FASTA files into the staging directory", lambda: self.run("stage_matched_refid_fastas.py", "--matched-files", self.matched_txt, "--output-dir", self.included_fasta_dir)),
+            Step("stage-refid-fastas", "copy discovered FASTA files into the staging directory", stage_refid_fastas),
             Step("filter-accession-metadata", "filter master metadata to staged FASTA accessions", lambda: self.run("filter_accessions_metadata_by_fasta.py", "--fasta-dir", self.included_fasta_dir, "--metadata-csv", self.metadata_csv, "--output-dir", self.temp_root)),
             Step("split-refid-metadata", "create per-RefID metadata filters", lambda: (self.run("prepare_ns5a_pipeline_workdirs.py", "--clean-dir", self.refid_metadata_dir), self.run("split_refid_metadata_csv.py", "--input-csv", self.temp_root / "included_accessions_metadata.csv", "--output-dir", self.refid_metadata_dir))),
             Step("filter-refid-fastas", "filter staged FASTA records by RefID metadata", lambda: self.run("filter_refid_fastas_by_metadata.py", "--metadata-dir", self.refid_metadata_dir, "--fasta-dir", self.included_fasta_dir)),
             Step("prepare-comet-assignments", "create COMET calls and remove unassigned records", prepare_comet),
-            Step("build-genotype-workbook", "build the COMET genotype workbook", lambda: self.run("build_ns5a_comet_gt_allstudies.py", "--fasta-dir", self.included_fasta_dir, "--comet-genotype-csv", comet_gt_csv, "--output-dir", self.output_dir, stdout_path=summary("build_ns5a_gt_allstudies"))),
-            Step("add-genotype-counts", "add the genotype-count worksheet", lambda: self.run("add_gt_counts_sheet.py", "--workbook", gt_workbook)),
-            Step("build-source-features", "build optional source-feature CSV output", lambda: self.run("build_ns5a_sourcefeatures_csv.py", "--matched-fasta-report", self.matched_txt, "--genbank-dir", self.genbank_dir, stdout_path=summary("build_ns5a_sourcefeatures_csv"))),
-            Step("build-grouped-source-features", "build optional grouped source-feature output", lambda: self.run("build_ns5a_sourcefeatures_grouped_csv.py", "--gt-workbook", gt_workbook, "--summary-xlsx", self.output_dir / "NS5A_NumSeqs_Naive_1PP_CoversRAS_ByStudy.xlsx", stdout_path=summary("build_ns5a_sourcefeatures_grouped_csv"))),
-            Step("build-subtype-workbook", "build COMET subtype workbook with non-COMET priorities", lambda: self.run("build_ns5a_comet_subtype_allstudies.py", "--genotype-workbook", gt_workbook, "--comet-subtype-csv", comet_subtype_csv, "--noncomet-subtype-workbook", self.noncomet_workbook, "--output-dir", self.output_dir, stdout_path=summary("build_ns5a_subtype_allstudies_wseqs"))),
+            Step("build-genotype-workbook", "build the COMET genotype workbook", lambda: self.run("build_ns5a_comet_gt_allstudies.py", "--fasta-dir", self.included_fasta_dir, "--comet-genotype-csv", comet_gt_csv, "--output-dir", self.step_dirs["build-genotype-workbook"], stdout_path=summary("build-genotype-workbook"))),
+            Step("add-genotype-counts", "add the genotype-count worksheet", lambda: self.run("add_gt_counts_sheet.py", "--workbook", self.step_dirs["build-genotype-workbook"] / "NS5A_GT_AllStudies.xlsx", "--output-workbook", gt_workbook)),
+            Step("build-source-features", "build optional source-feature CSV output", lambda: self.run("build_ns5a_sourcefeatures_csv.py", "--matched-fasta-report", self.matched_txt, "--genbank-dir", self.genbank_dir, "--output-csv", self.step_dirs["build-source-features"] / "NS5A_SourceFeatures.csv", stdout_path=summary("build-source-features"))),
+            Step("build-grouped-source-features", "build optional grouped source-feature output", lambda: self.run("build_ns5a_sourcefeatures_grouped_csv.py", "--input-csv", self.step_dirs["build-source-features"] / "NS5A_SourceFeatures.csv", "--output-csv", self.step_dirs["build-grouped-source-features"] / "NS5A_SourceFeatures_Grouped.csv", "--gt-workbook", gt_workbook, "--summary-xlsx", self.step_dirs["build-grouped-source-features"] / "NS5A_NumSeqs_Naive_1PP_CoversRAS_ByStudy.xlsx", stdout_path=summary("build-grouped-source-features"))),
+            Step("build-subtype-workbook", "build COMET subtype workbook with non-COMET priorities", lambda: self.run("build_ns5a_comet_subtype_allstudies.py", "--genotype-workbook", gt_workbook, "--comet-subtype-csv", comet_subtype_csv, "--noncomet-subtype-workbook", self.noncomet_workbook, "--output-dir", self.step_dirs["build-subtype-workbook"], stdout_path=summary("build-subtype-workbook"))),
             Step("extract-profile-aa", "extract genotype-position amino-acid sequences", extract_aa),
-            Step("validate-profile-alignment", "write alignment QC columns and flagged-accession report", lambda: self.run("validate_ns5a_profile_alignment.py", "--input-workbook", self.output_dir / "NS5A_Profile_Input_Source.xlsx", "--gt-aa-json", self.gt_aa_json, "--output-workbook", self.aa_workbook, "--flagged-accessions-csv", self.output_dir / "NS5A_Profile_Alignment_QC_Flagged_Accessions.csv", stdout_path=self.skill_temp_root / "validate_ns5a_profile_alignment.json")),
-            Step("summarize-qc-mutation-burden", "summarize QC-passed genotype mutation burden", lambda: self.run("build_qc_passed_genotype_mutation_burden_summary.py", "--input-workbook", self.aa_workbook, "--output-csv", self.output_dir / "NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv")),
+            Step("validate-profile-alignment", "write alignment QC columns and flagged-accession report", lambda: self.run("validate_ns5a_profile_alignment.py", "--input-workbook", self.step_dirs["extract-profile-aa"] / "NS5A_Profile_Input_Source.xlsx", "--gt-aa-json", self.gt_aa_json, "--output-workbook", self.aa_workbook, "--flagged-accessions-csv", self.step_dirs["validate-profile-alignment"] / "NS5A_Profile_Alignment_QC_Flagged_Accessions.csv", stdout_path=summary("validate-profile-alignment", "last_run_summary.json"))),
+            Step("summarize-qc-mutation-burden", "summarize QC-passed genotype mutation burden", lambda: self.run("build_qc_passed_genotype_mutation_burden_summary.py", "--input-workbook", self.aa_workbook, "--output-csv", self.step_dirs["summarize-qc-mutation-burden"] / "NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv")),
             Step("report-profile-input-counts", "report profile-input inclusion counts", report_profile_counts),
-            Step("build-complete-profiles", "build genotype and subtype complete profiles", lambda: self.run("build_ns5a_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--output-dir", self.output_dir, "--profile-accessions-csv", self.profile_accessions_csv, stdout_path=summary("build_ns5a_completeprofiles_tabspergt"))),
-            Step("export-noncomet-priority-accessions", "export non-COMET priority profile accessions", lambda: self.run("export_noncomet_priority_profile_accessions.py", "--profile-accessions-csv", self.profile_accessions_csv, "--comet-subtype-csv", self.comet_csv, "--noncomet-subtype-workbook", self.noncomet_workbook, "--output-csv", self.output_dir / "NS5A_NonComet_Priority_Profile_Accessions.csv")),
-            Step("export-consensus-fastas", "export genotype and subtype consensus FASTA files", lambda: self.run("export_ns5a_consensus_fasta.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--output-dir", self.output_dir)),
-            Step("compare-reference-consensus", "compare COMET consensus sequences to references", lambda: (self.run("export_gt_reference_consensus_differences.py", "--gene", "NS5A_NTD", "--reference-fasta", REPO_ROOT / "HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta", "--subtype-reference-dir", REPO_ROOT / "HCVData/Reference_seqs"), self.run("build_ns5a_subtype_consensus_reference_distance.py", "--subtype-profile-workbook", subtype_profile, "--subtype-json", self.subtype_json, "--output-xlsx", self.output_dir / "NS5A_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"))),
-            Step("build-genotype-ras-profile", "build genotype RAS profile", lambda: self.run("build_ns5a_gt_ras_profiles.py", "--gt-profile-workbook", gt_profile, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.output_dir, stdout_path=summary("build_ns5a_gt_ras_profiles"))),
-            Step("build-subtype-ras-profile", "build subtype RAS profile", lambda: self.run("build_ns5a_subtype_ras_profiles.py", "--subtype-profile-workbook", subtype_profile, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.output_dir, stdout_path=summary("build_ns5a_subtype_ras_profiles"))),
-            Step("build-combined-ras-reports", "build combined RAS, coverage, and sequence-audit reports", lambda: (self.run("build_ns5a_combined_ras_profiles.py", "--gt-ras-profile-workbook", gt_ras, "--subtype-ras-profile-workbook", subtype_ras, "--output-xlsx", combined_ras, stdout_path=summary("build_ns5a_combined_ras_profiles")), self.run("build_comet_subtype_ras_coverage_report.py", "--gene", "NS5A", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--output-xlsx", self.output_dir / "NS5A_Subtype_RAS_Coverage_Report.xlsx"), self.run("build_comet_workflow_sequence_audit.py", "--gene", "NS5A", "--selection-workbook", self.excel_file, "--selection-sheet", self.sheet_name, "--fasta-dir", self.fasta_pool, "--metadata-csv", self.metadata_csv, "--comet-csv", self.comet_csv, "--qc-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--combined-profile-workbook", combined_ras, "--combined-subtype-cutoff", "5", "--combined-subtype-cutoff-exclusive", "--output-xlsx", self.output_dir / "NS5A_Workflow_Sequence_Audit.xlsx"))),
-            Step("summarize-subtype-ras-differences", "summarize subtype RAS differences from genotype consensus", lambda: self.run("build_ns5a_subtype_ras_consensus_difference_summary.py", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus, "--output-xlsx", self.output_dir / "NS5A_Subtype_RAS_Consensus_Difference_Summary.xlsx", "--output-png", self.output_dir / "NS5A_Subtype_RAS_Consensus_Difference_Trend.png", stdout_path=summary("build_ns5a_subtype_ras_consensus_difference_summary"))),
-            Step("build-genotype-aa-distance", "build genotype amino-acid distance matrix", lambda: self.run("build_ns5a_gt_aa_distance_matrix.py", "--input-fasta", gt_consensus, "--aligned-fasta", self.output_dir / "NS5A_GT_Consensus_aligned.fasta", "--output-xlsx", self.output_dir / "NS5A_GT_AA_Distance_Pos24_93.xlsx", "--details-xlsx", summary("build_ns5a_gt_aa_distance_matrix", "NS5A_GT_AA_Distance_Pos24_93_details.xlsx"), "--start", "24", "--end", "93", stdout_path=summary("build_ns5a_gt_aa_distance_matrix", "last_run_summary.txt"))),
-            Step("build-subtype-aa-distance", "build subtype amino-acid distance matrices", lambda: self.run("build_ns5a_subtype_aa_distance_matrices.py", "--input-fasta", subtype_consensus, "--subtype-profile-workbook", subtype_profile, "--min-subtype-sequences", "10", "--output-xlsx", self.output_dir / "NS5A_Subtype_AA_Distance_Pos24_93.xlsx", "--temp-dir", summary("build_ns5a_subtype_aa_distance_matrices").parent, "--start", "24", "--end", "93", stdout_path=summary("build_ns5a_subtype_aa_distance_matrices", "last_run_summary.txt"))),
+            Step("build-complete-profiles", "build genotype and subtype complete profiles", lambda: self.run("build_ns5a_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--output-dir", self.step_dirs["build-complete-profiles"], "--profile-accessions-csv", self.profile_accessions_csv, stdout_path=summary("build-complete-profiles"))),
+            Step("export-noncomet-priority-accessions", "export non-COMET priority profile accessions", lambda: self.run("export_noncomet_priority_profile_accessions.py", "--profile-accessions-csv", self.profile_accessions_csv, "--comet-subtype-csv", self.comet_csv, "--noncomet-subtype-workbook", self.noncomet_workbook, "--output-csv", self.step_dirs["export-noncomet-priority-accessions"] / "NS5A_NonComet_Priority_Profile_Accessions.csv")),
+            Step("export-consensus-fastas", "export genotype and subtype consensus FASTA files", lambda: self.run("export_ns5a_consensus_fasta.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--output-dir", self.step_dirs["export-consensus-fastas"])),
+            Step("compare-reference-consensus", "compare COMET consensus sequences to references", lambda: (self.run("export_gt_reference_consensus_differences.py", "--gene", "NS5A_NTD", "--reference-fasta", REPO_ROOT / "HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta", "--consensus-dir", self.step_dirs["export-consensus-fastas"], "--output-dir", self.step_dirs["compare-reference-consensus"], "--subtype-reference-dir", REPO_ROOT / "HCVData/Reference_seqs"), self.run("build_ns5a_subtype_consensus_reference_distance.py", "--subtype-profile-workbook", subtype_profile, "--subtype-json", self.subtype_json, "--output-xlsx", self.step_dirs["compare-reference-consensus"] / "NS5A_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"))),
+            Step("build-genotype-ras-profile", "build genotype RAS profile", lambda: self.run("build_ns5a_gt_ras_profiles.py", "--gt-profile-workbook", gt_profile, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.step_dirs["build-genotype-ras-profile"], stdout_path=summary("build-genotype-ras-profile"))),
+            Step("build-subtype-ras-profile", "build subtype RAS profile", lambda: self.run("build_ns5a_subtype_ras_profiles.py", "--subtype-profile-workbook", subtype_profile, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.step_dirs["build-subtype-ras-profile"], stdout_path=summary("build-subtype-ras-profile"))),
+            Step("build-combined-ras-reports", "build combined RAS, coverage, and sequence-audit reports", lambda: (self.run("build_ns5a_combined_ras_profiles.py", "--gt-ras-profile-workbook", gt_ras, "--subtype-ras-profile-workbook", subtype_ras, "--output-xlsx", combined_ras, stdout_path=summary("build-combined-ras-reports")), self.run("build_comet_subtype_ras_coverage_report.py", "--gene", "NS5A", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--output-xlsx", self.step_dirs["build-combined-ras-reports"] / "NS5A_Subtype_RAS_Coverage_Report.xlsx"), self.run("build_comet_workflow_sequence_audit.py", "--gene", "NS5A", "--selection-workbook", self.excel_file, "--selection-sheet", self.sheet_name, "--fasta-dir", self.fasta_pool, "--metadata-csv", self.metadata_csv, "--comet-csv", self.comet_csv, "--qc-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--combined-profile-workbook", combined_ras, "--combined-subtype-cutoff", "5", "--combined-subtype-cutoff-exclusive", "--output-xlsx", self.step_dirs["build-combined-ras-reports"] / "NS5A_Workflow_Sequence_Audit.xlsx"))),
+            Step("summarize-subtype-ras-differences", "summarize subtype RAS differences from genotype consensus", lambda: self.run("build_ns5a_subtype_ras_consensus_difference_summary.py", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus, "--output-xlsx", self.step_dirs["summarize-subtype-ras-differences"] / "NS5A_Subtype_RAS_Consensus_Difference_Summary.xlsx", "--output-png", self.step_dirs["summarize-subtype-ras-differences"] / "NS5A_Subtype_RAS_Consensus_Difference_Trend.png", stdout_path=summary("summarize-subtype-ras-differences"))),
+            Step("build-genotype-aa-distance", "build genotype amino-acid distance matrix", lambda: self.run("build_ns5a_gt_aa_distance_matrix.py", "--input-fasta", gt_consensus, "--aligned-fasta", self.step_dirs["build-genotype-aa-distance"] / "NS5A_GT_Consensus_aligned.fasta", "--output-xlsx", self.step_dirs["build-genotype-aa-distance"] / "NS5A_GT_AA_Distance_Pos24_93.xlsx", "--details-xlsx", summary("build-genotype-aa-distance", "NS5A_GT_AA_Distance_Pos24_93_details.xlsx"), "--start", "24", "--end", "93", stdout_path=summary("build-genotype-aa-distance", "last_run_summary.txt"))),
+            Step("build-subtype-aa-distance", "build subtype amino-acid distance matrices", lambda: self.run("build_ns5a_subtype_aa_distance_matrices.py", "--input-fasta", subtype_consensus, "--subtype-profile-workbook", subtype_profile, "--min-subtype-sequences", "10", "--output-xlsx", self.step_dirs["build-subtype-aa-distance"] / "NS5A_Subtype_AA_Distance_Pos24_93.xlsx", "--temp-dir", self.step_dirs["build-subtype-aa-distance"] / "temp", "--start", "24", "--end", "93", stdout_path=summary("build-subtype-aa-distance", "last_run_summary.txt"))),
             Step("build-paired-distance-matrices", "build paired AA and NA RAS/range distance matrices", paired_distances),
-            Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns5a_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.output_dir / "NS5A_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.output_dir / "NS5A_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build_ns5a_ras_entropy", "last_run_summary.txt"))),
+            Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns5a_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.step_dirs["build-ras-entropy"] / "NS5A_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.step_dirs["build-ras-entropy"] / "NS5A_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build-ras-entropy", "last_run_summary.txt"))),
             Step("add-nonconsensus-row", "create annotated combined profile with MeanDiff and PositionDiff", lambda: self.run("add_combined_profile_nonconsensus_row.py", "--combined-profile-workbook", combined_ras, "--output-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus)),
-            Step("update-coverage-labels", "replace annotated combined-profile coverage labels", lambda: self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv)),
-            Step("publish-ictv-report", "publish the shared ICTV comparison report", lambda: self.run("add_subtype_consensus_mutation_summaries.py")),
+            Step("update-coverage-labels", "replace annotated combined-profile coverage labels", lambda: self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--output-workbook", self.step_dirs["update-coverage-labels"] / "NS5A_Combined_RAS_Profiles_Annotated.xlsx")),
+            Step("publish-ictv-report", "publish the shared ICTV comparison report", lambda: self.run("add_subtype_consensus_mutation_summaries.py", "--shared-report-dir", self.step_dirs["publish-ictv-report"])),
         ]
 
 

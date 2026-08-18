@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import re
 import tempfile
 from collections import defaultdict
@@ -31,13 +32,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/temp") / "hcv-ns5a-comet-build-workflow" / Path(__file__).stem
+    path = Path(os.environ.get("NS5A_COMET_TEMP_ROOT", "outputs/temp/hcv-ns5a-comet-build-workflow")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def sourcefeatures_temp_csv_path() -> Path:
-    return Path("outputs/temp") / "hcv-ns5a-comet-build-workflow" / "build_ns5a_sourcefeatures_csv" / "NS5A_SourceFeatures.csv"
+    return Path(os.environ.get("NS5A_COMET_TEMP_ROOT", "outputs/temp/hcv-ns5a-comet-build-workflow")) / "build_ns5a_sourcefeatures_csv" / "NS5A_SourceFeatures.csv"
 
 
 def normalize_space(value: str) -> str:

@@ -99,7 +99,7 @@ Configuration stays in the repository base folder. The Python runner loads:
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
 Set `sheet_name` in the `[ns5a]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
-Temporary files and step summaries are written under `outputs/temp/hcv-ns5a-comet-build-workflow/`.
+All workflow artifacts, including temporary files and step summaries, are written below `outputs/comet-NS5A/`. Each runner stage owns a numbered subdirectory such as `02_discover-refid-fastas/`. Starting a full run (or explicitly running `prepare-workdirs`) recreates this output root first.
 
 ## Inputs
 
@@ -121,7 +121,7 @@ The COMET subtype step gives priority to non-COMET genotype and subtype assignme
 
 ## Outputs
 
-The workflow writes NS5A outputs under `outputs/`, including:
+The workflow writes NS5A outputs under numbered stage directories in `outputs/comet-NS5A/`, including:
 
 - `NS5A_GT_AllStudies.xlsx`
 - `NS5A_matched_fasta_files.txt`
@@ -151,6 +151,6 @@ The workflow writes NS5A outputs under `outputs/`, including:
 - Keep NS5A scripts together in this skill folder.
 - Use `scripts/run_ns5a_pipeline.py` for complete runs or `--step <name>` for one specific build step.
 - Keep `.env` and `pipeline.local.toml` in the repository root; do not copy them into this skill folder.
-- Keep temporary outputs under `outputs/temp/hcv-ns5a-comet-build-workflow/` so they do not mix with other skills.
+- Keep all outputs under `outputs/comet-NS5A/`; the runner separates them by numbered step and clears this directory at the beginning of a run.
 - Preserve the order above because later reports consume earlier workbooks.
 - Source-feature extraction and grouped source-feature steps are excluded from full runs unless `--include-source-features` is set.

@@ -29,7 +29,7 @@ genbank_dir = "HCVData/GenBankFiles"
 excel_file = "HCVData/Ref-selection/___IncludedNS5ARefs.xlsx"
 sheet_name = "NS5A_PtGT0_Check"
 fasta_pool = "HCVData/FASTA"
-output_dir = "outputs/comet"
+output_dir = "outputs/comet-NS5A"
 
 [ns5b]
 excel_file = "HCVData/Ref-selection/___IncludedNS5BRefs.xlsx"
