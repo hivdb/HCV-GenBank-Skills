@@ -96,6 +96,7 @@ The workflow writes NS3 outputs under `outputs/`, including:
 - `NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx`
 - `NS3_GT_Consensus.fasta`
 - `NS3_Subtype_Consensus.fasta`
+- `NS3_Subtype_Consensus_Aligned_to_GT1_1a.fasta` (all subtype consensuses aligned to GT1_1a coordinates)
 - `NS3_GT_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Profiles.xlsx`
 - `NS3_Combined_RAS_Profiles.xlsx`

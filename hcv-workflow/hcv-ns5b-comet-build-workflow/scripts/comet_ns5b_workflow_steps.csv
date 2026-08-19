@@ -18,6 +18,7 @@ report-profile-input-counts,build_ns5b_completeprofiles_tabspergt.py --report-on
 build-complete-profiles,build_ns5b_completeprofiles_tabspergt.py
 export-noncomet-priority-accessions,export_noncomet_priority_profile_accessions.py
 export-consensus-fastas,export_ns5b_consensus_fasta.py
+align-subtype-consensus-to-gt1a,align_ns5b_subtype_consensuses_to_gt1a.py
 compare-reference-consensus,export_gt_reference_consensus_differences.py;build_ns5b_subtype_consensus_reference_distance.py
 build-genotype-ras-profile,build_ns5b_gt_ras_profiles.py
 build-subtype-ras-profile,build_ns5b_subtype_ras_profiles.py

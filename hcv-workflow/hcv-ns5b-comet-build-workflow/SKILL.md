@@ -90,6 +90,7 @@ The workflow writes NS5B outputs under `outputs/`, including:
 - `NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5B_GT_Consensus.fasta`
 - `NS5B_Subtype_Consensus.fasta`
+- `NS5B_Subtype_Consensus_Aligned_to_GT1_1a.fasta` (all subtype consensuses aligned to GT1_1a coordinates)
 - `NS5B_GT_RAS_Profiles.xlsx`
 - `NS5B_Subtype_RAS_Profiles.xlsx`
 - paired AA/NA RAS and position-range distance workbooks under `outputs/`
