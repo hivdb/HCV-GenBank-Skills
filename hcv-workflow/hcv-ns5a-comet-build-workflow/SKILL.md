@@ -52,32 +52,34 @@ Run the workflow in this order. For an individual step, invoke its listed script
    - Python: `export_noncomet_priority_profile_accessions.py`
 16. Export genotype and subtype consensus FASTA files.
    - Python: `export_ns5a_consensus_fasta.py`
-17. Compare COMET consensus sequences with genotype and subtype references.
+17. Align subtype consensus sequences to the fixed GT1_1a coordinate system.
+   - Python: `align_ns5a_subtype_consensuses_to_gt1a.py`
+18. Compare COMET consensus sequences with genotype and subtype references.
    - Python: `export_gt_reference_consensus_differences.py`
    - Python: `build_ns5a_subtype_consensus_reference_distance.py`
-18. Build genotype and subtype RAS profiles.
+19. Build genotype and subtype RAS profiles.
    - Python: `build_ns5a_gt_ras_profiles.py`
    - Python: `build_ns5a_subtype_ras_profiles.py`
-19. Build the combined RAS profile and its COMET coverage and sequence-audit reports.
+20. Build the combined RAS profile and its COMET coverage and sequence-audit reports.
    - Python: `build_ns5a_combined_ras_profiles.py`
    - Python: `build_comet_subtype_ras_coverage_report.py`
    - Python: `build_comet_workflow_sequence_audit.py`
-20. Summarize subtype RAS differences from genotype consensus.
+21. Summarize subtype RAS differences from genotype consensus.
    - Python: `build_ns5a_subtype_ras_consensus_difference_summary.py`
-21. Build the genotype amino-acid consensus distance matrix.
+22. Build the genotype amino-acid consensus distance matrix.
    - Python: `build_ns5a_gt_aa_distance_matrix.py`
-22. Build subtype amino-acid distance matrices.
+23. Build subtype amino-acid distance matrices.
    - Python: `build_ns5a_subtype_aa_distance_matrices.py`
-23. Build paired genotype and subtype AA/NA distance matrices for RAS positions and positions 24–93.
+24. Build paired genotype and subtype AA/NA distance matrices for RAS positions and positions 24–93.
    - Python: `build_ns5a_aa_distance_matrices.py` (run once for each position set)
    - Python: `build_ns5a_na_distance_matrices.py` (run once for each position set)
-24. Build genotype and subtype RAS entropy reports.
+25. Build genotype and subtype RAS entropy reports.
    - Python: `build_ns5a_ras_entropy.py`
-25. Create an annotated combined RAS profile with `MeanDiff` and `PositionDiff` values.
+26. Create an annotated combined RAS profile with `MeanDiff` and `PositionDiff` values.
    - Python: `add_combined_profile_nonconsensus_row.py`
-26. Replace combined-profile non-X coverage labels with mean-difference labels.
+27. Replace combined-profile non-X coverage labels with mean-difference labels.
    - Python: `replace_comet_profile_coverage_range_with_mean_diff.py`
-27. Publish the shared ICTV reference/consensus comparison report.
+28. Publish the shared ICTV reference/consensus comparison report.
    - Python: `add_subtype_consensus_mutation_summaries.py`
 
 Run the Python orchestrator for full workflows or a named stage:
@@ -140,6 +142,7 @@ The workflow writes NS5A outputs under `outputs/`, including:
 - `NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5A_GT_Consensus.fasta`
 - `NS5A_Subtype_Consensus.fasta`
+- `NS5A_Subtype_Consensus_Aligned_to_GT1_1a.fasta` (all subtype consensuses aligned to GT1_1a coordinates)
 - `NS5A_GT_RAS_Profiles.xlsx`
 - `NS5A_Subtype_RAS_Profiles.xlsx`
 - `NS5A_Combined_RAS_Profiles.xlsx` (base combined profile)

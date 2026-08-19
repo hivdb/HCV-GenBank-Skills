@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import re
 from pathlib import Path
 
@@ -86,10 +87,11 @@ def write_excel(output_path: Path, rows: list[list[str | int]]) -> None:
 
 def write_subtype_alignment(
     gene: str, reference_path: Path, consensus_path: Path, output_path: Path
-) -> tuple[int, list[tuple[str, str, str, str]]]:
+) -> tuple[int, list[tuple[str, str, str, str]], list[tuple[str, str, int, int]]]:
     consensuses = read_fasta(consensus_path)
     rows: list[tuple[str, str, str, dict[int, tuple[str, str]]]] = []
     missing_consensuses: list[tuple[str, str, str, str]] = []
+    matched_lengths: list[tuple[str, str, int, int]] = []
     seen_subtypes: set[tuple[str, str]] = set()
     for header, reference in read_fasta(reference_path).items():
         fields = header_fields(header)
@@ -101,11 +103,13 @@ def write_subtype_alignment(
             continue
         if genotype and subtype:
             seen_subtypes.add(subtype_key)
-        consensus = consensuses.get(f"GT{genotype}_{subtype}")
+        consensus_name = f"GT{genotype}_{subtype}"
+        consensus = consensuses.get(consensus_name)
         if not genotype or not subtype or consensus is None:
             missing_consensuses.append((gene, f"GT{genotype}", subtype, accession))
             continue
         rows.append((genotype, subtype, accession, covered_alignment_pairs(reference, consensus)))
+        matched_lengths.append((header, consensus_name, len(reference), len(consensus)))
     rows.sort(key=lambda row: (int(row[0]), row[1], row[2]))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     excel_rows: list[list[str | int]] = []
@@ -125,7 +129,15 @@ def write_subtype_alignment(
             ]
         )
     write_excel(output_path, excel_rows)
-    return len(rows), missing_consensuses
+    return len(rows), missing_consensuses, matched_lengths
+
+
+def write_subtype_length_csv(path: Path, rows: list[tuple[str, str, int, int]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["ref_name", "cons_name", "ref_aa_length", "cons_aa_length"])
+        writer.writerows(rows)
 
 
 def write_missing_subtype_consensus_report(
@@ -194,10 +206,27 @@ def main() -> int:
         type=Path,
         help="Optional directory containing HCV_Subtype_Refs_<gene>_AA.fasta files.",
     )
+    parser.add_argument(
+        "--subtype-reference-fasta",
+        type=Path,
+        help="Explicit subtype reference FASTA for a single selected gene.",
+    )
+    parser.add_argument(
+        "--subtype-consensus-fasta",
+        type=Path,
+        help="Explicit subtype consensus FASTA for a single selected gene.",
+    )
+    parser.add_argument(
+        "--subtype-length-csv",
+        type=Path,
+        help="Write matched subtype reference/consensus names and amino-acid lengths to this CSV.",
+    )
     args = parser.parse_args()
 
     refs = load_references(args.reference_fasta)
     genes = args.gene or GENES
+    if (args.subtype_reference_fasta or args.subtype_consensus_fasta or args.subtype_length_csv) and len(genes) != 1:
+        raise ValueError("Explicit subtype FASTA and length-CSV options require exactly one --gene value")
     for gene in genes:
         consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
         output = args.output_dir / f"HCV_GT_Ref_vs_Comet_GT_Consensus_Differences_{gene}.xlsx"
@@ -208,24 +237,30 @@ def main() -> int:
             output,
         )
         print(f"{output}: {count} aligned reference-consensus amino-acid pairs")
-    if args.subtype_reference_dir:
+    if args.subtype_reference_dir or args.subtype_reference_fasta:
         missing_consensuses: list[tuple[str, str, str, str]] = []
+        matched_lengths: list[tuple[str, str, int, int]] = []
         for gene in genes:
             consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
-            reference_path = args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
+            reference_path = args.subtype_reference_fasta or args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
             output = args.output_dir / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx"
-            matched, missing = write_subtype_alignment(
+            consensus_path = args.subtype_consensus_fasta or args.consensus_dir / f"{consensus_gene}_Subtype_Consensus.fasta"
+            matched, missing, lengths = write_subtype_alignment(
                 gene,
                 reference_path,
-                args.consensus_dir / f"{consensus_gene}_Subtype_Consensus.fasta",
+                consensus_path,
                 output,
             )
             missing_consensuses.extend(missing)
+            matched_lengths.extend(lengths)
             print(f"{output}: {matched} matched subtype references; {len(missing)} without a Comet consensus")
         suffix = "" if len(genes) == len(GENES) else f"_{genes[0]}"
         missing_output = args.output_dir / f"HCV_Subtype_Refs_Without_Comet_Consensus{suffix}.xlsx"
         write_missing_subtype_consensus_report(missing_output, missing_consensuses)
         print(f"{missing_output}: {len(missing_consensuses)} subtype references without a Comet consensus")
+        if args.subtype_length_csv:
+            write_subtype_length_csv(args.subtype_length_csv, matched_lengths)
+            print(f"{args.subtype_length_csv}: {len(matched_lengths)} matched subtype reference/consensus lengths")
     return 0
 
 

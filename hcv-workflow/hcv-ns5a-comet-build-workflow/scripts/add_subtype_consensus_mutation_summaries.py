@@ -33,15 +33,13 @@ def mutation_sort_key(value: str) -> tuple[int, str]:
     return (int(match.group(1)) if match else 1_000_000, value)
 
 def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) -> None:
-    title = 'Subtype reference-to-COMET-consensus mutations'
     note = 'Only subtypes with one or more RAS-position differences are listed. Percentages are from the final combined profile.'
-    lines=[f'# {title}', '', note, '']
-    document = Document()
-    document.add_heading(title, level=0)
-    document.add_paragraph(note)
     for gene in ('NS3','NS5A_NTD','NS5B'):
-        lines.extend([f'## {gene}', ''])
-        document.add_heading(gene, level=1)
+        title = f'{gene} subtype reference-to-COMET-consensus mutations'
+        lines = [f'# {title}', '', note, '']
+        document = Document()
+        document.add_heading(title, level=0)
+        document.add_paragraph(note)
         for subtype, mutations in sorted(readme.get(gene,{}).items(), key=lambda item: (int(item[0][2]), item[0])):
             summary = f'{subtype}: {", ".join(sorted(mutations, key=mutation_sort_key))}'
             lines.append(f'- {summary}')
@@ -53,35 +51,36 @@ def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) ->
                 percentage_run.font.subscript = True
                 offset = match.end()
             paragraph.add_run(summary[offset:])
-        lines.append('')
-    (root/'README_Subtype_Consensus_Mutations.md').write_text('\n'.join(lines),encoding='utf-8')
-    document.save(root/'README_Subtype_Consensus_Mutations.docx')
+        stem = f'README_Subtype_Consensus_Mutations_{gene}'
+        (root / f'{stem}.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        document.save(root / f'{stem}.docx')
+    for suffix in ('.md', '.docx'):
+        (root / f'README_Subtype_Consensus_Mutations{suffix}').unlink(missing_ok=True)
 
-def publish_shared_report(source: Path, destination: Path) -> None:
+def publish_shared_report(comparison_paths: dict[str, Path], documents_root: Path, destination: Path) -> None:
     """Copy the complete report set after all three COMET workflows are available."""
     destination.mkdir(parents=True, exist_ok=True)
-    filenames = [
-        'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx',
-        'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5A_NTD.xlsx',
-        'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5B.xlsx',
-        'README_Subtype_Consensus_Mutations.md',
-        'README_Subtype_Consensus_Mutations.docx',
-    ]
-    for filename in filenames:
-        shutil.copy2(source / filename, destination / filename)
+    for path in comparison_paths.values():
+        shutil.copy2(path, destination / path.name)
+    for gene in ('NS3', 'NS5A_NTD', 'NS5B'):
+        for suffix in ('.md', '.docx'):
+            filename = f'README_Subtype_Consensus_Mutations_{gene}{suffix}'
+            shutil.copy2(documents_root / filename, destination / filename)
+    for suffix in ('.md', '.docx'):
+        (destination / f'README_Subtype_Consensus_Mutations{suffix}').unlink(missing_ok=True)
 
 
 def validate_reported_mutations(
-    output_root: Path,
-    comet: Path,
+    comparison_paths: dict[str, Path],
+    profile_paths: dict[str, Path],
     gene_tokens: list[tuple[str, str]],
 ) -> None:
     """Require every reported RAS consensus mutation to have a profile percentage."""
     missing: list[str] = []
     for gene, token in gene_tokens:
-        values = profiles(comet / f"{token}_Subtype_RAS_Profiles.xlsx")
+        values = profiles(profile_paths[token])
         workbook = load_workbook(
-            output_root / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx",
+            comparison_paths[gene],
             read_only=True,
             data_only=True,
         )
@@ -117,12 +116,25 @@ def main() -> None:
         default=Path('outputs/shared_report/ICTV_ref_local_cons_compare'),
         help='Destination for copies of the final three-gene report set.',
     )
+    parser.add_argument('--comparison-output-dir', type=Path, default=Path('outputs/reference_seqs'))
+    parser.add_argument('--ns3-output-dir', type=Path, default=Path('outputs/comet-NS3'))
+    parser.add_argument('--ns5a-output-dir', type=Path, default=Path('outputs/comet-NS5A'))
+    parser.add_argument('--ns5b-output-dir', type=Path, default=Path('outputs/comet-NS5B'))
     args = parser.parse_args()
-    output_root=Path('outputs/reference_seqs'); comet=Path('outputs/comet')
+    output_root = args.comparison_output_dir
+    comparison_paths = {
+        'NS3': output_root / 'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx',
+        'NS5A_NTD': output_root / 'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5A_NTD.xlsx',
+        'NS5B': args.ns5b_output_dir / 'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5B.xlsx',
+    }
+    profile_paths = {
+        'NS3': args.ns3_output_dir / 'NS3_Subtype_RAS_Profiles.xlsx',
+        'NS5A': args.ns5a_output_dir / 'NS5A_Subtype_RAS_Profiles.xlsx',
+        'NS5B': args.ns5b_output_dir / 'NS5B_Subtype_RAS_Profiles.xlsx',
+    }
     required = [
-        *(output_root / f'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx'
-          for gene in ('NS3', 'NS5A_NTD', 'NS5B')),
-        *(comet / f'{gene}_Subtype_RAS_Profiles.xlsx' for gene in ('NS3', 'NS5A', 'NS5B')),
+        *comparison_paths.values(),
+        *profile_paths.values(),
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
@@ -130,11 +142,11 @@ def main() -> None:
         print('missing_inputs=' + ';'.join(missing))
         return
     gene_tokens = [('NS3','NS3'),('NS5A_NTD','NS5A'),('NS5B','NS5B')]
-    validate_reported_mutations(output_root, comet, gene_tokens)
+    validate_reported_mutations(comparison_paths, profile_paths, gene_tokens)
     readme: dict[str,dict[str,set[str]]] = {}
     for gene,token in gene_tokens:
-        path=output_root/f'HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx'
-        values=profiles(comet/f'{token}_Subtype_RAS_Profiles.xlsx')
+        path = comparison_paths[gene]
+        values = profiles(profile_paths[token])
         wb=load_workbook(path); ws=wb.active
         col=next((cell.column for cell in ws[2] if cell.value=='Mutations'), ws.max_column+1)
         for row in range(1,ws.max_row+1):
@@ -154,6 +166,6 @@ def main() -> None:
                 readme.setdefault(gene,{}).setdefault(f'GT{gt}_{subtype}',set()).update(plain)
         ws.column_dimensions[ws.cell(1,col).column_letter].width=50; wb.save(path)
     write_summary_documents(output_root, readme)
-    publish_shared_report(output_root, args.shared_report_dir)
+    publish_shared_report(comparison_paths, output_root, args.shared_report_dir)
 
 if __name__=='__main__': main()
