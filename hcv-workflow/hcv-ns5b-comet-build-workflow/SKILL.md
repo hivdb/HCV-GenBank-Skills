@@ -28,13 +28,15 @@ See `NS5B_workflow.svg` in this skill folder.
 13. `build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py`
 14. `build_ns5b_subtype_ras_profiles/build_ns5b_subtype_ras_profiles.py`
 
-Prefer the wrapper when running the full workflow:
+Use the Python orchestrator for complete runs or selected, resumable stages:
 
 ```bash
-EXCEL_FILE=/path/to/HCV_BlastHits.xlsx FASTA_POOL=/path/to/FASTA hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.sh
+python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py --list-steps
+python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py
+python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py --step discover-refid-fastas
 ```
 
-The shell wrapper is the skill entry point. Do not add a Python entry point unless the orchestration needs cross-platform behavior or richer argument validation; the current Bash wrapper already handles repository defaults, staging, cleanup, and ordered script execution.
+`--list-steps` prints all named stages. `--step <name>` runs only that stage; repeat the flag to run selected stages in order. Selected stages expect their prerequisite outputs to exist. Source-feature stages remain excluded from full runs unless `--include-source-features` is supplied. The legacy shell wrapper remains available for compatibility but is no longer the preferred entry point.
 
 Configuration stays in the repository base folder. The wrapper loads:
 
@@ -59,7 +61,7 @@ Temporary files and step summaries are written under `outputs/temp/hcv-ns5b-come
 - optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
 The discovery step keeps rows where `RefID` is present and `Num Pts` is not `Exclude`. It does not filter on `NS5BCount` or `Notes`.
-After discovery, the wrapper copies all matched RefID FASTA files into `outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
+After discovery, the runner copies all matched RefID FASTA files into `outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `17` accession is listed in `17.csv`; `30` source_isolate contains `day1`; `192` source_isolate contains `day1`; `346` source_isolate contains `baseline`; `891` source_isolate contains a token from `Ha01` through `Ha97`; `943` source_isolate contains `day 1`; `1051` source_isolate contains a token from `1a` through `51a`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
@@ -95,7 +97,7 @@ The workflow writes NS5B outputs under `outputs/`, including:
 ## Operating Rules
 
 - Keep NS5B scripts together in this skill folder.
-- Use `scripts/run_ns5b_pipeline.sh` for complete runs unless the user asks for one specific build step.
+- Use `scripts/run_ns5b_pipeline.py` for complete runs or `--step <name>` for a specific build step.
 - Keep `.env` and `pipeline.local.toml` in the repository root; do not copy them into this skill folder.
 - Keep temporary outputs under `outputs/temp/hcv-ns5b-comet-build-workflow/` so they do not mix with other skills.
 - Preserve the order above because later reports consume earlier workbooks.

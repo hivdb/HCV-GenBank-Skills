@@ -174,14 +174,14 @@ def main() -> int:
     parser.add_argument(
         "--consensus-dir",
         type=Path,
-        default=Path("outputs/comet"),
-        help="Directory containing the current Comet consensus FASTAs (default: outputs/comet).",
+        default=Path("outputs/comet-NS5B"),
+        help="Directory containing the current NS5B Comet consensus FASTAs (default: outputs/comet-NS5B).",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("outputs/reference_seqs"),
-        help="Directory for generated comparison workbooks (default: outputs/reference_seqs).",
+        default=Path("outputs/comet-NS5B"),
+        help="Directory for generated comparison workbooks (default: outputs/comet-NS5B).",
     )
     parser.add_argument(
         "--subtype-reference-dir",

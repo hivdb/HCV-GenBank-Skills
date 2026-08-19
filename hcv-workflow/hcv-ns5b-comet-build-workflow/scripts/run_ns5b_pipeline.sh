@@ -42,7 +42,7 @@ EXCEL_FILE="${EXCEL_FILE:-}"
 FASTA_POOL="${FASTA_POOL:-}"
 GENBANK_DIR="${GENBANK_DIR:-}"
 SHEET_NAME="${SHEET_NAME:-}"
-OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/outputs/comet}"
+OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/outputs/comet-NS5B}"
 REFERENCE_FASTA="${REFERENCE_FASTA:-$REPO_ROOT/HCVData/HCV_GT_RefSeqs.fasta}"
 SUBTYPE_JSON="${SUBTYPE_JSON:-$REPO_ROOT/HCVData/HCV_Subtype_Refs_By_Genome_NA.json}"
 GT_AA_JSON="${GT_AA_JSON:-$REPO_ROOT/HCVData/HCV_GT_Refs_By_Gene_AA.json}"
@@ -301,10 +301,12 @@ announce_step 12 "Export consensus FASTA files" \
 
 announce_step 12b "Compare NS5B COMET consensus to references" \
   "COMET consensus FASTAs: $OUTPUT_DIR/NS5B_GT_Consensus.fasta; $OUTPUT_DIR/NS5B_Subtype_Consensus.fasta" \
-  "reference comparison workbooks: outputs/reference_seqs"
+  "reference comparison workbooks: $OUTPUT_DIR"
 "$PYTHON_BIN" "$SCRIPT_DIR/export_gt_reference_consensus_differences.py" \
   --gene NS5B \
   --reference-fasta "$REPO_ROOT/HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta" \
+  --consensus-dir "$OUTPUT_DIR" \
+  --output-dir "$OUTPUT_DIR" \
   --subtype-reference-dir "$REPO_ROOT/HCVData/Reference_seqs"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_ns5b_subtype_consensus_reference_distance.py" --subtype-profile-workbook "$OUTPUT_DIR/NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx" --subtype-json "$SUBTYPE_JSON" --output-xlsx "$OUTPUT_DIR/NS5B_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx"
 
