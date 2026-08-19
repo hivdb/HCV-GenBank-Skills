@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export Original_NS5A rows whose Status begins with 'include'."""
+"""Export Original_NS3 rows whose Status begins with 'include'."""
 from __future__ import annotations
 
 import argparse
@@ -11,7 +11,7 @@ from openpyxl import Workbook, load_workbook
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = REPO_ROOT / "HCVData" / "HCV_BlastHists_202604_data.xlsx"
-DEFAULT_OUTPUT = REPO_ROOT / "HCVData" / "Ref-selection" / "IncludedNS5ARefs_StatusInclude.xlsx"
+DEFAULT_OUTPUT = REPO_ROOT / "HCVData" / "Ref-selection" / "IncludedNS3Refs_StatusInclude.xlsx"
 
 
 def main() -> None:
@@ -21,14 +21,14 @@ def main() -> None:
     args = parser.parse_args()
 
     source_workbook = load_workbook(args.input_xlsx, data_only=False)
-    source_sheet = source_workbook["Original_NS5A"]
+    source_sheet = source_workbook["Original_NS3"]
     headers = {cell.value: cell.column for cell in source_sheet[1]}
     if "Status" not in headers:
-        raise ValueError("Original_NS5A must contain a Status column")
+        raise ValueError("Original_NS3 must contain a Status column")
 
     output_workbook = Workbook()
     output_sheet = output_workbook.active
-    output_sheet.title = "Original_NS5A_Included"
+    output_sheet.title = "Original_NS3_Included"
     for row in source_sheet.iter_rows():
         destination_row = output_sheet.max_row + 1 if row[0].row != 1 else 1
         if row[0].row != 1:
