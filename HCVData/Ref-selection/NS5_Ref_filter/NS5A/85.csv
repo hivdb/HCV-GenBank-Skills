@@ -1,0 +1,49 @@
+IsolateID,PersonID,Clone Method,NS3 Range,NS5A_NTD Range,NS5B Range,Virus,Country,Year,Source,Genotype,Subtype,Sequencing Method,Treatment,DrugClass,PI,NS5A_I,NI,NNI,Recent Regimen,PI DRMs,NS5A_I DRMs,NI DRMs,NS3 Ins,NS5A Ins,NS5B Ins,Stops,DRM Mode
+MW689944,PID1,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689945,PID2,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689946,PID3,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689948,PID5,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689949,PID6,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,"V36L, T54S",,,,,,,EASL-extend
+MW689950,PID7,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689951,PID8,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689953,PID10,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689957,PID14,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689963,PID20,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689967,PID24,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,Q80L,,,,,,,EASL-extend
+MW689969,PID26,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689970,PID27,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689972,PID29,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689974,PID31,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689976,PID33,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689977,PID34,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689979,PID36,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689982,PID39,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689985,PID42,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,Q80K,,,,,,,EASL-extend
+MW689986,PID43,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689987,PID44,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689989,PID46,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,Q80K,,,,,,,EASL-extend
+MW689990,PID47,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689991,PID48,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689992,PID49,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689993,PID50,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,"E2: H3*Y
+",EASL-extend
+MW689994,PID51,None,1 ~ 631,1 ~ 213,1 ~ 580,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689995,PID52,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689996,PID53,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689997,PID54,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW689998,PID55,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690002,PID59,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,"E2: H3*Y
+",EASL-extend
+MW690003,PID60,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690004,PID61,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690005,PID62,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690006,PID63,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690009,PID66,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690011,PID68,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,"V36L, Q80K",,,,,,,EASL-extend
+MW690014,PID71,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,C316N,,,,,EASL-extend
+MW690015,PID72,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690016,PID73,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,"L159F, C316N",,,,,EASL-extend
+MW690017,PID74,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690018,PID75,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,"T54S, V55I",,,,,,,EASL-extend
+MW690019,PID76,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+MW690020,PID77,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1A,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend

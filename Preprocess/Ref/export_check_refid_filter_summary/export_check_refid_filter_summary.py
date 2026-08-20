@@ -15,30 +15,30 @@ FILTERS = {
         "30": "source_isolate contains Day1", "2116": "source_collection_date before 2011",
         "943": "source_isolate contains Day 1", "2150": "source_isolate contains b",
         "600": "source_isolate does not contain failure", "884": "source_isolate contains Pre-TH",
-        "499": "source_isolate contains HCC", "2227": "Accession membership list: outputs/temp/hcv-ns3-comet-build-workflow/run_ns3_pipeline/2227_Nguyen_(2015)_w_metadata_filtered.csv",
+        "499": "source_isolate contains HCC", "2227": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS3/2227_Nguyen_(2015)_w_metadata_filtered.csv",
         "661": "source_isolation_source equals plasma", "2168": "source_isolate contains pre",
         "1356": "source_isolate does not contain IC", "192": "source_isolate contains day 1",
         "2138": "source_isolate contains Week 0", "346": "source_isolate contains baseline/D0",
     },
     "NS5A": {
         "29": "source_isolate contains SCRN", "600": "source_isolate does not contain failure",
-        "535": "Accession membership list: outputs/temp/hcv-ns5a-comet-build-workflow/run_ns5a_pipeline/535.csv",
+        "535": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS5A/535.csv",
         "661": "source_isolation_source equals plasma", "123": "source_isolate does not contain TF",
         "50": "source_isolate contains week 0", "192": "source_isolate contains day1",
-        "142": "source_isolate contains baseline", "17": "Accession membership list: outputs/temp/hcv-ns5a-comet-build-workflow/run_ns5a_pipeline/17.csv",
+        "142": "source_isolate contains baseline", "17": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS5A/17.csv",
         "288": "source_isolate contains pre", "346": "source_isolate contains baseline/D0",
     },
     "NS5B": {
         "891": "source_isolate contains token Ha01 through Ha97", "30": "source_isolate contains day1",
         "943": "source_isolate contains day 1", "1051": "source_isolate contains token 1a through 51a",
-        "192": "source_isolate contains day1", "17": "Accession membership list: outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline/17.csv",
+        "192": "source_isolate contains day1", "17": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS5B/17.csv",
         "346": "source_isolate contains baseline",
     },
 }
 
 WORKFLOW_TEMP_ROOTS = {
     "NS3": Path("outputs/temp/hcv-ns3-comet-build-workflow/run_ns3_pipeline"),
-    "NS5A": Path("outputs/temp/hcv-ns5a-comet-build-workflow/run_ns5a_pipeline"),
+    "NS5A": Path("outputs/comet-NS5A/temp/run_ns5a_pipeline"),
     "NS5B": Path("outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline"),
 }
 

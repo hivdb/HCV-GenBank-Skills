@@ -1,0 +1,31 @@
+IsolateID,PersonID,Clone Method,NS3 Range,NS5A_NTD Range,NS5B Range,Virus,Country,Year,Source,Genotype,Subtype,Sequencing Method,Treatment,DrugClass,PI,NS5A_I,NI,NNI,Recent Regimen,PI DRMs,NS5A_I DRMs,NI DRMs,NS3 Ins,NS5A Ins,NS5B Ins,Stops,DRM Mode
+OM525855,PID2,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,5,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525857,PID4,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525858,PID5,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525860,PID7,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525861,PID8,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525867,PID14,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525870,PID17,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525874,PID21,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525877,PID24,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525878,PID25,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525879,PID26,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525880,PID27,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525881,PID28,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525882,PID29,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525883,PID30,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,1B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525884,PID31,None,1 ~ 631,1 ~ 212,1 ~ 591,HCV,USA,,Plasma,8,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525886,PID33,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525887,PID34,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525893,PID40,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525898,PID45,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,V321I,,,,,EASL-extend
+OM525899,PID46,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2B,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525900,PID47,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,"E2: V5*
+",EASL-extend
+OM525901,PID48,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525904,PID51,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,1,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525905,PID52,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,UNKNOWN,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525907,PID54,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend
+OM525908,PID55,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,"NS5A_CTD: E196E*KQ
+",EASL-extend
+OM525910,PID57,None,1 ~ 631,1 ~ 213,1 ~ 591,HCV,USA,,Plasma,2,2D,Sanger,No,None,None,None,None,None,None,,,,,,,,EASL-extend

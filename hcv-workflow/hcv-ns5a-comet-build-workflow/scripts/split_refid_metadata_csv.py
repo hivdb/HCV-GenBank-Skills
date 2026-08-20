@@ -10,6 +10,8 @@ from pathlib import Path
 
 
 RULES_CSV = Path(__file__).with_name("refid_metadata_filters.csv")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+ACCESSION_LIST_DIR = REPO_ROOT / "HCVData" / "Ref-selection" / "NS5_Ref_filter" / "NS5A"
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         "--rules-csv",
         default=RULES_CSV,
         help="CSV containing RefID, Field, Operator, and Value columns",
+    )
+    parser.add_argument(
+        "--accession-list-dir",
+        default=ACCESSION_LIST_DIR,
+        help="Directory containing accession-list CSVs referenced by in_accession_list rules",
     )
     return parser.parse_args()
 
@@ -121,6 +128,7 @@ def main() -> int:
     input_csv = Path(args.input_csv).expanduser()
     output_dir = Path(args.output_dir).expanduser()
     rules_csv = Path(args.rules_csv).expanduser()
+    accession_list_dir = Path(args.accession_list_dir).expanduser()
 
     if not input_csv.is_file():
         raise RuntimeError(f"Input CSV was not found: {input_csv}")
@@ -137,7 +145,7 @@ def main() -> int:
         if (row.get("Accession") or "").strip()
     }
     accession_filters = {
-        rule.refid: load_accessions(input_csv.parent / rule.value)
+        rule.refid: load_accessions(accession_list_dir / rule.value)
         for rule in rules
         if rule.operator == "in_accession_list"
     }

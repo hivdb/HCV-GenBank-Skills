@@ -9,6 +9,10 @@ from collections import defaultdict
 from pathlib import Path
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+ACCESSION_LIST_DIR = REPO_ROOT / "HCVData" / "Ref-selection" / "NS5_Ref_filter" / "NS5B"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -18,6 +22,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--input-csv", required=True, help="Path to included_accessions_metadata.csv")
     parser.add_argument("--output-dir", required=True, help="Directory for per-RefID CSV files")
+    parser.add_argument(
+        "--accession-list-dir",
+        default=ACCESSION_LIST_DIR,
+        help="Directory containing manual accession-list CSVs",
+    )
     return parser.parse_args()
 
 
@@ -105,6 +114,7 @@ def main() -> int:
     args = parse_args()
     input_csv = Path(args.input_csv).expanduser()
     output_dir = Path(args.output_dir).expanduser()
+    accession_list_dir = Path(args.accession_list_dir).expanduser()
 
     if not input_csv.is_file():
         raise RuntimeError(f"Input CSV was not found: {input_csv}")
@@ -117,7 +127,7 @@ def main() -> int:
         if (row.get("Accession") or "").strip()
     }
     accession_filters = {
-        "17": load_accessions(input_csv.parent / "17.csv"),
+        "17": load_accessions(accession_list_dir / "17.csv"),
     }
     rows_by_refid: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in rows:
