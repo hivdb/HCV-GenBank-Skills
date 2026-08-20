@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import re
 import shutil
@@ -37,7 +38,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/comet-NS3/temp") / Path(__file__).stem
+    path = Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3/temp")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 

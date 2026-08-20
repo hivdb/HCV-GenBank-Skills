@@ -17,6 +17,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--metadata-dir", required=True, help="Directory containing RefID_*_metadata.csv files")
     parser.add_argument("--fasta-dir", required=True, help="Directory containing copied RefID FASTA files")
+    parser.add_argument(
+        "--kept-accessions-output",
+        required=True,
+        help="CSV manifest of accessions retained after RefID metadata filtering.",
+    )
     return parser.parse_args()
 
 
@@ -81,6 +86,14 @@ def write_fasta(path: Path, records: list[tuple[str, list[str]]]) -> None:
                 handle.write(f"{sequence_line}\n")
 
 
+def write_accession_manifest(path: Path, accessions: set[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["accession"])
+        writer.writeheader()
+        writer.writerows({"accession": accession} for accession in sorted(accessions))
+
+
 def main() -> int:
     args = parse_args()
     metadata_dir = Path(args.metadata_dir).expanduser()
@@ -123,11 +136,14 @@ def main() -> int:
         filtered_fasta_refids += 1
 
     output_accessions = collect_fasta_accessions(fasta_dir)
+    kept_accessions_output = Path(args.kept_accessions_output).expanduser()
+    write_accession_manifest(kept_accessions_output, output_accessions)
     print(f"staged_fasta_accessions_before_filter={len(input_accessions)}")
     print(f"staged_fasta_accessions_after_filter={len(output_accessions)}")
     print(f"staged_fasta_accessions_removed={len(input_accessions - output_accessions)}")
     print(f"refid_fasta_files_filtered={filtered_fasta_refids}")
     print(f"filter_rules_without_matching_fasta={missing_fasta_count}")
+    print(f"kept_accessions_manifest={kept_accessions_output}")
     return 0
 
 

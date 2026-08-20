@@ -95,6 +95,14 @@ def main() -> int:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerows(output_rows)
+    total_accessions = sum(int(row["n"]) for row in output_rows)
+    distribution = sorted(output_rows, key=lambda row: (-int(row["n"]), str(row["genotype"])))
+    distribution_text = ", ".join(
+        f"{row['genotype']} ({int(row['n']) / total_accessions:.1%}, {int(row['n'])})"
+        for row in distribution
+    ) if total_accessions else ""
+    print(f"QC-passed genotype distribution: {distribution_text}")
+    print(f"Total accessions: {total_accessions}")
     print(f"Wrote {len(output_rows)} genotype summaries to {output_path.resolve()}")
     return 0
 

@@ -98,7 +98,7 @@ Configuration stays in the repository base folder. The Python runner loads:
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
 Set `sheet_name` in the `[ns5a]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
-Temporary files and step summaries are written under `outputs/comet-NS5A/temp/`.
+Each step writes its files under `outputs/comet-NS5A/<order>_<step-name>/` (for example, `08_build-genotype-workbook/`). The runner prints each step as a Markdown heading with its order, name, and short explanation, followed by input, excluded, and final-included accession counts.
 
 ## Inputs
 
@@ -112,20 +112,18 @@ Temporary files and step summaries are written under `outputs/comet-NS5A/temp/`.
 - optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
 The discovery step keeps every row with a `RefID` from the configured `IncludedNS5ARefs_StatusInclude.xlsx` selection workbook; it does not apply a `Num Pts` filter.
-After discovery, the Python runner copies all matched RefID FASTA files into `outputs/comet-NS5A/temp/run_ns5a_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
-The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
-The per-RefID metadata split step reads its rules from `scripts/refid_metadata_filters.csv`; edit that CSV to add or change rules. It writes CSVs only for RefIDs defined there, under `refid_metadata/`. Rules using `in_accession_list` load their accession-list CSV (such as `17.csv`) from `HCVData/Ref-selection/NS5_Ref_filter/NS5A/`.
-The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
+After discovery, the runner copies matched FASTA files into `03_stage-refid-fastas/included_refid_fastas/`, then creates the filtered copy and `kept_accessions.csv` manifest in `06_filter-refid-fastas/`. Step 7 reads that manifest, copies the filtered FASTAs into `07_prepare-comet-assignments/included_refid_fastas/`, and removes missing or unassigned records only from the Step 7 copy. Downstream steps use the Step 7 copy.
+The metadata filtering step writes its metadata CSVs in `04_filter-accession-metadata/`; the per-RefID rules and CSVs are in `05_split-refid-metadata/refid_metadata/`.
 The COMET subtype step gives priority to non-COMET genotype and subtype assignments for retained accessions called `1d` and for genotype 7 or 8 accessions. It also adds priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
 
 ## Outputs
 
-The workflow writes NS5A outputs under `outputs/`, including:
+The workflow writes NS5A outputs under `outputs/comet-NS5A/`, in numbered step folders, including:
 
 - `NS5A_GT_AllStudies.xlsx`
 - `NS5A_matched_fasta_files.txt`
-- discovery `filtered_rows.xlsx` under `outputs/comet-NS5A/temp/.../find_refid_fastas/...`
-- copied included RefID FASTA files under `outputs/comet-NS5A/temp/run_ns5a_pipeline/included_refid_fastas/`
+- discovery `filtered_rows.xlsx` under `02_discover-refid-fastas/`
+- copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`
@@ -144,12 +142,12 @@ The workflow writes NS5A outputs under `outputs/`, including:
 - `NS5A_Subtype_RAS_Profiles.xlsx`
 - `NS5A_Combined_RAS_Profiles.xlsx` (base combined profile)
 - `NS5A_Combined_RAS_Profiles_Annotated.xlsx` (derived profile with `MeanDiff`, `PositionDiff`, and updated coverage labels)
-- paired AA/NA RAS and position-range distance workbooks under `outputs/`
+- paired AA/NA RAS and position-range distance workbooks under `28_build-paired-distance-matrices/`
 
 ## Operating Rules
 
 - Keep NS5A scripts together in this skill folder.
 - Use `scripts/run_ns5a_pipeline.py` for complete runs or `--step <name>` for one specific build step.
 - Keep `.env` and `pipeline.local.toml` in the repository root; do not copy them into this skill folder.
-- Keep temporary outputs under `outputs/comet-NS5A/temp/` so they do not mix with other skills.
+- Keep every generated artifact in its numbered step folder under `outputs/comet-NS5A/`.
 - Preserve the order above because later reports consume earlier workbooks.

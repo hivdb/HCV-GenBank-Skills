@@ -49,7 +49,7 @@ Configuration stays in the repository base folder. The wrapper loads:
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
 Set `sheet_name` in the `[ns3]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
-Temporary files and step summaries are written under `outputs/comet-NS3/temp/`.
+Each stage writes its outputs under a numbered directory in `outputs/comet-NS3/`.
 
 ## Inputs
 
@@ -62,7 +62,7 @@ Temporary files and step summaries are written under `outputs/comet-NS3/temp/`.
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 
 The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on `NumPatients`, `Num Pts`, `NS3Count`, or `Notes`.
-After discovery, the runner copies all matched RefID FASTA files into `outputs/comet-NS3/temp/run_ns3_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
+After discovery, the runner copies all matched RefID FASTA files into `03_stage-refid-fastas/included_refid_fastas/`, then creates the filtered FASTA copy and `kept_accessions.csv` under `06_filter-refid-fastas/`. Step 7 reads that manifest, copies the filtered FASTAs into `07_prepare-comet-assignments/included_refid_fastas/`, and removes missing or unassigned records only from the Step 7 copy. Downstream steps use the Step 7 copy.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/` and prints filter, kept row count, and total row count. Current filters: `30` source_isolate contains `Day1`; `85` accession is listed in `85.csv`; `142` source_isolate contains `baseline`; `192` source_isolate contains `day 1`; `346` source_isolate contains `baseline/D0`; `499` source_isolate contains `HCC`; `600` source_isolate does not contain `failure`; `661` source_isolation_source equals `plasma`; `884` source_isolate contains `Pre-TH`; `943` source_isolate contains `Day 1`; `1356` source_isolate does not contain `IC`; `2008` source_isolate does not contain `chimpanzee`; `2110` source_isolate contains `T0`; `2116` source_collection_date is before 2011; `2138` source_isolate contains `Week 0`; `2150` source_isolate contains `b`; `2168` source_isolate contains `pre`; `2178` source_isolation_source equals `plasma`. The manual accession list is a durable input in `HCVData/Ref-selection/NS5_Ref_filter/NS3/`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
@@ -76,7 +76,7 @@ The workflow writes NS3 outputs under `outputs/comet-NS3/`, including:
 - `NS3_GT_AllStudies.xlsx` (Comet genotype calls plus per-GT NS3 nucleotide distances and aligned-nucleotide counts)
 - `NS3_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `outputs/comet-NS3/temp/.../find_refid_fastas/...`
-- copied included RefID FASTA files under `outputs/comet-NS3/temp/run_ns3_pipeline/included_refid_fastas/`
+- copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`

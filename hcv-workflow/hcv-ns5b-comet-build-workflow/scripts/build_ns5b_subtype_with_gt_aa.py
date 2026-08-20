@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+import os
 import json
 import re
 import shutil
 import subprocess
 import tempfile
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -51,6 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument("--output-workbook")
     parser.add_argument("--min-aa-overlap", type=int, default=80)
+    parser.add_argument("--workers", type=int, default=4, help="Worker threads for accession preparation/extraction and BLASTX.")
     return parser.parse_args()
 
 
@@ -60,7 +63,7 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/comet-NS5B/temp") / Path(__file__).stem
+    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B/temp")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -226,7 +229,7 @@ def build_gt_db(job_dir: Path, gt: str, aa_sequence: str) -> Path:
     return db_prefix
 
 
-def run_blastx(query_fasta: Path, db_prefix: Path, out_path: Path) -> list[dict[str, Any]]:
+def run_blastx(query_fasta: Path, db_prefix: Path, out_path: Path, workers: int) -> list[dict[str, Any]]:
     subprocess.run(
         [
             "blastx",
@@ -242,6 +245,8 @@ def run_blastx(query_fasta: Path, db_prefix: Path, out_path: Path) -> list[dict[
             "1",
             "-max_target_seqs",
             "1",
+            "-num_threads",
+            str(workers),
             "-outfmt",
             BLAST_OUTFMT,
             "-out",
@@ -347,16 +352,6 @@ def write_output(path: Path, header: list[str], rows: list[dict[str, Any]]) -> N
     workbook.save(path)
 
 
-def genotype_count_summary(rows: list[dict[str, Any]]) -> tuple[dict[str, int], str]:
-    counts = Counter(str(row["ClosestGT"]).strip() for row in rows if str(row["ClosestGT"]).strip())
-    total = sum(counts.values())
-    ordered = sorted(counts, key=lambda genotype: (-counts[genotype], int(genotype) if genotype.isdigit() else genotype))
-    return dict(counts), ", ".join(
-        f"GT{genotype} ({counts[genotype] / total:.1%}, {counts[genotype]})"
-        for genotype in ordered
-    )
-
-
 def main() -> int:
     args = parse_args()
     subtype_workbook = Path(args.subtype_workbook).expanduser()
@@ -368,6 +363,7 @@ def main() -> int:
     gt_refs = load_gt_refs(gt_aa_json)
     refid_to_fasta = build_refid_to_fasta(fasta_dir)
     job_dir = make_job_dir(output_dir, subtype_workbook)
+    workers = max(1, args.workers)
 
     rows_by_gt: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in subtype_rows:
@@ -375,20 +371,36 @@ def main() -> int:
 
     output_rows: list[dict[str, Any]] = []
     for gt, rows in sorted(rows_by_gt.items(), key=lambda item: int(item[0])):
+        print(f"extract_aa_genotype=GT{gt}", flush=True)
         db_prefix = build_gt_db(job_dir, gt, gt_refs[gt])
         reference_aa = gt_refs[gt]
         query_entries: list[tuple[str, str]] = []
         sequence_by_qseqid: dict[str, str] = {}
 
+        # Cache each RefID FASTA once; the previous implementation reparsed it
+        # independently for every accession in that RefID.
+        fasta_cache: dict[str, dict[str, str]] = {}
         for row in rows:
             fasta_path = refid_to_fasta.get(row["RefID"])
             if fasta_path is None:
                 continue
-            sequence_by_accession = {accession_from_header(h): seq for h, seq in parse_fasta(fasta_path)}
-            sequence = sequence_by_accession.get(row["AccessionID"])
+            if row["RefID"] not in fasta_cache:
+                fasta_cache[row["RefID"]] = {
+                    accession_from_header(h): seq for h, seq in parse_fasta(fasta_path)
+                }
+
+        def prepare_accession(row: dict[str, Any]) -> tuple[str, str] | None:
+            sequence = fasta_cache.get(row["RefID"], {}).get(row["AccessionID"])
             if not sequence:
+                return None
+            return f"{row['RefID']}|{row['AccessionID']}", sequence
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            prepared = list(executor.map(prepare_accession, rows))
+        for row, prepared_record in zip(rows, prepared):
+            if prepared_record is None:
                 continue
-            qseqid = f"{row['RefID']}|{row['AccessionID']}"
+            qseqid, sequence = prepared_record
             query_entries.append((qseqid, sequence))
             sequence_by_qseqid[qseqid] = sequence
 
@@ -397,21 +409,24 @@ def main() -> int:
 
         query_fasta = job_dir / f"ns5b_queries_gt{gt}.fasta"
         write_fasta(query_fasta, query_entries)
-        hits = run_blastx(query_fasta, db_prefix, job_dir / f"ns5b_gt{gt}.blast.tsv")
+        hits = run_blastx(query_fasta, db_prefix, job_dir / f"ns5b_gt{gt}.blast.tsv", workers)
         best_hits = choose_best_hits(hits, args.min_aa_overlap)
 
-        for row in rows:
+        def extract_accession(row: dict[str, Any]) -> dict[str, Any] | None:
             qseqid = f"{row['RefID']}|{row['AccessionID']}"
             hit = best_hits.get(qseqid)
             if hit is None:
-                continue
+                return None
             start_aa, end_aa, aa_sequence, na_sequence = extract_aa(sequence_by_qseqid[qseqid], hit, reference_aa)
             output_row = dict(row)
             output_row["StartAAPosition"] = start_aa if aa_sequence else ""
             output_row["EndAAPosition"] = end_aa if aa_sequence else ""
             output_row["AASequence"] = aa_sequence
             output_row["NASequence"] = na_sequence
-            output_rows.append(output_row)
+            return output_row
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            extracted_rows = list(executor.map(extract_accession, rows))
+        output_rows.extend(row for row in extracted_rows if row is not None)
         try:
             query_fasta.unlink()
         except OSError:
@@ -431,11 +446,8 @@ def main() -> int:
         "rows_with_aa": len(output_rows),
         "min_aa_overlap": args.min_aa_overlap,
     }
-    summary["genotype_counts"], genotype_summary = genotype_count_summary(output_rows)
-    print(f"extract_aa_genotype_counts={genotype_summary}", flush=True)
     cleanup_db_files(job_dir)
     shutil.rmtree(job_dir, ignore_errors=True)
-    print(json.dumps(summary, indent=2))
     return 0
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import csv
 import json
 import shutil
@@ -33,7 +34,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/comet-NS5B/temp") / Path(__file__).stem
+    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B/temp")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -226,6 +227,11 @@ def write_subtype_workbook(path: Path, rows_by_gt_subtype: dict[str, dict[str, l
 
 def main() -> int:
     args = parse_args()
+    print(
+        "NS5B complete-profile requirement: every retained sequence must cover all "
+        "callable RAS positions (150, 159, 206, 282, 316, 320, 321).",
+        flush=True,
+    )
     input_workbook = Path(args.input_workbook).expanduser()
     output_dir = Path(args.output_dir)
     script_temp_dir()

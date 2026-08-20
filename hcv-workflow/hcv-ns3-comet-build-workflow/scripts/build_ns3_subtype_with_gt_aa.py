@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import re
 import shutil
 import subprocess
 import tempfile
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -59,7 +60,7 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/comet-NS3/temp") / Path(__file__).stem
+    path = Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3/temp")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -352,14 +353,6 @@ def cleanup_job_dir(job_dir: Path) -> None:
                 pass
 
 
-def genotype_count_summary(rows: list[dict[str, Any]]) -> tuple[dict[str, int], str]:
-    counts = Counter(str(row["ClosestGT"]).strip() for row in rows if str(row["ClosestGT"]).strip())
-    total = sum(counts.values())
-    ordered = sorted(counts, key=lambda genotype: (-counts[genotype], int(genotype) if genotype.isdigit() else genotype))
-    return dict(counts), ", ".join(
-        f"GT{genotype} ({counts[genotype] / total:.1%}, {counts[genotype]})"
-        for genotype in ordered
-    )
 def main() -> int:
     args = parse_args()
     subtype_workbook = Path(args.subtype_workbook).expanduser()
@@ -381,6 +374,7 @@ def main() -> int:
     summary: dict[str, Any] = {"input_rows": len(rows), "by_gt": {}}
 
     for gt, group_rows in sorted(rows_by_gt.items(), key=lambda item: int(item[0])):
+        print(f"extract_aa_genotype=GT{gt}", flush=True)
         query_entries: list[tuple[str, str]] = []
         seq_by_qseqid: dict[str, str] = {}
         for row in group_rows:
@@ -432,12 +426,8 @@ def main() -> int:
     write_workbook(out_path, header, rows)
     summary["output_workbook"] = str(out_path.resolve())
     summary["rows_with_aa"] = sum(1 for row in rows if row.get("AASequence"))
-    extracted_rows = [row for row in rows if row.get("AASequence")]
-    summary["genotype_counts"], genotype_summary = genotype_count_summary(extracted_rows)
-    print(f"extract_aa_genotype_counts={genotype_summary}", flush=True)
     cleanup_job_dir(job_dir)
     shutil.rmtree(job_dir, ignore_errors=True)
-    print(json.dumps(summary, indent=2))
     return 0
 
 

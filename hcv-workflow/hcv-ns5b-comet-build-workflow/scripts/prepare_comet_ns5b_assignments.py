@@ -16,6 +16,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--comet-csv", required=True)
     parser.add_argument("--fasta-dir", required=True)
+    parser.add_argument("--accessions-csv", required=True, help="Step 6 kept-accessions CSV used as the authoritative COMET input set.")
     parser.add_argument("--genotype-output-csv", required=True)
     parser.add_argument("--subtype-output-csv", required=True)
     parser.add_argument("--not-found-output-csv", required=True)
@@ -66,6 +67,14 @@ def load_comet(path: Path) -> dict[str, tuple[str, str] | None]:
     return calls
 
 
+def load_accessions(path: Path) -> set[str]:
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if "accession" not in (reader.fieldnames or []):
+            raise RuntimeError(f"Column 'accession' was not found in {path}")
+        return {accession for row in reader if (accession := (row.get("accession") or "").strip())}
+
+
 def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -83,17 +92,22 @@ def main() -> int:
     args = parse_args()
     fasta_dir = Path(args.fasta_dir)
     calls = load_comet(Path(args.comet_csv))
+    requested_accessions = load_accessions(Path(args.accessions_csv))
     genotype_rows: list[dict[str, str]] = []
     subtype_rows: list[dict[str, str]] = []
     missing_rows: list[dict[str, str]] = []
     missing_or_unassigned_records: list[list[str]] = []
     kept_records_by_path: dict[Path, list[list[str]]] = {}
     total_accessions = assigned = unassigned = missing = 0
+    seen_accessions: set[str] = set()
 
     for fasta_path in sorted(fasta_dir.glob("*.fasta")):
         kept: list[list[str]] = []
         for record in read_fasta(fasta_path):
             accession = accession_from_header(record[0])
+            if accession not in requested_accessions:
+                continue
+            seen_accessions.add(accession)
             total_accessions += 1
             call = calls.get(accession) or calls.get(accession.split(".", 1)[0])
             if call is None:
@@ -110,7 +124,12 @@ def main() -> int:
             subtype_rows.append({"accession": accession, "genotype": genotype, "subtype": subtype, "column_name": "Comet NS5B"})
         kept_records_by_path[fasta_path] = kept
 
-    print(f"staged_fasta_accession_count={total_accessions}")
+    missing_from_fasta = requested_accessions - seen_accessions
+    if missing_from_fasta:
+        preview = ", ".join(sorted(missing_from_fasta)[:10])
+        raise RuntimeError(f"{len(missing_from_fasta)} Step 6 kept accession(s) were absent from {fasta_dir}: {preview}")
+
+    print(f"comet_input_accession_count={total_accessions}")
     print(f"comet_assigned_accession_count={assigned}")
     print(f"comet_missing_accession_count={missing}")
     print(f"comet_unassigned_accession_count={unassigned}")

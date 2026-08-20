@@ -120,6 +120,8 @@ def main() -> None:
     parser.add_argument('--ns3-output-dir', type=Path, default=Path('outputs/comet-NS3'))
     parser.add_argument('--ns5a-output-dir', type=Path, default=Path('outputs/comet-NS5A'))
     parser.add_argument('--ns5b-output-dir', type=Path, default=Path('outputs/comet-NS5B'))
+    parser.add_argument('--comparison-workbook', type=Path, help='Explicit comparison workbook for the selected gene.')
+    parser.add_argument('--ras-workbook', type=Path, help='Explicit subtype RAS workbook for the selected gene.')
     parser.add_argument('--gene', required=True, choices=('NS3', 'NS5A', 'NS5B'), help='COMET workflow gene to publish.')
     args = parser.parse_args()
     output_root = args.comparison_output_dir
@@ -135,6 +137,11 @@ def main() -> None:
     }
     gene_tokens_by_runner_gene = {'NS3': ('NS3', 'NS3'), 'NS5A': ('NS5A_NTD', 'NS5A'), 'NS5B': ('NS5B', 'NS5B')}
     gene_tokens = [gene_tokens_by_runner_gene[args.gene]]
+    comparison_gene, profile_gene = gene_tokens[0]
+    if args.comparison_workbook:
+        comparison_paths[comparison_gene] = args.comparison_workbook
+    if args.ras_workbook:
+        profile_paths[profile_gene] = args.ras_workbook
     report_genes = [gene_tokens[0][0]]
     required = [comparison_paths[report_genes[0]], profile_paths[gene_tokens[0][1]]]
     missing = [str(path) for path in required if not path.is_file()]
