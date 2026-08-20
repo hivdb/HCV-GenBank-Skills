@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-suffix",
-        default="_FirstSeq_Pairwise_Aligned.fasta",
+        default="_Pairwise_Aligned.fasta",
         help="Suffix appended after HCV_Subtype_Refs_<GENE>_AA in output names.",
     )
     return parser.parse_args()
