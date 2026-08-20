@@ -24,7 +24,9 @@ Use this skill for the full NS5B high-throughput build workflow. The first step 
 13. `export_gt_reference_consensus_differences/export_gt_reference_consensus_differences.py`
 14. `build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py`
 15. `build_ns5b_subtype_ras_profiles/build_ns5b_subtype_ras_profiles.py`
-16. `build_ns5b_combined_ras_profiles/build_ns5b_combined_ras_profiles.py`
+16. Build the combined RAS profile and update its coverage labels.
+    - `build_ns5b_combined_ras_profiles/build_ns5b_combined_ras_profiles.py`
+    - `replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py`
 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 

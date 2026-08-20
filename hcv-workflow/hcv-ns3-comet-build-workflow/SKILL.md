@@ -24,11 +24,12 @@ Use this skill for the full NS3 high-throughput build workflow. The first step r
 13. `export_gt_reference_consensus_differences/export_gt_reference_consensus_differences.py`
 14. `build_ns3_gt_ras_profiles/build_ns3_gt_ras_profiles.py`
 15. `build_ns3_subtype_ras_profiles/build_ns3_subtype_ras_profiles.py`
-16. `build_ns3_combined_ras_profiles/build_ns3_combined_ras_profiles.py`
+16. Build the combined RAS profile and update its coverage labels.
+    - `build_ns3_combined_ras_profiles/build_ns3_combined_ras_profiles.py`
+    - `replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py`
 17. `add_combined_profile_nonconsensus_row/add_combined_profile_nonconsensus_row.py`
-18. `replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py`
-19. `build_ns3_subtype_ras_consensus_difference_summary/build_ns3_subtype_ras_consensus_difference_summary.py`
-20. `build_ns3_subtype_profile_coverage_report/build_ns3_subtype_profile_coverage_report.py` (GT5 subtype 5a coverage audit)
+18. `build_ns3_subtype_ras_consensus_difference_summary/build_ns3_subtype_ras_consensus_difference_summary.py`
+19. `build_ns3_subtype_profile_coverage_report/build_ns3_subtype_profile_coverage_report.py` (GT5 subtype 5a coverage audit)
 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 

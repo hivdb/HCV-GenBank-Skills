@@ -57,8 +57,9 @@ Run the workflow in this order. For an individual step, invoke its listed script
 18. Build genotype and subtype RAS profiles.
    - Python: `build_ns5a_gt_ras_profiles.py`
    - Python: `build_ns5a_subtype_ras_profiles.py`
-19. Build the combined RAS profile and its COMET coverage and sequence-audit reports.
+19. Build the combined RAS profile, update its coverage labels, and create its COMET coverage and sequence-audit reports.
    - Python: `build_ns5a_combined_ras_profiles.py`
+   - Python: `replace_comet_profile_coverage_range_with_mean_diff.py`
    - Python: `build_comet_subtype_ras_coverage_report.py`
    - Python: `build_comet_workflow_sequence_audit.py`
 20. Summarize subtype RAS differences from genotype consensus.
@@ -74,9 +75,7 @@ Run the workflow in this order. For an individual step, invoke its listed script
    - Python: `build_ns5a_ras_entropy.py`
 25. Create an annotated combined RAS profile with `MeanDiff` and `PositionDiff` values.
    - Python: `add_combined_profile_nonconsensus_row.py`
-26. Replace combined-profile non-X coverage labels with mean-difference labels.
-   - Python: `replace_comet_profile_coverage_range_with_mean_diff.py`
-27. Publish the shared ICTV reference/consensus comparison report.
+26. Publish the shared ICTV reference/consensus comparison report.
    - Python: `add_subtype_consensus_mutation_summaries.py`
 
 Run the Python orchestrator for full workflows or a named stage:
