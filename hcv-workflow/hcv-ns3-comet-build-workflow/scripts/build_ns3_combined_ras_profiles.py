@@ -113,13 +113,17 @@ def write_combined_workbook(
     gt_format = workbook.add_format({"bold": True, "bg_color": "#D9EAF7", "align": "center", "valign": "vcenter", "text_wrap": True})
     mean_diff_format = workbook.add_format({"align": "center", "valign": "vcenter", "text_wrap": True, "num_format": "0.0"})
     superscript_format = workbook.add_format({"font_script": 1})
+    red_text_format = workbook.add_format({"font_color": "#FF0000"})
+    red_superscript_format = workbook.add_format({"font_color": "#FF0000", "font_script": 1})
     headers = [*positions, "MeanDiff"]
     worksheet.set_column(0, 0, 24)
     worksheet.set_column(1, len(headers) - 1, 12)
     for column, value in enumerate(headers):
         worksheet.write_blank(0, column, None, header_format) if value is None else worksheet.write(0, column, value, header_format)
 
-    def write_variant_cell(row: int, column: int, variants: list[tuple[str, str]], cell_style) -> None:
+    def write_variant_cell(
+        row: int, column: int, variants: list[tuple[str, str]], cell_style, genotype_consensus_aas: set[str] | None = None
+    ) -> None:
         if not variants:
             worksheet.write_blank(row, column, None, cell_style)
             return
@@ -127,7 +131,10 @@ def write_combined_workbook(
         for index, (amino_acid, frequency) in enumerate(variants):
             if index and index % 2 == 0:
                 amino_acid = f"\n{amino_acid}"
-            rich_parts.extend((amino_acid, superscript_format, frequency))
+            if genotype_consensus_aas is not None and amino_acid.lstrip("\n") not in genotype_consensus_aas:
+                rich_parts.extend((red_text_format, amino_acid, red_superscript_format, frequency))
+            else:
+                rich_parts.extend((amino_acid, superscript_format, frequency))
         result = worksheet.write_rich_string(row, column, *rich_parts, cell_style)
         if result:
             raise RuntimeError(f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}")
@@ -145,11 +152,20 @@ def write_combined_workbook(
         worksheet_row += 1
 
         gt_amino_acids = [most_frequent_variant(value) for value in gt_row[1:]]
+        all_gt_consensus_aas = [
+            {
+                variant[0]
+                for gt_number, row in gt_by_number.items()
+                if gt_number in {"1", "2", "3", "4", "5", "6"}
+                if (variant := most_frequent_variant(row[position_index + 1])) is not None
+            }
+            for position_index in range(len(gt_amino_acids))
+        ]
         for subtype_row in subtypes_by_gt.get(genotype, []):
             subtype_values = subtype_row[1:]
             worksheet.write(worksheet_row, 0, subtype_row[0], cell_format)
             for column, (value, gt_variant) in enumerate(zip(subtype_values, gt_amino_acids), start=1):
-                write_variant_cell(worksheet_row, column, filtered_variants(value, threshold, {gt_variant[0]} if gt_variant is not None else None), cell_format)
+                write_variant_cell(worksheet_row, column, filtered_variants(value, threshold, {gt_variant[0]} if gt_variant is not None else None), cell_format, all_gt_consensus_aas[column - 1])
             worksheet.write_number(worksheet_row, len(headers) - 1, mean_diff(subtype_values, gt_amino_acids, threshold), mean_diff_format)
             output_rows += 1
             worksheet_row += 1

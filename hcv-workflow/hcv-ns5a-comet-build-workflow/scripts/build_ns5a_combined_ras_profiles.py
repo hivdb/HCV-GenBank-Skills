@@ -118,6 +118,8 @@ def write_combined_workbook(
         {"bold": True, "bg_color": "#D9EAF7", "align": "center", "valign": "vcenter", "text_wrap": True}
     )
     superscript_format = workbook.add_format({"font_script": 1})
+    red_text_format = workbook.add_format({"font_color": "#FF0000"})
+    red_superscript_format = workbook.add_format({"font_color": "#FF0000", "font_script": 1})
     worksheet.set_column(0, 0, 24)
     worksheet.set_column(1, len(positions) - 1, 12)
 
@@ -130,6 +132,7 @@ def write_combined_workbook(
         column: int,
         variants: list[tuple[str, str]],
         cell_style,
+        genotype_consensus_aas: set[str] | None = None,
     ) -> None:
         if not variants:
             worksheet.write_blank(row, column, None, cell_style)
@@ -138,7 +141,10 @@ def write_combined_workbook(
         for index, (amino_acid, frequency) in enumerate(variants):
             if index and index % 2 == 0:
                 amino_acid = f"\n{amino_acid}"
-            rich_parts.extend((amino_acid, superscript_format, frequency))
+            if genotype_consensus_aas is not None and amino_acid.lstrip("\n") not in genotype_consensus_aas:
+                rich_parts.extend((red_text_format, amino_acid, red_superscript_format, frequency))
+            else:
+                rich_parts.extend((amino_acid, superscript_format, frequency))
         result = worksheet.write_rich_string(row, column, *rich_parts, cell_style)
         if result:
             raise RuntimeError(f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}")
@@ -158,6 +164,15 @@ def write_combined_workbook(
         worksheet_row += 1
 
         gt_amino_acids = [most_frequent_variant(value) for value in gt_row[1:]]
+        all_gt_consensus_aas = [
+            {
+                variant[0]
+                for gt_number, row in gt_by_number.items()
+                if gt_number in {"1", "2", "3", "4", "5", "6"}
+                if (variant := most_frequent_variant(row[position_index + 1])) is not None
+            }
+            for position_index in range(len(gt_amino_acids))
+        ]
         for subtype_row in subtypes_by_gt.get(genotype, []):
             subtype_values = subtype_row[1:]
             worksheet.write(worksheet_row, 0, subtype_row[0], cell_format)
@@ -171,6 +186,7 @@ def write_combined_workbook(
                         {gt_variant[0]} if gt_variant is not None else None,
                     ),
                     cell_format,
+                    all_gt_consensus_aas[column - 1],
                 )
             csv_rows.append(
                 [subtype_row[0]]
