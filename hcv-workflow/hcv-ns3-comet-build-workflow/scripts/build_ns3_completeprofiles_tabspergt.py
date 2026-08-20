@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/temp") / "hcv-ns3-comet-build-workflow" / Path(__file__).stem
+    path = Path("outputs/comet-NS3/temp") / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 

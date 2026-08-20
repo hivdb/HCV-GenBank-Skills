@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
         help="Subtype complete-profile workbook used to determine sequence counts",
     )
     parser.add_argument("--output-xlsx", default="outputs/NS3_Subtype_AA_Distance_Pos36_175.xlsx")
-    parser.add_argument("--temp-dir", default="outputs/temp/ns3_subtype_aa_distance_matrices")
+    parser.add_argument("--temp-dir", default="outputs/comet-NS3/temp/ns3_subtype_aa_distance_matrices")
     parser.add_argument("--min-subtype-sequences", type=int, default=10)
     parser.add_argument("--start", type=int, default=36, help="1-based aligned start position")
     parser.add_argument("--end", type=int, default=175, help="1-based aligned end position, inclusive")

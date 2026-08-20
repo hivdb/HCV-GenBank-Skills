@@ -37,7 +37,7 @@ FILTERS = {
 }
 
 WORKFLOW_TEMP_ROOTS = {
-    "NS3": Path("outputs/temp/hcv-ns3-comet-build-workflow/run_ns3_pipeline"),
+    "NS3": Path("outputs/comet-NS3/temp/run_ns3_pipeline"),
     "NS5A": Path("outputs/comet-NS5A/temp/run_ns5a_pipeline"),
     "NS5B": Path("outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline"),
 }
