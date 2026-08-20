@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -158,7 +157,6 @@ def main() -> int:
         "subtype_entry_count": len(subtype_entries),
         "positions_by_subtype": positions_by_subtype,
     }
-    print(json.dumps(summary, indent=2))
     return 0
 
 

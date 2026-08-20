@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fasta-dir", required=True)
     parser.add_argument("--comet-genotype-csv", required=True)
-    parser.add_argument("--noncomet-subtype-workbook", required=True)
+    parser.add_argument("--noncomet-coverage-csv", required=True)
     parser.add_argument("--output-dir", required=True)
     return parser.parse_args()
 
@@ -37,33 +37,21 @@ def load_comet(path: Path) -> dict[str, str]:
 
 
 def load_noncomet_priority_genotypes(path: Path) -> dict[str, tuple[str, str, str, str]]:
-    workbook = load_workbook(path, read_only=True, data_only=True)
-    sheet = workbook[workbook.sheetnames[0]]
-    header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]
-    index = {name: position for position, name in enumerate(header)}
-    required = ["RefID", "RefName", "AccessionID", "ClosestGT", "ClosestSubtype"]
-    missing = [name for name in required if name not in index]
-    if missing:
-        raise RuntimeError(f"Columns missing from {path}: {', '.join(missing)}")
-
     assignments: dict[str, tuple[str, str, str, str]] = {}
-    for values in sheet.iter_rows(min_row=2, values_only=True):
-        subtype = str(values[index["ClosestSubtype"]]).strip().lower()
-        accession = str(values[index["AccessionID"]]).strip()
-        genotype = str(values[index["ClosestGT"]]).strip().lower()
-        if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
-            assignments[accession.split(".", 1)[0]] = (
-                str(values[index["RefID"]]).strip(),
-                str(values[index["RefName"]]).strip(), accession, genotype,
-            )
-    workbook.close()
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            accession = str(row.get("Accession") or "").strip()
+            genotype = str(row.get("ClosestGenotype") or "").strip().lower()
+            subtype = str(row.get("ClosestSubtype") or "").strip().lower()
+            if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
+                assignments[accession.split(".", 1)[0]] = ("", "", accession, genotype)
     return assignments
 
 
 def main() -> int:
     args = parse_args()
     assignments = load_comet(Path(args.comet_genotype_csv))
-    noncomet_priority_genotypes = load_noncomet_priority_genotypes(Path(args.noncomet_subtype_workbook))
+    noncomet_priority_genotypes = load_noncomet_priority_genotypes(Path(args.noncomet_coverage_csv))
     rows: list[tuple[str, str, str, str, str]] = []
     seen_accessions: set[str] = set()
     override_count = 0

@@ -54,7 +54,7 @@ Temporary files and step summaries are written under `outputs/comet-NS5B/temp/`.
 - `HCV_GT_RefSeqs.fasta`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
 - `HCV_GT_Refs_By_Gene_AA.json`
-- `outputs/local_alignment/NS5B_Subtype_AllStudies_WSeqs.xlsx` for mandatory non-COMET subtype 1d overrides and additions
+- `HCVData/HCV-all-seq-subtype/NS5B_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET subtype 1d and genotype 7/8 overrides and additions
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 
 The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on patient-count columns, `NS5BCount`, or `Notes`.

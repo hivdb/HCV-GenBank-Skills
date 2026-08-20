@@ -8,7 +8,7 @@ import re
 import shutil
 import subprocess
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -347,6 +347,16 @@ def write_output(path: Path, header: list[str], rows: list[dict[str, Any]]) -> N
     workbook.save(path)
 
 
+def genotype_count_summary(rows: list[dict[str, Any]]) -> tuple[dict[str, int], str]:
+    counts = Counter(str(row["ClosestGT"]).strip() for row in rows if str(row["ClosestGT"]).strip())
+    total = sum(counts.values())
+    ordered = sorted(counts, key=lambda genotype: (-counts[genotype], int(genotype) if genotype.isdigit() else genotype))
+    return dict(counts), ", ".join(
+        f"GT{genotype} ({counts[genotype] / total:.1%}, {counts[genotype]})"
+        for genotype in ordered
+    )
+
+
 def main() -> int:
     args = parse_args()
     subtype_workbook = Path(args.subtype_workbook).expanduser()
@@ -421,6 +431,8 @@ def main() -> int:
         "rows_with_aa": len(output_rows),
         "min_aa_overlap": args.min_aa_overlap,
     }
+    summary["genotype_counts"], genotype_summary = genotype_count_summary(output_rows)
+    print(f"extract_aa_genotype_counts={genotype_summary}", flush=True)
     cleanup_db_files(job_dir)
     shutil.rmtree(job_dir, ignore_errors=True)
     print(json.dumps(summary, indent=2))

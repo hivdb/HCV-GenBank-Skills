@@ -107,7 +107,7 @@ Temporary files and step summaries are written under `outputs/comet-NS5A/temp/`.
 - `HCV_GT_RefSeqs.fasta`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
 - `HCV_GT_Refs_By_Gene_AA.json`
-- `outputs/local_alignment/NS5A_Subtype_AllStudies_WSeqs.xlsx` for mandatory non-COMET subtype 1d overrides and additions
+- `HCVData/HCV-all-seq-subtype/NS5A_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET subtype 1d and genotype 7/8 overrides and additions
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 - optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
