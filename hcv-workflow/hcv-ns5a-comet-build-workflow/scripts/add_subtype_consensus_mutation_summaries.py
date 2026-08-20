@@ -32,6 +32,20 @@ def mutation_sort_key(value: str) -> tuple[int, str]:
     match = MUTATION_POSITION.match(value)
     return (int(match.group(1)) if match else 1_000_000, value)
 
+
+def combined_profile_subtypes(path: Path) -> set[str]:
+    """Return GT/subtype labels represented in a combined RAS profile."""
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    worksheet = workbook.active
+    labels: set[str] = set()
+    for row in worksheet.iter_rows(min_row=2, values_only=True):
+        label = str(row[0] or "")
+        match = re.match(r"GT(\d+)_([^\s(]+)\s*\(", label)
+        if match:
+            labels.add(f"GT{match.group(1)}_{match.group(2).lower()}")
+    workbook.close()
+    return labels
+
 def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]], genes: list[str]) -> None:
     note = 'Only subtypes with one or more RAS-position differences are listed. Percentages are from the final combined profile.'
     for gene in genes:
@@ -122,6 +136,7 @@ def main() -> None:
     parser.add_argument('--ns5b-output-dir', type=Path, default=Path('outputs/comet-NS5B'))
     parser.add_argument('--comparison-workbook', type=Path, help='Explicit comparison workbook for the selected gene.')
     parser.add_argument('--ras-workbook', type=Path, help='Explicit subtype RAS workbook for the selected gene.')
+    parser.add_argument('--combined-profile-workbook', type=Path, help='Optional combined RAS profile limiting reported subtypes.')
     parser.add_argument('--gene', required=True, choices=('NS3', 'NS5A', 'NS5B'), help='COMET workflow gene to publish.')
     args = parser.parse_args()
     output_root = args.comparison_output_dir
@@ -142,6 +157,9 @@ def main() -> None:
         comparison_paths[comparison_gene] = args.comparison_workbook
     if args.ras_workbook:
         profile_paths[profile_gene] = args.ras_workbook
+    allowed_subtypes = None
+    if args.combined_profile_workbook:
+        allowed_subtypes = combined_profile_subtypes(args.combined_profile_workbook)
     report_genes = [gene_tokens[0][0]]
     required = [comparison_paths[report_genes[0]], profile_paths[gene_tokens[0][1]]]
     missing = [str(path) for path in required if not path.is_file()]
@@ -160,6 +178,8 @@ def main() -> None:
             if ws.cell(row,1).value=='Gene': ws.cell(row,col).value='Mutations'; ws.cell(row,col).font=Font(bold=True)
             if ws.cell(row,4).value!='Consensus': continue
             refrow=row-1; gt=str(ws.cell(row,2).value or '').removeprefix('GT'); subtype=str(ws.cell(row,3).value or '').lower(); parts=[]; plain=[]
+            if allowed_subtypes is not None and f'GT{gt}_{subtype}' not in allowed_subtypes:
+                continue
             for c in range(5,col):
                 cons=ws.cell(row,c).value
                 if not cons: continue
