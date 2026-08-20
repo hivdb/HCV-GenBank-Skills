@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 from collections import defaultdict
 from pathlib import Path
 from statistics import median
@@ -33,6 +34,17 @@ def percentile(values: list[float], percent: float) -> float:
 def display_number(value: float) -> str | int:
     rounded = round(value, 1)
     return int(rounded) if rounded.is_integer() else rounded
+
+
+def format_significant_percent(fraction: float) -> str:
+    """Format a proportion as a percentage with one significant figure."""
+    percent = fraction * 100
+    if percent == 0:
+        return "0%"
+    magnitude = math.floor(math.log10(abs(percent)))
+    rounded = round(percent, -magnitude)
+    decimal_places = max(0, -math.floor(math.log10(abs(rounded))))
+    return f"{rounded:.{decimal_places}f}%"
 
 
 def main() -> int:
@@ -101,7 +113,7 @@ def main() -> int:
         key=lambda row: (-int(row["n"]), str(row["genotype"])),
     )
     distribution_text = ", ".join(
-        f"{row['genotype']} ({int(row['n']) / total_accessions:.1%}, {int(row['n'])})"
+        f"{row['genotype']} ({format_significant_percent(int(row['n']) / total_accessions)}, {int(row['n'])})"
         for row in distribution
     ) if total_accessions else ""
     print(f"QC-passed genotype distribution: {distribution_text}")

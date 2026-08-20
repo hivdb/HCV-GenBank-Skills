@@ -63,7 +63,8 @@ Each stage writes its outputs under a numbered directory in `outputs/comet-NS3/`
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 
 The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on `NumPatients`, `Num Pts`, `NS3Count`, or `Notes`.
-After discovery, the runner copies all matched RefID FASTA files into `03_stage-refid-fastas/included_refid_fastas/`, then creates the filtered FASTA copy and `kept_accessions.csv` under `06_filter-refid-fastas/`. Step 7 reads that manifest, copies the filtered FASTAs into `07_prepare-comet-assignments/included_refid_fastas/`, and removes missing or unassigned records only from the Step 7 copy. Downstream steps use the Step 7 copy.
+After discovery, the runner copies all matched RefID FASTA files into `03_stage-refid-fastas/included_refid_fastas/`. Step 4 copies them into `04_prepare-comet-assignments/included_refid_fastas/` and removes records missing from COMET or marked unassigned. Steps 6–8 apply metadata filtering to that COMET-filtered copy; downstream workbooks use the filtered copy under `08_filter-refid-fastas/`.
+After every stage following staging, the runner prints the current number of unique GT7 and GT8 subtypes and their accession counts. Before the subtype workbook exists, these counts are calculated from the same COMET-plus-priority assignments it will use.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/` and prints filter, kept row count, and total row count. Current filters: `30` source_isolate contains `Day1`; `85` accession is listed in `85.csv`; `142` source_isolate contains `baseline`; `192` source_isolate contains `day 1`; `346` source_isolate contains `baseline/D0`; `499` source_isolate contains `HCC`; `600` source_isolate does not contain `failure`; `661` source_isolation_source equals `plasma`; `884` source_isolate contains `Pre-TH`; `943` source_isolate contains `Day 1`; `1356` source_isolate does not contain `IC`; `2008` source_isolate does not contain `chimpanzee`; `2110` source_isolate contains `T0`; `2116` source_collection_date is before 2011; `2138` source_isolate contains `Week 0`; `2150` source_isolate contains `b`; `2168` source_isolate contains `pre`; `2178` source_isolation_source equals `plasma`. The manual accession list is a durable input in `HCVData/Ref-selection/NS5_Ref_filter/NS3/`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
@@ -77,8 +78,8 @@ The workflow writes NS3 outputs under `outputs/comet-NS3/`, including:
 - `NS3_GT_AllStudies.xlsx` (Comet genotype calls plus per-GT NS3 nucleotide distances and aligned-nucleotide counts)
 - `NS3_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `outputs/comet-NS3/temp/.../find_refid_fastas/...`
-- copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
-- `NS3_NonComet_Priority_Assignments.csv` under `08_select-noncomet-priority-assignments/`
+- copied included RefID FASTA files under `03_stage-refid-fastas/`, the COMET-filtered copy under `04_prepare-comet-assignments/`, and the metadata-filtered copy and `kept_accessions.csv` under `08_filter-refid-fastas/`
+- `NS3_NonComet_Priority_Assignments.csv` under `05_select-noncomet-priority-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`
@@ -93,11 +94,13 @@ The workflow writes NS3 outputs under `outputs/comet-NS3/`, including:
 - `NS3_GT_AA_Distance_RAS.xlsx` and `NS3_Subtype_AA_Distance_RAS.xlsx` (equivalent full pairwise amino-acid distance matrices over NS3 RAS positions only)
 - `NS3_GT_CompleteProfiles_TabsPerGT.xlsx`
 - `NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx`
+- `NS3_Subtype_CompleteProfiles_Merged.xlsx` (one merged subtype table with `Subtype`, `NS3Position`, `NumSeqsIncludingPosition`, `AminoAcid`, `CountWithAA`, and `PctWithAA`)
 - `NS3_GT_Consensus.fasta`
 - `NS3_Subtype_Consensus.fasta`
 - `NS3_Subtype_Consensus_Aligned_to_GT1_1a.fasta` (all subtype consensuses aligned to GT1_1a coordinates)
 - `NS3_GT_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Profiles.xlsx`
+- `NS3_Subtype_RAS_Profiles_Explicit_AA.xlsx` (all reportable subtype amino acids at RAS positions; used by the ICTV publication step)
 - `NS3_Combined_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx` (per-subtype mean and median RAS AA differences from genotype consensus)
 - `NS3_GT5_5a_Profile_Coverage.xlsx`, `NS3_GT5_5a_Profile_Position_Coverage.csv`, and `NS3_GT5_5a_Profile_Position_Coverage.png` (accession-level, per-position, and charted subtype 5a coverage across full NS3 positions 1-631; the chart includes ambiguous and stop calls)

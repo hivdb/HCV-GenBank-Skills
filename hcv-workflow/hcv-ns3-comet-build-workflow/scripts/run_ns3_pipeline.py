@@ -29,10 +29,12 @@ RAS_POSITIONS = "36,41,43,54,55,56,80,122,155,156,158,166,168,170,175"
 RANGE_POSITIONS = ",".join(str(position) for position in range(36, 176))
 STEP_NAMES = (
     "prepare-workdirs", "discover-refid-fastas", "stage-refid-fastas",
+    "prepare-comet-assignments", "select-noncomet-priority-assignments",
     "filter-accession-metadata", "split-refid-metadata", "filter-refid-fastas",
-    "prepare-comet-assignments", "select-noncomet-priority-assignments", "build-genotype-workbook", "add-genotype-counts",
+    "build-genotype-workbook", "add-genotype-counts",
     "build-subtype-workbook", "extract-profile-aa", "validate-profile-alignment",
     "summarize-qc-mutation-burden", "report-profile-input-counts", "build-complete-profiles",
+    "merge-subtype-complete-profiles",
     "export-noncomet-priority-accessions", "export-consensus-fastas",
     "align-subtype-consensus-to-gt1a", "compare-reference-consensus",
     "build-genotype-ras-profile", "build-subtype-ras-profile", "build-combined-ras-reports",
@@ -173,6 +175,7 @@ class Pipeline:
         self.filtered_fasta_dir = self.step_dir("filter-refid-fastas") / "included_refid_fastas"
         self.kept_accessions_csv = self.step_dir("filter-refid-fastas") / "kept_accessions.csv"
         self.included_fasta_dir = self.step_dir("prepare-comet-assignments") / "included_refid_fastas"
+        self.comet_subtype_assignments_csv = self.temp_root / "comet_ns3_subtype_assignments.csv"
         self.priority_assignments_csv = self.step_dir("select-noncomet-priority-assignments") / "NS3_NonComet_Priority_Assignments.csv"
         self.aa_workbook = self.step_dir("validate-profile-alignment") / "NS3_Profile_Input_Alignment_QC.xlsx"
         self.profile_accessions_csv = self.step_dir("build-complete-profiles") / "NS3_Profile_Accessions_QC_Pass.csv"
@@ -245,13 +248,115 @@ class Pipeline:
                     if accession:
                         included_accessions.add(accession)
         if not included_accessions:
-            output_dir = self.filtered_fasta_dir if self.current_step_order == STEP_ORDER["filter-refid-fastas"] else self.included_fasta_dir
+            output_dir = self.filtered_fasta_dir if self.current_step_order >= STEP_ORDER["filter-refid-fastas"] else self.included_fasta_dir
             included_accessions = self.fasta_accessions(output_dir)
         if not included_accessions:
             included_accessions = input_accessions
         print(f"Input accessions: {len(input_accessions)}")
         print(f"Excluded accessions: {len(input_accessions - included_accessions)}")
         print(f"Final included accessions: {len(included_accessions)}")
+
+    def print_gt7_gt8_subtype_counts(self) -> None:
+        """Report current GT7/GT8 subtype diversity and accession counts."""
+        counts: dict[str, tuple[set[str], int]] = {"7": (set(), 0), "8": (set(), 0)}
+        stage = ""
+        subtype_workbook = self.step_dir("build-subtype-workbook") / "NS3_Subtype_AllStudies_WSeqs.xlsx"
+        if self.current_step_order >= STEP_ORDER["build-complete-profiles"] and self.profile_accessions_csv.is_file():
+            stage = "complete-profile eligibility"
+            with self.profile_accessions_csv.open(encoding="utf-8", newline="") as handle:
+                for row in csv.DictReader(handle):
+                    genotype = (row.get("genotype") or "").strip().removeprefix("GT")
+                    subtype = (row.get("subtype") or "").strip().lower()
+                    if genotype in counts and subtype:
+                        counts[genotype][0].add(subtype)
+                        counts[genotype] = (counts[genotype][0], counts[genotype][1] + 1)
+        elif self.current_step_order >= STEP_ORDER["validate-profile-alignment"] and self.aa_workbook.is_file():
+            stage = "alignment QC"
+            from openpyxl import load_workbook
+            workbook = load_workbook(self.aa_workbook, read_only=True, data_only=True)
+            sheet = workbook[workbook.sheetnames[0]]
+            header = [str(value or "") for value in next(sheet.iter_rows(values_only=True))]
+            index = {name: position for position, name in enumerate(header)}
+            for values in sheet.iter_rows(min_row=2, values_only=True):
+                if str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+                    continue
+                genotype = str(values[index["ClosestGT"]] or "").strip().removeprefix("GT")
+                subtype = str(values[index["ClosestSubtype"]] or "").strip().lower()
+                if genotype in counts and subtype:
+                    counts[genotype][0].add(subtype)
+                    counts[genotype] = (counts[genotype][0], counts[genotype][1] + 1)
+            workbook.close()
+        elif self.current_step_order >= STEP_ORDER["extract-profile-aa"]:
+            extraction_workbook = self.step_dir("extract-profile-aa") / "NS3_Profile_Input_Source.xlsx"
+            if extraction_workbook.is_file():
+                stage = "amino-acid extraction"
+                from openpyxl import load_workbook
+                workbook = load_workbook(extraction_workbook, read_only=True, data_only=True)
+                sheet = workbook[workbook.sheetnames[0]]
+                header = [str(value or "") for value in next(sheet.iter_rows(values_only=True))]
+                index = {name: position for position, name in enumerate(header)}
+                for values in sheet.iter_rows(min_row=2, values_only=True):
+                    genotype = str(values[index["ClosestGT"]] or "").strip().removeprefix("GT")
+                    subtype = str(values[index["ClosestSubtype"]] or "").strip().lower()
+                    if genotype in counts and subtype:
+                        counts[genotype][0].add(subtype)
+                        counts[genotype] = (counts[genotype][0], counts[genotype][1] + 1)
+                workbook.close()
+        elif subtype_workbook.is_file():
+            stage = "COMET and priority assignments"
+            from openpyxl import load_workbook
+
+            workbook = load_workbook(subtype_workbook, read_only=True, data_only=True)
+            sheet = workbook[workbook.sheetnames[0]]
+            header = [str(value or "") for value in next(sheet.iter_rows(values_only=True))]
+            index = {name: position for position, name in enumerate(header)}
+            for values in sheet.iter_rows(min_row=2, values_only=True):
+                genotype = str(values[index["ClosestGT"]] or "").strip().removeprefix("GT")
+                subtype = str(values[index["ClosestSubtype"]] or "").strip().lower()
+                if genotype in counts and subtype:
+                    counts[genotype][0].add(subtype)
+                    counts[genotype] = (counts[genotype][0], counts[genotype][1] + 1)
+            workbook.close()
+        elif self.comet_subtype_assignments_csv.is_file():
+            stage = "COMET and priority assignments"
+            comet_assignments: dict[str, tuple[str, str]] = {}
+            with self.comet_subtype_assignments_csv.open(encoding="utf-8-sig", newline="") as handle:
+                for row in csv.DictReader(handle):
+                    accession = (row.get("accession") or "").strip()
+                    if accession:
+                        comet_assignments[accession.split(".", 1)[0]] = (
+                            (row.get("genotype") or "").strip().removeprefix("GT"),
+                            (row.get("subtype") or "").strip().lower(),
+                        )
+            priority_assignments: dict[str, tuple[str, str]] = {}
+            if self.priority_assignments_csv.is_file():
+                with self.priority_assignments_csv.open(encoding="utf-8-sig", newline="") as handle:
+                    for row in csv.DictReader(handle):
+                        accession = (row.get("Accession") or "").strip()
+                        if accession:
+                            priority_assignments[accession.split(".", 1)[0]] = (
+                                (row.get("ClosestGenotype") or "").strip().removeprefix("GT"),
+                                (row.get("ClosestSubtype") or "").strip().lower(),
+                            )
+            fasta_dir = self.filtered_fasta_dir if self.current_step_order >= STEP_ORDER["filter-refid-fastas"] else self.included_fasta_dir
+            seen_accessions: set[str] = set()
+            for accession in self.fasta_accessions(fasta_dir):
+                accession_key = accession.split(".", 1)[0]
+                assignment = priority_assignments.get(accession_key) or comet_assignments.get(accession_key)
+                if assignment is None:
+                    continue
+                genotype, subtype = assignment
+                if genotype in counts and subtype:
+                    counts[genotype][0].add(subtype)
+                    counts[genotype] = (counts[genotype][0], counts[genotype][1] + 1)
+                seen_accessions.add(accession_key)
+            for accession_key, (genotype, subtype) in priority_assignments.items():
+                if accession_key not in seen_accessions and genotype in counts and subtype:
+                    counts[genotype][0].add(subtype)
+                    counts[genotype] = (counts[genotype][0], counts[genotype][1] + 1)
+        for genotype in ("7", "8"):
+            subtypes, accessions = counts[genotype]
+            print(f"GT{genotype} after {stage or 'assignment'}: {len(subtypes)} subtypes ({accessions} accessions)")
 
     def steps(self) -> list[Step]:
         summary = lambda step, filename="last_run_summary.json": self.step_dir(step) / filename
@@ -263,10 +368,11 @@ class Pipeline:
         subtype_consensus = self.step_dir("export-consensus-fastas") / "NS3_Subtype_Consensus.fasta"
         gt_ras = self.step_dir("build-genotype-ras-profile") / "NS3_GT_RAS_Profiles.xlsx"
         subtype_ras = self.step_dir("build-subtype-ras-profile") / "NS3_Subtype_RAS_Profiles.xlsx"
+        explicit_subtype_ras = self.step_dir("build-subtype-ras-profile") / "NS3_Subtype_RAS_Profiles_Explicit_AA.xlsx"
         combined_ras = self.step_dir("build-combined-ras-reports") / "NS3_Combined_RAS_Profiles.xlsx"
         annotated_combined_ras = self.step_dir("add-nonconsensus-row") / "NS3_Combined_RAS_Profiles_Annotated.xlsx"
         comet_gt_csv = self.temp_root / "comet_ns3_genotype_assignments.csv"
-        comet_subtype_csv = self.temp_root / "comet_ns3_subtype_assignments.csv"
+        comet_subtype_csv = self.comet_subtype_assignments_csv
 
         def prepare() -> None:
             self.run("prepare_ns3_pipeline_workdirs.py", "--clean-dir", self.output_dir)
@@ -280,8 +386,8 @@ class Pipeline:
             self.matched_txt.write_text(matches[0].read_text(encoding="utf-8"), encoding="utf-8")
 
         def prepare_comet() -> None:
-            shutil.copytree(self.filtered_fasta_dir, self.included_fasta_dir, dirs_exist_ok=True)
-            self.run("prepare_comet_ns3_assignments.py", "--comet-csv", self.comet_csv, "--fasta-dir", self.included_fasta_dir, "--accessions-csv", self.kept_accessions_csv, "--genotype-output-csv", comet_gt_csv, "--subtype-output-csv", comet_subtype_csv, "--not-found-output-csv", self.temp_root / "comet_ns3_not_found_or_unassigned.csv", "--not-found-fasta-output", self.temp_root / "comet_ns3_not_found_or_unassigned.fasta", "--remove-unassigned")
+            shutil.copytree(self.staged_fasta_dir, self.included_fasta_dir, dirs_exist_ok=True)
+            self.run("prepare_comet_ns3_assignments.py", "--comet-csv", self.comet_csv, "--fasta-dir", self.included_fasta_dir, "--genotype-output-csv", comet_gt_csv, "--subtype-output-csv", comet_subtype_csv, "--not-found-output-csv", self.temp_root / "comet_ns3_not_found_or_unassigned.csv", "--not-found-fasta-output", self.temp_root / "comet_ns3_not_found_or_unassigned.fasta", "--remove-unassigned")
 
         def extract_aa() -> None:
             step_dir = self.step_dir("extract-profile-aa")
@@ -303,12 +409,12 @@ class Pipeline:
             Step("prepare-workdirs", "recreate the NS3 COMET output and run directories", prepare),
             Step("discover-refid-fastas", "discover selected RefID FASTA files", discover),
             Step("stage-refid-fastas", "copy discovered FASTA files into the staging directory", lambda: (self.staged_fasta_dir.mkdir(parents=True, exist_ok=True), self.run("stage_matched_refid_fastas.py", "--matched-files", self.matched_txt, "--output-dir", self.staged_fasta_dir))),
-            Step("filter-accession-metadata", "filter master metadata to staged FASTA accessions", lambda: self.run("filter_accessions_metadata_by_fasta.py", "--fasta-dir", self.staged_fasta_dir, "--metadata-csv", self.metadata_csv, "--output-dir", self.metadata_dir)),
+            Step("prepare-comet-assignments", "create COMET calls and remove missing or unassigned records", prepare_comet),
+            Step("select-noncomet-priority-assignments", "select non-COMET assignments that override or supplement COMET", lambda: self.run("select_noncomet_priority_assignments.py", "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--fasta-dir", self.fasta_pool, "--output-csv", self.priority_assignments_csv, stdout_path=summary("select-noncomet-priority-assignments"))),
+            Step("filter-accession-metadata", "filter master metadata to COMET-filtered FASTA accessions", lambda: self.run("filter_accessions_metadata_by_fasta.py", "--fasta-dir", self.included_fasta_dir, "--metadata-csv", self.metadata_csv, "--output-dir", self.metadata_dir)),
             Step("split-refid-metadata", "create per-RefID metadata filters", lambda: (self.run("prepare_ns3_pipeline_workdirs.py", "--clean-dir", self.refid_metadata_dir), self.run("split_refid_metadata_csv.py", "--input-csv", self.metadata_dir / "included_accessions_metadata.csv", "--output-dir", self.refid_metadata_dir))),
-            Step("filter-refid-fastas", "filter staged FASTA records by RefID metadata", lambda: (shutil.copytree(self.staged_fasta_dir, self.filtered_fasta_dir, dirs_exist_ok=True), self.run("filter_refid_fastas_by_metadata.py", "--metadata-dir", self.refid_metadata_dir, "--fasta-dir", self.filtered_fasta_dir, "--kept-accessions-output", self.kept_accessions_csv))),
-            Step("prepare-comet-assignments", "create COMET calls and remove unassigned records", prepare_comet),
-            Step("select-noncomet-priority-assignments", "select non-COMET assignments that override or supplement COMET", lambda: self.run("select_noncomet_priority_assignments.py", "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--output-csv", self.priority_assignments_csv, stdout_path=summary("select-noncomet-priority-assignments"))),
-            Step("build-genotype-workbook", "build the COMET genotype workbook", lambda: self.run("build_ns3_comet_gt_allstudies.py", "--fasta-dir", self.included_fasta_dir, "--comet-genotype-csv", comet_gt_csv, "--priority-assignments-csv", self.priority_assignments_csv, "--output-dir", self.step_dir("build-genotype-workbook"), stdout_path=summary("build-genotype-workbook"))),
+            Step("filter-refid-fastas", "filter COMET-filtered FASTA records by RefID metadata", lambda: (shutil.copytree(self.included_fasta_dir, self.filtered_fasta_dir, dirs_exist_ok=True), self.run("filter_refid_fastas_by_metadata.py", "--metadata-dir", self.refid_metadata_dir, "--fasta-dir", self.filtered_fasta_dir, "--kept-accessions-output", self.kept_accessions_csv))),
+            Step("build-genotype-workbook", "build the COMET genotype workbook", lambda: self.run("build_ns3_comet_gt_allstudies.py", "--fasta-dir", self.filtered_fasta_dir, "--comet-genotype-csv", comet_gt_csv, "--priority-assignments-csv", self.priority_assignments_csv, "--output-dir", self.step_dir("build-genotype-workbook"), stdout_path=summary("build-genotype-workbook"))),
             Step("add-genotype-counts", "add the genotype-count worksheet", lambda: self.run("add_gt_counts_sheet.py", "--workbook", gt_workbook)),
             Step("build-subtype-workbook", "build the COMET subtype workbook", lambda: self.run("build_ns3_comet_subtype_allstudies.py", "--genotype-workbook", gt_workbook, "--comet-subtype-csv", comet_subtype_csv, "--priority-assignments-csv", self.priority_assignments_csv, "--output-dir", self.step_dir("build-subtype-workbook"), stdout_path=summary("build-subtype-workbook"))),
             Step("extract-profile-aa", "extract genotype-position amino-acid sequences", extract_aa),
@@ -316,6 +422,7 @@ class Pipeline:
             Step("summarize-qc-mutation-burden", "summarize QC-passed genotype mutation burden", lambda: self.run("build_qc_passed_genotype_mutation_burden_summary.py", "--input-workbook", self.aa_workbook, "--output-csv", self.step_dir("summarize-qc-mutation-burden") / "NS3_QC_Passed_Genotype_Mutation_Burden_Summary.csv")),
             Step("report-profile-input-counts", "report profile-input inclusion counts", report_profile_counts),
             Step("build-complete-profiles", "build genotype and subtype complete profiles", lambda: self.run("build_ns3_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--output-dir", self.step_dir("build-complete-profiles"), "--profile-accessions-csv", self.profile_accessions_csv, stdout_path=summary("build-complete-profiles"))),
+            Step("merge-subtype-complete-profiles", "merge subtype complete-profile worksheets into one table", lambda: self.run("merge_ns3_subtype_completeprofiles.py", "--input-workbook", subtype_profile, "--output-workbook", self.step_dir("merge-subtype-complete-profiles") / "NS3_Subtype_CompleteProfiles_Merged.xlsx", stdout_path=summary("merge-subtype-complete-profiles"))),
             Step("export-noncomet-priority-accessions", "export non-COMET priority profile accessions", lambda: self.run("export_noncomet_priority_profile_accessions.py", "--profile-accessions-csv", self.profile_accessions_csv, "--comet-subtype-csv", self.comet_csv, "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--output-csv", self.step_dir("export-noncomet-priority-accessions") / "NS3_NonComet_Priority_Profile_Accessions.csv")),
             Step("export-consensus-fastas", "export genotype and subtype consensus FASTA files", lambda: self.run("export_ns3_consensus_fasta.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--output-dir", self.step_dir("export-consensus-fastas"))),
             Step("align-subtype-consensus-to-gt1a", "align subtype consensuses to the fixed GT1_1a coordinate system", lambda: self.run("align_ns3_subtype_consensuses_to_gt1a.py", "--input-fasta", subtype_consensus, "--output-fasta", self.step_dir("align-subtype-consensus-to-gt1a") / "NS3_Subtype_Consensus_Aligned_to_GT1_1a.fasta")),
@@ -330,7 +437,7 @@ class Pipeline:
             Step("build-paired-distance-matrices", "build paired AA and NA RAS/range distance matrices", paired_distances),
             Step("build-subtype-profile-coverage", "build the NS3 genotype 5 subtype 5a coverage audit", lambda: self.run("build_ns3_subtype_profile_coverage_report.py", "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype", "5", "--subtype", "5a", "--range-start", "1", "--range-end", "631", "--output-xlsx", self.step_dir("build-subtype-profile-coverage") / "NS3_GT5_5a_Profile_Coverage.xlsx", "--position-coverage-csv", self.step_dir("build-subtype-profile-coverage") / "NS3_GT5_5a_Profile_Position_Coverage.csv", "--position-coverage-png", self.step_dir("build-subtype-profile-coverage") / "NS3_GT5_5a_Profile_Position_Coverage.png")),
             Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns3_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.step_dir("build-ras-entropy") / "NS3_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.step_dir("build-ras-entropy") / "NS3_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build-ras-entropy", "last_run_summary.txt"))),
-            Step("publish-ictv-report", "publish the NS3 ICTV comparison report", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns5a-comet-build-workflow" / "scripts" / "add_subtype_consensus_mutation_summaries.py"), "--gene", "NS3", "--comparison-workbook", self.step_dir("compare-reference-consensus") / "HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx", "--ras-workbook", subtype_ras, "--combined-profile-workbook", combined_ras, "--comparison-output-dir", self.step_dir("compare-reference-consensus"), "--ns3-output-dir", self.step_dir("build-subtype-ras-profile"), "--shared-report-dir", self.step_dir("publish-ictv-report") / "shared_report")),
+            Step("publish-ictv-report", "publish the NS3 ICTV comparison report", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns5a-comet-build-workflow" / "scripts" / "add_subtype_consensus_mutation_summaries.py"), "--gene", "NS3", "--comparison-workbook", self.step_dir("compare-reference-consensus") / "HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx", "--ras-workbook", explicit_subtype_ras, "--combined-profile-workbook", combined_ras, "--comparison-output-dir", self.step_dir("compare-reference-consensus"), "--ns3-output-dir", self.step_dir("build-subtype-ras-profile"), "--shared-report-dir", self.step_dir("publish-ictv-report") / "shared_report")),
         ]
 
 
@@ -359,14 +466,16 @@ def main() -> int:
         pipeline.current_step_order = step.order
         pipeline.current_step_dir.mkdir(parents=True, exist_ok=True)
         pipeline.announce(step.order, step.name, step.description)
-        input_fasta_dir = pipeline.staged_fasta_dir if step.order <= STEP_ORDER["filter-refid-fastas"] else (
-            pipeline.filtered_fasta_dir if step.order == STEP_ORDER["prepare-comet-assignments"] else pipeline.included_fasta_dir
+        input_fasta_dir = pipeline.staged_fasta_dir if step.order <= STEP_ORDER["stage-refid-fastas"] else (
+            pipeline.included_fasta_dir if step.order <= STEP_ORDER["filter-refid-fastas"] else pipeline.filtered_fasta_dir
         )
         input_accessions = pipeline.fasta_accessions(input_fasta_dir)
         try:
             step.action()
         finally:
             pipeline.print_accession_counts(input_accessions)
+            if step.order > STEP_ORDER["stage-refid-fastas"]:
+                pipeline.print_gt7_gt8_subtype_counts()
     print("NS3 pipeline complete")
     return 0
 

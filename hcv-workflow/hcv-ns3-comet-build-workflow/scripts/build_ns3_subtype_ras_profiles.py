@@ -214,12 +214,15 @@ def main() -> int:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / "NS3_Subtype_RAS_Profiles.xlsx"
+    explicit_excel_path = output_dir / "NS3_Subtype_RAS_Profiles_Explicit_AA.xlsx"
+    write_excel(explicit_excel_path, grid)
     genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
         excel_path, positions, gt_rows, subtype_rows, FREQUENCY_THRESHOLD_PERCENT, include_all_rows=True
     )
 
     summary = {
         "excel": str(excel_path.resolve()),
+        "explicit_amino_acid_excel": str(explicit_excel_path.resolve()),
         "positions": RESISTANCE_POSITIONS,
         "frequency_threshold_percent": FREQUENCY_THRESHOLD_PERCENT,
         "included_subtype_count": output_rows - genotype_count,

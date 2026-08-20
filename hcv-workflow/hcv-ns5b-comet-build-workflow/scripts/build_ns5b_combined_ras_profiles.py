@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -205,6 +206,20 @@ def main() -> int:
         and count >= FULL_PROFILE_SUMMARY_MIN_TOTAL_SEQUENCES
         for row in subtype_rows
     )
+    combined_headers, combined_rows = read_profile_workbook(output_path)
+    mean_diff_column = combined_headers.index("MeanDiff")
+    subtype_mean_diffs = [
+        float(row[mean_diff_column])
+        for row in combined_rows
+        if "_" in str(row[0] or "") and isinstance(row[mean_diff_column], (int, float))
+    ]
+    mean_subtype_mean_diff = sum(subtype_mean_diffs) / len(subtype_mean_diffs) if subtype_mean_diffs else 0.0
+    high_mean_diff_text = ", ".join(
+        str(item["subtype"]).split("_", 1)[-1].split(maxsplit=1)[0]
+        for item in high_mean_diff_subtypes
+    ) or "none"
+    print(f"Subtypes with MeanDiff >= 2.5: {high_mean_diff_text}", file=sys.stderr)
+    print(f"Mean MeanDiff across subtypes: {mean_subtype_mean_diff:.1f}", file=sys.stderr)
     print(
         json.dumps(
             {
@@ -213,6 +228,7 @@ def main() -> int:
                 "profile_row_count": output_rows,
                 "included_subtype_count": output_rows - genotype_count,
                 "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
+                "mean_subtype_mean_diff": mean_subtype_mean_diff,
                 "full_profile_subtype_count": full_profile_subtype_count,
                 "full_profile_subtype_at_least_10_sequence_count": full_profile_subtype_at_least_10_count,
                 "subtype_frequency_threshold": args.subtype_frequency_threshold,

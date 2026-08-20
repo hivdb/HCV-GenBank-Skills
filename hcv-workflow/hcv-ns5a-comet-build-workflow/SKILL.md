@@ -24,16 +24,16 @@ Run the workflow in this order. For an individual step, invoke its listed script
    - Python: `find_refid_fastas.py`
 4. Stage the matched FASTA files.
    - Python: `stage_matched_refid_fastas.py`
-5. Filter master accession metadata to the staged FASTA accessions.
-   - Python: `filter_accessions_metadata_by_fasta.py`
-6. Apply RefID-specific metadata rules.
-   - Python: `split_refid_metadata_csv.py`
-7. Filter staged FASTA records using the RefID metadata files.
-   - Python: `filter_refid_fastas_by_metadata.py`
-8. Create COMET assignment files and remove missing or unassigned records.
+5. Create COMET assignment files and remove missing or unassigned records.
    - Python: `prepare_comet_ns5a_assignments.py`
-9. Select priority non-COMET assignments for later genotype and subtype workbooks.
+6. Select priority non-COMET assignments for later genotype and subtype workbooks.
    - Python: `select_noncomet_priority_assignments.py`
+7. Filter master accession metadata to the COMET-filtered FASTA accessions.
+   - Python: `filter_accessions_metadata_by_fasta.py`
+8. Apply RefID-specific metadata rules.
+   - Python: `split_refid_metadata_csv.py`
+9. Filter COMET-filtered FASTA records using the RefID metadata files.
+   - Python: `filter_refid_fastas_by_metadata.py`
 10. Build the COMET genotype study workbook.
    - Python: `build_ns5a_comet_gt_allstudies.py`
    - Python: `add_gt_counts_sheet.py`
@@ -99,7 +99,7 @@ Configuration stays in the repository base folder. The Python runner loads:
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
 Set `sheet_name` in the `[ns5a]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
-Each step writes its files under `outputs/comet-NS5A/<order>_<step-name>/` (for example, `08_build-genotype-workbook/`). The runner prints each step as a Markdown heading with its order, name, and short explanation, followed by input, excluded, and final-included accession counts.
+Each step writes its files under `outputs/comet-NS5A/<order>_<step-name>/` (for example, `09_build-genotype-workbook/`). The runner prints each step as a Markdown heading with its order, name, and short explanation, followed by input, excluded, and final-included accession counts.
 
 ## Inputs
 
@@ -113,7 +113,8 @@ Each step writes its files under `outputs/comet-NS5A/<order>_<step-name>/` (for 
 - optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
 The discovery step keeps every row with a `RefID` from the configured `IncludedNS5ARefs_StatusInclude.xlsx` selection workbook; it does not apply a `Num Pts` filter.
-After discovery, the runner copies matched FASTA files into `03_stage-refid-fastas/included_refid_fastas/`, then creates the filtered copy and `kept_accessions.csv` manifest in `06_filter-refid-fastas/`. Step 7 reads that manifest, copies the filtered FASTAs into `07_prepare-comet-assignments/included_refid_fastas/`, and removes missing or unassigned records only from the Step 7 copy. Downstream steps use the Step 7 copy.
+After discovery, the runner copies matched FASTA files into `03_stage-refid-fastas/included_refid_fastas/`. Step 4 copies them into `04_prepare-comet-assignments/included_refid_fastas/` and removes records missing from COMET or marked unassigned. Steps 6–8 apply metadata filtering to that COMET-filtered copy; downstream workbooks use the filtered copy under `08_filter-refid-fastas/`.
+After every stage following staging, the runner prints the current number of unique GT7 and GT8 subtypes and their accession counts. Before the subtype workbook exists, these counts are calculated from the same COMET-plus-priority assignments it will use.
 The metadata filtering step writes its metadata CSVs in `04_filter-accession-metadata/`; the per-RefID rules and CSVs are in `05_split-refid-metadata/refid_metadata/`.
 The priority-assignment stage selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 
@@ -124,8 +125,8 @@ The workflow writes NS5A outputs under `outputs/comet-NS5A/`, in numbered step f
 - `NS5A_GT_AllStudies.xlsx`
 - `NS5A_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `02_discover-refid-fastas/`
-- copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
-- `NS5A_NonComet_Priority_Assignments.csv` under `08_select-noncomet-priority-assignments/`
+- copied included RefID FASTA files under `03_stage-refid-fastas/`, the COMET-filtered copy under `04_prepare-comet-assignments/`, and the metadata-filtered copy and `kept_accessions.csv` under `08_filter-refid-fastas/`
+- `NS5A_NonComet_Priority_Assignments.csv` under `05_select-noncomet-priority-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`
@@ -137,11 +138,13 @@ The workflow writes NS5A outputs under `outputs/comet-NS5A/`, in numbered step f
 - `NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv` (per-genotype mutation burden among QC-passed input rows)
 - `NS5A_GT_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx`
+- `NS5A_Subtype_CompleteProfiles_Merged.xlsx` (one merged subtype table with `Subtype`, `NS5APosition`, `NumSeqsIncludingPosition`, `AminoAcid`, `CountWithAA`, and `PctWithAA`)
 - `NS5A_GT_Consensus.fasta`
 - `NS5A_Subtype_Consensus.fasta`
 - `NS5A_Subtype_Consensus_Aligned_to_GT1_1a.fasta` (all subtype consensuses aligned to GT1_1a coordinates)
 - `NS5A_GT_RAS_Profiles.xlsx`
 - `NS5A_Subtype_RAS_Profiles.xlsx`
+- `NS5A_Subtype_RAS_Profiles_Explicit_AA.xlsx` (all reportable subtype amino acids at RAS positions; used by the ICTV publication step)
 - `NS5A_Combined_RAS_Profiles.xlsx` (base combined profile)
 - `NS5A_Combined_RAS_Profiles_Annotated.xlsx` (derived profile with `MeanDiff`, `PositionDiff`, and updated coverage labels)
 - paired AA/NA RAS and position-range distance workbooks under `28_build-paired-distance-matrices/`

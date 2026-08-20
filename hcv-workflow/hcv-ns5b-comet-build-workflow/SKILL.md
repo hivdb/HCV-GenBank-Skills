@@ -61,7 +61,8 @@ Step 11 caches RefID FASTAs and parallelizes accession preparation/AA extraction
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 
 The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on patient-count columns, `NS5BCount`, or `Notes`.
-After discovery, the runner copies all matched RefID FASTA files into `03_stage-refid-fastas/included_refid_fastas/`, then creates the filtered FASTA copy and `kept_accessions.csv` under `06_filter-refid-fastas/`. Step 7 reads that manifest, copies the filtered FASTAs into `07_prepare-comet-assignments/included_refid_fastas/`, and removes missing or unassigned records only from the Step 7 copy. Downstream steps use the Step 7 copy.
+After discovery, the runner copies all matched RefID FASTA files into `03_stage-refid-fastas/included_refid_fastas/`. Step 4 copies them into `04_prepare-comet-assignments/included_refid_fastas/` and removes records missing from COMET or marked unassigned. Steps 6–8 apply metadata filtering to that COMET-filtered copy; downstream workbooks use the filtered copy under `08_filter-refid-fastas/`.
+After every stage following staging, the runner prints the current number of unique GT7 and GT8 subtypes and their accession counts. Before the subtype workbook exists, these counts are calculated from the same COMET-plus-priority assignments it will use.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `17` accession is listed in `17.csv`; `30` source_isolate contains `day1`; `192` source_isolate contains `day1`; `346` source_isolate contains `baseline`; `891` source_isolate contains a token from `Ha01` through `Ha97`; `943` source_isolate contains `day 1`; `1051` source_isolate contains a token from `1a` through `51a`. The manual accession list is a durable input in `HCVData/Ref-selection/NS5_Ref_filter/NS5B/`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
@@ -76,8 +77,8 @@ The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
 - `NS5B_GT_AllStudies.xlsx`
 - `NS5B_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `outputs/comet-NS5B/temp/.../find_refid_fastas/...`
-- copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
-- `NS5B_NonComet_Priority_Assignments.csv` under `08_select-noncomet-priority-assignments/`
+- copied included RefID FASTA files under `03_stage-refid-fastas/`, the COMET-filtered copy under `04_prepare-comet-assignments/`, and the metadata-filtered copy and `kept_accessions.csv` under `08_filter-refid-fastas/`
+- `NS5B_NonComet_Priority_Assignments.csv` under `05_select-noncomet-priority-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`
@@ -89,11 +90,13 @@ The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
 - `NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv` (per-genotype mutation burden among QC-passed input rows)
 - `NS5B_GT_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx`
+- `NS5B_Subtype_CompleteProfiles_Merged.xlsx` (one merged subtype table with `Subtype`, `NS5BPosition`, `NumSeqsIncludingPosition`, `AminoAcid`, `CountWithAA`, and `PctWithAA`)
 - `NS5B_GT_Consensus.fasta`
 - `NS5B_Subtype_Consensus.fasta`
 - `NS5B_Subtype_Consensus_Aligned_to_GT1_1a.fasta` (all subtype consensuses aligned to GT1_1a coordinates)
 - `NS5B_GT_RAS_Profiles.xlsx`
 - `NS5B_Subtype_RAS_Profiles.xlsx`
+- `NS5B_Subtype_RAS_Profiles_Explicit_AA.xlsx` (all reportable subtype amino acids at RAS positions; used by the ICTV publication step)
 - paired AA/NA RAS and position-range distance workbooks under `outputs/`
 
 ## Operating Rules

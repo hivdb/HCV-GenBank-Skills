@@ -2,11 +2,11 @@ StepName,FunctionScripts
 prepare-workdirs,prepare_ns5a_pipeline_workdirs.py
 discover-refid-fastas,find_refid_fastas.py
 stage-refid-fastas,stage_matched_refid_fastas.py
+prepare-comet-assignments,prepare_comet_ns5a_assignments.py
+select-noncomet-priority-assignments,select_noncomet_priority_assignments.py
 filter-accession-metadata,filter_accessions_metadata_by_fasta.py
 split-refid-metadata,prepare_ns5a_pipeline_workdirs.py;split_refid_metadata_csv.py
 filter-refid-fastas,filter_refid_fastas_by_metadata.py
-prepare-comet-assignments,prepare_comet_ns5a_assignments.py
-select-noncomet-priority-assignments,select_noncomet_priority_assignments.py
 build-genotype-workbook,build_ns5a_comet_gt_allstudies.py
 add-genotype-counts,add_gt_counts_sheet.py
 build-source-features,build_ns5a_sourcefeatures_csv.py
@@ -17,6 +17,7 @@ validate-profile-alignment,validate_ns5a_profile_alignment.py
 summarize-qc-mutation-burden,build_qc_passed_genotype_mutation_burden_summary.py
 report-profile-input-counts,build_ns5a_completeprofiles_tabspergt.py --report-only
 build-complete-profiles,build_ns5a_completeprofiles_tabspergt.py
+merge-subtype-complete-profiles,merge_ns5a_subtype_completeprofiles.py
 export-noncomet-priority-accessions,export_noncomet_priority_profile_accessions.py
 export-consensus-fastas,export_ns5a_consensus_fasta.py
 align-subtype-consensus-to-gt1a,align_ns5a_subtype_consensuses_to_gt1a.py

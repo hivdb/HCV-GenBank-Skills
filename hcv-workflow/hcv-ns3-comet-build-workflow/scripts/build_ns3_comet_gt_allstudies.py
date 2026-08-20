@@ -44,7 +44,7 @@ def load_priority_genotypes(path: Path) -> dict[str, tuple[str, str, str, str]]:
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
             if accession:
-                assignments[accession.split(".", 1)[0]] = ("", "", accession, genotype)
+                assignments[accession.split(".", 1)[0]] = (str(row.get("RefID") or "").strip(), str(row.get("RefName") or "").strip(), accession, genotype)
     return assignments
 
 
