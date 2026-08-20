@@ -16,8 +16,8 @@ import xlsxwriter
 
 VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
 TOTAL_SEQUENCE_RE = re.compile(r"\(\s*(\d+)\s*,")
-# Include NS5A genotype and subtype profile rows only above this cutoff.
-MIN_TOTAL_SEQUENCES = 5
+# Include NS5A genotype and subtype profile rows with at least this many accessions.
+MIN_TOTAL_SEQUENCES = 10
 FULL_PROFILE_SUMMARY_MIN_TOTAL_SEQUENCES = 10
 
 
@@ -52,10 +52,8 @@ def genotype_from_label(label: object) -> str | None:
 
 
 def has_minimum_total_sequences(label: object) -> bool:
-    if genotype_from_label(label) in {"7", "8"}:
-        return True
     match = TOTAL_SEQUENCE_RE.search(str(label))
-    return match is not None and int(match.group(1)) > MIN_TOTAL_SEQUENCES
+    return match is not None and int(match.group(1)) >= MIN_TOTAL_SEQUENCES
 
 
 def total_sequences(label: object) -> int | None:
