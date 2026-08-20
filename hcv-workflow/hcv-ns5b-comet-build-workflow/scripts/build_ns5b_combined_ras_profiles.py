@@ -19,6 +19,7 @@ from openpyxl.utils import get_column_letter
 VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
 TOTAL_SEQUENCE_RE = re.compile(r"\(\s*(\d+)\s*,")
 MIN_TOTAL_SEQUENCES = 10
+FULL_PROFILE_SUMMARY_MIN_TOTAL_SEQUENCES = 10
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,6 +56,11 @@ def has_minimum_total_sequences(label: object) -> bool:
         return True
     match = TOTAL_SEQUENCE_RE.search(str(label))
     return match is not None and int(match.group(1)) >= MIN_TOTAL_SEQUENCES
+
+
+def total_sequences(label: object) -> int | None:
+    match = TOTAL_SEQUENCE_RE.search(str(label))
+    return int(match.group(1)) if match is not None else None
 
 
 def variants_to_rich_text(
@@ -189,12 +195,20 @@ def main() -> int:
     genotype_count, output_rows = write_combined_workbook(
         output_path, positions, gt_rows, subtype_rows, args.subtype_frequency_threshold
     )
+    full_profile_subtype_count = len(subtype_rows)
+    full_profile_subtype_at_least_10_count = sum(
+        (count := total_sequences(row[0])) is not None
+        and count >= FULL_PROFILE_SUMMARY_MIN_TOTAL_SEQUENCES
+        for row in subtype_rows
+    )
     print(
         json.dumps(
             {
                 "output_xlsx": str(output_path.resolve()),
                 "genotype_count": genotype_count,
                 "profile_row_count": output_rows,
+                "full_profile_subtype_count": full_profile_subtype_count,
+                "full_profile_subtype_at_least_10_sequence_count": full_profile_subtype_at_least_10_count,
                 "subtype_frequency_threshold": args.subtype_frequency_threshold,
             },
             indent=2,
