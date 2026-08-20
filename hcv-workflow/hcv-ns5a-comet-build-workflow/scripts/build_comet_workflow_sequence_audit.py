@@ -7,7 +7,7 @@ from pathlib import Path
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 
-QUASISPECIES={'19','31','32','34','70','81','115','262','1044','2043','2071','2129','2139','2175','2195','2212','2216','2225','2324'}
+QUASISPECIES={'31','32','34','70','81','115','262','1044','2043','2071','2129','2139','2175','2195','2212','2216','2225','2324'}
 SUBTYPE=re.compile(r'^GT(\d+)_(\S+) \((\d+),')
 VALID_CALL=re.compile(r'^[1-8][a-z][a-z0-9]*$',re.I)
 

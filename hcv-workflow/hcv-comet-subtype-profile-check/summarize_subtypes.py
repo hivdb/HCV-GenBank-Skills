@@ -43,7 +43,8 @@ def subtype_counts(path: Path, accession_column: str) -> Counter[str]:
 
 def summarize_gene(gene: str, assignment_dir: Path, profile_dir: Path, output_dir: Path) -> Path:
     assignment_path = assignment_dir / f"{gene}.csv"
-    profile_path = profile_dir / f"{gene}_Profile_Accessions.csv"
+    profile_filename = f"{gene}_Profile_Accessions_QC_Pass.csv" if gene == "NS5A" else f"{gene}_Profile_Accessions.csv"
+    profile_path = profile_dir / profile_filename
     if not assignment_path.exists():
         raise FileNotFoundError(f"Comet assignment file not found: {assignment_path}")
     if not profile_path.exists():

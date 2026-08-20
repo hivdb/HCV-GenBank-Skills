@@ -280,7 +280,7 @@ class Pipeline:
             Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns5b_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.output_dir / "NS5B_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.output_dir / "NS5B_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build_ns5b_ras_entropy", "last_run_summary.txt"))),
             Step("add-nonconsensus-row", "create annotated combined profile with MeanDiff and PositionDiff", lambda: self.run("add_combined_profile_nonconsensus_row.py", "--combined-profile-workbook", combined_ras, "--output-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus)),
             Step("update-coverage-labels", "replace annotated combined-profile coverage labels", lambda: self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv)),
-            Step("publish-ictv-report", "publish the shared ICTV comparison report", lambda: self.run("add_subtype_consensus_mutation_summaries.py")),
+            Step("publish-ictv-report", "publish the NS5B ICTV comparison report", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns5a-comet-build-workflow" / "scripts" / "add_subtype_consensus_mutation_summaries.py"), "--gene", "NS5B")),
         ]
 
 

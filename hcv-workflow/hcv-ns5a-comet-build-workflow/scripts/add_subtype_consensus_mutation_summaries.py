@@ -32,9 +32,9 @@ def mutation_sort_key(value: str) -> tuple[int, str]:
     match = MUTATION_POSITION.match(value)
     return (int(match.group(1)) if match else 1_000_000, value)
 
-def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) -> None:
+def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]], genes: list[str]) -> None:
     note = 'Only subtypes with one or more RAS-position differences are listed. Percentages are from the final combined profile.'
-    for gene in ('NS3','NS5A_NTD','NS5B'):
+    for gene in genes:
         title = f'{gene} subtype reference-to-COMET-consensus mutations'
         lines = [f'# {title}', '', note, '']
         document = Document()
@@ -57,12 +57,12 @@ def write_summary_documents(root: Path, readme: dict[str,dict[str,set[str]]]) ->
     for suffix in ('.md', '.docx'):
         (root / f'README_Subtype_Consensus_Mutations{suffix}').unlink(missing_ok=True)
 
-def publish_shared_report(comparison_paths: dict[str, Path], documents_root: Path, destination: Path) -> None:
-    """Copy the complete report set after all three COMET workflows are available."""
+def publish_shared_report(comparison_paths: dict[str, Path], documents_root: Path, destination: Path, genes: list[str]) -> None:
+    """Copy the requested gene-specific report set."""
     destination.mkdir(parents=True, exist_ok=True)
-    for path in comparison_paths.values():
+    for gene in genes:
+        path = comparison_paths[gene]
         shutil.copy2(path, destination / path.name)
-    for gene in ('NS3', 'NS5A_NTD', 'NS5B'):
         for suffix in ('.md', '.docx'):
             filename = f'README_Subtype_Consensus_Mutations_{gene}{suffix}'
             shutil.copy2(documents_root / filename, destination / filename)
@@ -120,6 +120,7 @@ def main() -> None:
     parser.add_argument('--ns3-output-dir', type=Path, default=Path('outputs/comet-NS3'))
     parser.add_argument('--ns5a-output-dir', type=Path, default=Path('outputs/comet-NS5A'))
     parser.add_argument('--ns5b-output-dir', type=Path, default=Path('outputs/comet-NS5B'))
+    parser.add_argument('--gene', required=True, choices=('NS3', 'NS5A', 'NS5B'), help='COMET workflow gene to publish.')
     args = parser.parse_args()
     output_root = args.comparison_output_dir
     comparison_paths = {
@@ -132,16 +133,15 @@ def main() -> None:
         'NS5A': args.ns5a_output_dir / 'NS5A_Subtype_RAS_Profiles.xlsx',
         'NS5B': args.ns5b_output_dir / 'NS5B_Subtype_RAS_Profiles.xlsx',
     }
-    required = [
-        *comparison_paths.values(),
-        *profile_paths.values(),
-    ]
+    gene_tokens_by_runner_gene = {'NS3': ('NS3', 'NS3'), 'NS5A': ('NS5A_NTD', 'NS5A'), 'NS5B': ('NS5B', 'NS5B')}
+    gene_tokens = [gene_tokens_by_runner_gene[args.gene]]
+    report_genes = [gene_tokens[0][0]]
+    required = [comparison_paths[report_genes[0]], profile_paths[gene_tokens[0][1]]]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
-        print('shared_report_status=waiting_for_all_comet_workflows')
+        print('shared_report_status=waiting_for_gene_inputs')
         print('missing_inputs=' + ';'.join(missing))
         return
-    gene_tokens = [('NS3','NS3'),('NS5A_NTD','NS5A'),('NS5B','NS5B')]
     validate_reported_mutations(comparison_paths, profile_paths, gene_tokens)
     readme: dict[str,dict[str,set[str]]] = {}
     for gene,token in gene_tokens:
@@ -165,7 +165,7 @@ def main() -> None:
                 parts.pop(); ws.cell(row,col).value=CellRichText(*parts)
                 readme.setdefault(gene,{}).setdefault(f'GT{gt}_{subtype}',set()).update(plain)
         ws.column_dimensions[ws.cell(1,col).column_letter].width=50; wb.save(path)
-    write_summary_documents(output_root, readme)
-    publish_shared_report(comparison_paths, output_root, args.shared_report_dir)
+    write_summary_documents(output_root, readme, report_genes)
+    publish_shared_report(comparison_paths, output_root, args.shared_report_dir, report_genes)
 
 if __name__=='__main__': main()

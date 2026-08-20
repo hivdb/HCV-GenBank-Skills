@@ -64,7 +64,7 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path("outputs/temp") / "hcv-ns5a-comet-build-workflow" / Path(__file__).stem
+    path = Path("outputs/comet-NS5A/temp") / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 
