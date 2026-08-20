@@ -30,6 +30,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def format_percent(value: float) -> str:
+    return f"{value:.2%}" if 0 < value < 0.001 else f"{value:.1%}"
+
+
 def main() -> None:
     args = parse_args()
     workbook_path = args.workbook
@@ -55,17 +59,25 @@ def main() -> None:
     if args.summary_sheet in wb.sheetnames:
         del wb[args.summary_sheet]
     summary_ws = wb.create_sheet(args.summary_sheet)
-    summary_ws.append(["BestGT", "SequenceCount"])
-    for gt in sorted(counts, key=lambda value: (int(value) if value.isdigit() else value)):
-        summary_ws.append([gt, counts[gt]])
-    summary_ws.append(["Total", total_rows])
+    summary_ws.append(["BestGT", "SequenceCount", "PercentOfTotal"])
+    ordered_genotypes = sorted(
+        counts,
+        key=lambda value: (-counts[value], int(value) if value.isdigit() else value),
+    )
+    for gt in ordered_genotypes:
+        summary_ws.append([gt, counts[gt], counts[gt] / total_rows if total_rows else 0])
+    summary_ws.append(["Total", total_rows, 1 if total_rows else 0])
+    for cell in summary_ws["C"][1:]:
+        cell.number_format = "[<0.001]0.00%;0.0%"
 
     wb.save(workbook_path)
 
     print(f"updated_workbook={workbook_path}")
     print(f"summary_sheet={args.summary_sheet}")
-    for gt in sorted(counts, key=lambda value: (int(value) if value.isdigit() else value)):
-        print(f"GT{gt}={counts[gt]}")
+    print(", ".join(
+        f"GT{gt} ({format_percent(counts[gt] / total_rows)}, {counts[gt]})"
+        for gt in ordered_genotypes
+    ))
     print(f"Total={total_rows}")
 
 

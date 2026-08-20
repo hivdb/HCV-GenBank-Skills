@@ -1,15 +1,11 @@
 ---
 name: hcv-ns5b-comet-build-workflow
-description: Use this skill when the user wants to run or inspect the HCV NS5B build scripts that discover RefID FASTA files, create genotype/subtype study workbooks, source-feature summaries, complete profile workbooks, and genotype/subtype RAS profile reports.
+description: Use this skill when the user wants to run or inspect the HCV NS5B COMET build scripts that discover RefID FASTA files, create genotype/subtype study workbooks, complete profile workbooks, and genotype/subtype RAS profile reports.
 ---
 
 # HCV NS5B Build Workflow
 
 Use this skill for the full NS5B high-throughput build workflow. The first step reads the configured Excel worksheet, discovers matching RefID FASTA files, and stages those files for downstream NS5B build steps.
-
-## Workflow Chart
-
-See `NS5B_workflow.svg` in this skill folder.
 
 ## Script Order
 
@@ -19,14 +15,16 @@ See `NS5B_workflow.svg` in this skill folder.
 4. `split_refid_metadata_csv/split_refid_metadata_csv.py`
 5. `filter_refid_fastas_by_metadata/filter_refid_fastas_by_metadata.py`
 6. `build_ns5b_gt_allstudies/build_ns5b_gt_allstudies.py`
-7. `build_ns5b_sourcefeatures_csv/build_ns5b_sourcefeatures_csv.py` is currently commented out in the wrapper
-8. `build_ns5b_sourcefeatures_grouped_csv/build_ns5b_sourcefeatures_grouped_csv.py` is currently commented out in the wrapper
-9. `build_ns5b_subtype_allstudies_wseqs/build_ns5b_subtype_allstudies_wseqs.py`
-10. `build_ns5b_subtype_with_gt_aa/build_ns5b_subtype_with_gt_aa.py`
-11. `build_ns5b_completeprofiles_tabspergt/build_ns5b_completeprofiles_tabspergt.py`
-12. `export_ns5b_consensus_fasta/export_ns5b_consensus_fasta.py`
-13. `build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py`
-14. `build_ns5b_subtype_ras_profiles/build_ns5b_subtype_ras_profiles.py`
+7. `build_ns5b_subtype_allstudies_wseqs/build_ns5b_subtype_allstudies_wseqs.py`
+8. `build_ns5b_subtype_with_gt_aa/build_ns5b_subtype_with_gt_aa.py`
+9. `validate_ns5b_profile_alignment/validate_ns5b_profile_alignment.py`
+10. `build_ns5b_completeprofiles_tabspergt/build_ns5b_completeprofiles_tabspergt.py`
+11. `export_ns5b_consensus_fasta/export_ns5b_consensus_fasta.py`
+12. `align_ns5b_subtype_consensuses_to_gt1a/align_ns5b_subtype_consensuses_to_gt1a.py`
+13. `export_gt_reference_consensus_differences/export_gt_reference_consensus_differences.py`
+14. `build_ns5b_gt_ras_profiles/build_ns5b_gt_ras_profiles.py`
+15. `build_ns5b_subtype_ras_profiles/build_ns5b_subtype_ras_profiles.py`
+16. `build_ns5b_combined_ras_profiles/build_ns5b_combined_ras_profiles.py`
 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 
@@ -36,7 +34,7 @@ python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py
 python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py --step discover-refid-fastas
 ```
 
-`--list-steps` prints all named stages. `--step <name>` runs only that stage; repeat the flag to run selected stages in order. Selected stages expect their prerequisite outputs to exist. Source-feature stages remain excluded from full runs unless `--include-source-features` is supplied. The legacy shell wrapper remains available for compatibility but is no longer the preferred entry point.
+`--list-steps` prints all named stages. `--step <name>` runs only that stage; repeat the flag to run selected stages in order. Selected stages expect their prerequisite outputs to exist. The legacy shell wrapper remains available for compatibility but is no longer the preferred entry point.
 
 Configuration stays in the repository base folder. The wrapper loads:
 
@@ -47,44 +45,43 @@ Configuration stays in the repository base folder. The wrapper loads:
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
 Set `sheet_name` in the `[ns5b]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
-Temporary files and step summaries are written under `outputs/temp/hcv-ns5b-comet-build-workflow/`.
+Temporary files and step summaries are written under `outputs/comet-NS5B/temp/`.
 
 ## Inputs
 
-- Excel workbook and configured worksheet containing `RefID`, `RefName`, and patient-count fields
+- Excel workbook and configured worksheet containing `RefID`
 - FASTA pool directory containing RefID-prefixed FASTA files
 - `HCV_GT_RefSeqs.fasta`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
 - `HCV_GT_Refs_By_Gene_AA.json`
 - `outputs/local_alignment/NS5B_Subtype_AllStudies_WSeqs.xlsx` for mandatory non-COMET subtype 1d overrides and additions
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
-- optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
-The discovery step keeps rows where `RefID` is present and `Num Pts` is not `Exclude`. It does not filter on `NS5BCount` or `Notes`.
-After discovery, the runner copies all matched RefID FASTA files into `outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
+The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on patient-count columns, `NS5BCount`, or `Notes`.
+After discovery, the runner copies all matched RefID FASTA files into `outputs/comet-NS5B/temp/run_ns5b_pipeline/included_refid_fastas/`. Downstream steps that accept `--fasta-dir` use this copied folder, not the original TOML `fasta_pool`.
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `17` accession is listed in `17.csv`; `30` source_isolate contains `day1`; `192` source_isolate contains `day1`; `346` source_isolate contains `baseline`; `891` source_isolate contains a token from `Ha01` through `Ha97`; `943` source_isolate contains `day 1`; `1051` source_isolate contains a token from `1a` through `51a`. The manual accession list is a durable input in `HCVData/Ref-selection/NS5_Ref_filter/NS5B/`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
-The COMET subtype step gives priority to non-COMET genotype and subtype assignments for retained accessions called `1d` and for genotype 7 or 8 accessions. It also adds priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
+The COMET genotype and subtype steps give priority to non-COMET assignments for retained accessions called `1d` and for genotype 7 or 8 accessions. They also add priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
 
 Complete-profile construction retains an accession only when it has callable amino-acid coverage at every NS5B RAS position: 150, 159, 206, 282, 316, 320, and 321. Missing, `X`, stop (`*`), or non-standard calls at any of these positions exclude that accession from the profile and its downstream RAS and distance reports.
 
 ## Outputs
 
-The workflow writes NS5B outputs under `outputs/`, including:
+The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
 
 - `NS5B_GT_AllStudies.xlsx`
 - `NS5B_matched_fasta_files.txt`
-- discovery `filtered_rows.xlsx` under `outputs/temp/hcv-ns5b-comet-build-workflow/.../find_refid_fastas/...`
-- copied included RefID FASTA files under `outputs/temp/hcv-ns5b-comet-build-workflow/run_ns5b_pipeline/included_refid_fastas/`
+- discovery `filtered_rows.xlsx` under `outputs/comet-NS5B/temp/.../find_refid_fastas/...`
+- copied included RefID FASTA files under `outputs/comet-NS5B/temp/run_ns5b_pipeline/included_refid_fastas/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`
 - filtered copied RefID FASTA files in `included_refid_fastas/` for RefIDs with metadata filters
-- source-feature CSV/XLSX outputs only if the commented source-feature steps are re-enabled
 - `NS5B_Subtype_AllStudies_WSeqs.xlsx`
 - `NS5B_Subtype_With_GT_AA.xlsx`
 - `NS5B_Profile_Input_Alignment_QC.xlsx` (profile input with per-accession alignment QC columns)
+- `NS5B_Profile_Accessions_QC_Pass.csv` (accessions retained for complete-profile construction)
 - `NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv` (per-genotype mutation burden among QC-passed input rows)
 - `NS5B_GT_CompleteProfiles_TabsPerGT.xlsx`
 - `NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx`
@@ -100,6 +97,5 @@ The workflow writes NS5B outputs under `outputs/`, including:
 - Keep NS5B scripts together in this skill folder.
 - Use `scripts/run_ns5b_pipeline.py` for complete runs or `--step <name>` for a specific build step.
 - Keep `.env` and `pipeline.local.toml` in the repository root; do not copy them into this skill folder.
-- Keep temporary outputs under `outputs/temp/hcv-ns5b-comet-build-workflow/` so they do not mix with other skills.
+- Keep temporary outputs under `outputs/comet-NS5B/temp/` so they do not mix with other skills.
 - Preserve the order above because later reports consume earlier workbooks.
-- Source-feature extraction and grouped source-feature steps are currently commented out in the wrapper.

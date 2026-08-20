@@ -47,8 +47,8 @@ KNOWN_QUASISPECIES_REFIDS = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Read one Excel worksheet, exclude rows where the patient-count column is 'Exclude', "
-            "collect RefIDs, and find matching FASTA files by filename prefix."
+            "Read one Excel worksheet, collect every non-empty RefID, and find matching "
+            "FASTA files by filename prefix."
         )
     )
     parser.add_argument("--excel-file", required=True, help="Path to the Excel workbook")
@@ -56,11 +56,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fasta-dir", required=True, help="Directory containing FASTA files")
     parser.add_argument("--output-dir", default="outputs", help="Base output directory")
     parser.add_argument("--refid-column", default="RefID", help="Column name holding RefID values")
-    parser.add_argument(
-        "--numpatients-column",
-        default="NumPatients",
-        help="Column name holding the NumPatients values",
-    )
     parser.add_argument(
         "--positive-column",
         action="append",
@@ -114,15 +109,10 @@ def parse_positive_number(value: Any) -> float | None:
         return None
 
 
-def is_excluded_patient_value(value: Any) -> bool:
-    return str(value).strip().casefold() == "exclude"
-
-
 def load_matching_refids(
     excel_file: Path,
     sheet_name: str,
     refid_column: str,
-    numpatients_column: str,
     positive_columns: list[str],
     excluded_refids: set[str],
 ) -> tuple[list[str], list[dict[str, Any]], list[str], list[tuple[Any, ...]], dict[str, Any]]:
@@ -140,14 +130,11 @@ def load_matching_refids(
 
     if refid_column not in header_index:
         raise RuntimeError(f"Column '{refid_column}' was not found in worksheet '{sheet_name}'")
-    if numpatients_column not in header_index:
-        raise RuntimeError(f"Column '{numpatients_column}' was not found in worksheet '{sheet_name}'")
     for column in positive_columns:
         if column not in header_index:
             raise RuntimeError(f"Column '{column}' was not found in worksheet '{sheet_name}'")
 
     refid_idx = header_index[refid_column]
-    numpatients_idx = header_index[numpatients_column]
     positive_indices = {column: header_index[column] for column in positive_columns}
 
     matching_refids: list[str] = []
@@ -155,18 +142,12 @@ def load_matching_refids(
     result_rows: list[tuple[Any, ...]] = []
     scanned_rows = 0
     qualifying_rows = 0
-    skipped_excluded_numpatients = 0
     skipped_missing_refid = 0
     skipped_additional_positive_filter = 0
     skipped_excluded_refid = 0
 
     for row in rows[1:]:
         scanned_rows += 1
-        numpatients_value = row[numpatients_idx] if numpatients_idx < len(row) else None
-        if is_excluded_patient_value(numpatients_value):
-            skipped_excluded_numpatients += 1
-            continue
-
         failed_positive_filter = False
         positive_values: dict[str, float] = {}
         for column, idx in positive_indices.items():
@@ -194,7 +175,6 @@ def load_matching_refids(
         matching_rows.append(
             {
                 "refid": refid,
-                numpatients_column: "" if numpatients_value is None else str(numpatients_value).strip(),
                 **positive_values,
             }
         )
@@ -204,7 +184,6 @@ def load_matching_refids(
         "headers": headers,
         "rows_scanned": scanned_rows,
         "qualifying_rows": qualifying_rows,
-        "skipped_excluded_numpatients": skipped_excluded_numpatients,
         "skipped_missing_refid": skipped_missing_refid,
         "skipped_additional_positive_filter": skipped_additional_positive_filter,
         "skipped_excluded_refid": skipped_excluded_refid,
@@ -280,7 +259,6 @@ def main() -> int:
         excel_file,
         args.sheet,
         args.refid_column,
-        args.numpatients_column,
         args.positive_column,
         excluded_refids,
     )
@@ -299,7 +277,6 @@ def main() -> int:
         "sheet": args.sheet,
         "fasta_dir": str(fasta_dir.resolve()),
         "refid_column": args.refid_column,
-        "numpatients_column": args.numpatients_column,
         "excluded_refids": sorted(excluded_refids),
         "refid_count": len(refids),
         "matched_file_count": len(matched_files),
