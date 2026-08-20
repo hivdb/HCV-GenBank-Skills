@@ -4,16 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 from collections import defaultdict
 from pathlib import Path
 
-from openpyxl import Workbook, load_workbook
-from openpyxl.cell.rich_text import CellRichText, TextBlock
-from openpyxl.cell.text import InlineFont
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
+import xlsxwriter
 
 
 VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
@@ -33,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gt-ras-profile-workbook", required=True)
     parser.add_argument("--subtype-ras-profile-workbook", required=True)
     parser.add_argument("--output-xlsx", default="outputs/NS5A_Combined_RAS_Profiles.xlsx")
+    parser.add_argument("--output-csv", help="Optional CSV export with two subtype calls per cell line")
     parser.add_argument("--subtype-frequency-threshold", type=float, default=1.0)
     return parser.parse_args()
 
@@ -64,22 +63,23 @@ def total_sequences(label: object) -> int | None:
     return int(match.group(1)) if match is not None else None
 
 
-def variants_to_rich_text(
+def filtered_variants(
     value: object, threshold: float | None = None, excluded_amino_acids: set[str] | None = None
-) -> CellRichText | str:
-    """Render amino-acid frequencies with superscript frequencies, as in RAS profiles."""
-    variants = [
+) -> list[tuple[str, str]]:
+    return [
         (amino_acid, frequency)
         for amino_acid, frequency in VARIANT_RE.findall(str(value or ""))
         if (threshold is None or float(frequency) >= threshold)
         and amino_acid not in (excluded_amino_acids or set())
     ]
-    if not variants:
-        return ""
-    parts: list[str | TextBlock] = []
-    for amino_acid, frequency in variants:
-        parts.extend((amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency)))
-    return CellRichText(*parts)
+
+
+def variants_to_multiline_text(
+    value: object, threshold: float | None = None, excluded_amino_acids: set[str] | None = None
+) -> str:
+    """Render subtype calls as plain CSV text with two calls on each line."""
+    variants = [f"{amino_acid}{frequency}" for amino_acid, frequency in filtered_variants(value, threshold, excluded_amino_acids)]
+    return "\n".join("".join(variants[index : index + 2]) for index in range(0, len(variants), 2))
 
 
 def most_frequent_variant(value: object) -> tuple[str, str] | None:
@@ -89,16 +89,9 @@ def most_frequent_variant(value: object) -> tuple[str, str] | None:
     return max(variants, key=lambda variant: float(variant[1]))
 
 
-def most_frequent_variant_to_rich_text(value: object) -> CellRichText | str:
-    variant = most_frequent_variant(value)
-    if variant is None:
-        return ""
-    amino_acid, frequency = variant
-    return CellRichText(amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency))
-
-
 def write_combined_workbook(
     output_path: Path,
+    output_csv: Path | None,
     positions: list[object],
     gt_rows: list[list[object]],
     subtype_rows: list[list[object]],
@@ -116,36 +109,75 @@ def write_combined_workbook(
         if genotype is not None and has_minimum_total_sequences(row[0]):
             subtypes_by_gt[genotype].append(row)
 
-    workbook = Workbook()
-    worksheet = workbook.active
-    worksheet.title = "Combined_RAS_Profile"
-    header_fill = PatternFill(fill_type="solid", fgColor="F2F2F2")
-    gt_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
-    bold = Font(bold=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    workbook = xlsxwriter.Workbook(output_path)
+    worksheet = workbook.add_worksheet("Combined_RAS_Profile")
+    cell_format = workbook.add_format({"align": "center", "valign": "vcenter", "text_wrap": True})
+    header_format = workbook.add_format(
+        {"bold": True, "bg_color": "#F2F2F2", "align": "center", "valign": "vcenter", "text_wrap": True}
+    )
+    gt_format = workbook.add_format(
+        {"bold": True, "bg_color": "#D9EAF7", "align": "center", "valign": "vcenter", "text_wrap": True}
+    )
+    superscript_format = workbook.add_format({"font_script": 1})
+    worksheet.set_column(0, 0, 24)
+    worksheet.set_column(1, len(positions) - 1, 12)
 
-    worksheet.append(positions)
-    for cell in worksheet[1]:
-        cell.fill = header_fill
-        cell.font = bold
+    csv_rows: list[list[object]] = [positions]
+    for column, value in enumerate(positions):
+        worksheet.write_blank(0, column, None, header_format) if value is None else worksheet.write(0, column, value, header_format)
+
+    def write_variant_cell(
+        row: int,
+        column: int,
+        variants: list[tuple[str, str]],
+        cell_style,
+    ) -> None:
+        if not variants:
+            worksheet.write_blank(row, column, None, cell_style)
+            return
+        rich_parts: list[object] = []
+        for index, (amino_acid, frequency) in enumerate(variants):
+            if index and index % 2 == 0:
+                amino_acid = f"\n{amino_acid}"
+            rich_parts.extend((amino_acid, superscript_format, frequency))
+        result = worksheet.write_rich_string(row, column, *rich_parts, cell_style)
+        if result:
+            raise RuntimeError(f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}")
 
     output_rows = 0
+    worksheet_row = 1
     for genotype in sorted(gt_by_number, key=int):
         gt_row = gt_by_number[genotype]
-        worksheet.append(
-            [gt_row[0]] + [most_frequent_variant_to_rich_text(value) for value in gt_row[1:]]
+        worksheet.write(worksheet_row, 0, gt_row[0], gt_format)
+        for column, value in enumerate(gt_row[1:], start=1):
+            variant = most_frequent_variant(value)
+            write_variant_cell(worksheet_row, column, [variant] if variant else [], gt_format)
+        csv_rows.append(
+            [gt_row[0]] + ["".join(variant) if (variant := most_frequent_variant(value)) else "" for value in gt_row[1:]]
         )
         output_rows += 1
-        for cell in worksheet[worksheet.max_row]:
-            cell.fill = gt_fill
-            cell.font = bold
+        worksheet_row += 1
 
         gt_amino_acids = [most_frequent_variant(value) for value in gt_row[1:]]
         for subtype_row in subtypes_by_gt.get(genotype, []):
             subtype_values = subtype_row[1:]
-            worksheet.append(
+            worksheet.write(worksheet_row, 0, subtype_row[0], cell_format)
+            for column, (value, gt_variant) in enumerate(zip(subtype_values, gt_amino_acids), start=1):
+                write_variant_cell(
+                    worksheet_row,
+                    column,
+                    filtered_variants(
+                        value,
+                        threshold,
+                        {gt_variant[0]} if gt_variant is not None else None,
+                    ),
+                    cell_format,
+                )
+            csv_rows.append(
                 [subtype_row[0]]
                 + [
-                    variants_to_rich_text(
+                    variants_to_multiline_text(
                         value,
                         threshold,
                         {gt_variant[0]} if gt_variant is not None else None,
@@ -154,17 +186,15 @@ def write_combined_workbook(
                 ]
             )
             output_rows += 1
-        worksheet.append([])
+            worksheet_row += 1
+        worksheet_row += 1
+        csv_rows.append([])
 
-    for row in worksheet.iter_rows():
-        for cell in row:
-            cell.alignment = Alignment(horizontal="center")
-    worksheet.column_dimensions["A"].width = 24
-    for column in range(2, worksheet.max_column + 1):
-        worksheet.column_dimensions[get_column_letter(column)].width = 12
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    workbook.save(output_path)
+    workbook.close()
+    if output_csv is not None:
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
+        with output_csv.open("w", newline="", encoding="utf-8-sig") as handle:
+            csv.writer(handle).writerows(csv_rows)
     return len(gt_by_number), output_rows
 
 
@@ -173,6 +203,7 @@ def main() -> int:
     gt_path = Path(args.gt_ras_profile_workbook).expanduser()
     subtype_path = Path(args.subtype_ras_profile_workbook).expanduser()
     output_path = Path(args.output_xlsx).expanduser()
+    output_csv = Path(args.output_csv).expanduser() if args.output_csv else None
     if not gt_path.is_file() or not subtype_path.is_file():
         raise RuntimeError("Both GT and subtype RAS profile workbooks are required")
 
@@ -181,7 +212,7 @@ def main() -> int:
     if positions != subtype_positions:
         raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
     genotype_count, output_rows = write_combined_workbook(
-        output_path, positions, gt_rows, subtype_rows, args.subtype_frequency_threshold
+        output_path, output_csv, positions, gt_rows, subtype_rows, args.subtype_frequency_threshold
     )
     full_profile_subtype_count = len(subtype_rows)
     full_profile_subtype_at_least_10_count = sum(
@@ -193,6 +224,7 @@ def main() -> int:
         json.dumps(
             {
                 "output_xlsx": str(output_path.resolve()),
+                "output_csv": str(output_csv.resolve()) if output_csv else None,
                 "genotype_count": genotype_count,
                 "profile_row_count": output_rows,
                 "full_profile_subtype_count": full_profile_subtype_count,

@@ -9,11 +9,8 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from openpyxl import Workbook, load_workbook
-from openpyxl.cell.rich_text import CellRichText, TextBlock
-from openpyxl.cell.text import InlineFont
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
+import xlsxwriter
 
 
 VARIANT_RE = re.compile(r"([A-Z*])(\d+(?:\.\d+)?)")
@@ -62,22 +59,15 @@ def total_sequences(label: object) -> int | None:
     return int(match.group(1)) if match is not None else None
 
 
-def variants_to_rich_text(
+def filtered_variants(
     value: object, threshold: float | None = None, excluded_amino_acids: set[str] | None = None
-) -> CellRichText | str:
-    """Render amino-acid frequencies with superscript frequencies, as in RAS profiles."""
-    variants = [
+) -> list[tuple[str, str]]:
+    return [
         (amino_acid, frequency)
         for amino_acid, frequency in VARIANT_RE.findall(str(value or ""))
         if (threshold is None or float(frequency) >= threshold)
         and amino_acid not in (excluded_amino_acids or set())
     ]
-    if not variants:
-        return ""
-    parts: list[str | TextBlock] = []
-    for amino_acid, frequency in variants:
-        parts.extend((amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency)))
-    return CellRichText(*parts)
 
 
 def most_frequent_variant(value: object) -> tuple[str, str] | None:
@@ -85,14 +75,6 @@ def most_frequent_variant(value: object) -> tuple[str, str] | None:
     if not variants:
         return None
     return max(variants, key=lambda variant: float(variant[1]))
-
-
-def most_frequent_variant_to_rich_text(value: object) -> CellRichText | str:
-    variant = most_frequent_variant(value)
-    if variant is None:
-        return ""
-    amino_acid, frequency = variant
-    return CellRichText(amino_acid, TextBlock(InlineFont(vertAlign="superscript"), frequency))
 
 
 def mean_diff(value_rows: list[object], gt_variants: list[tuple[str, str] | None], threshold: float) -> float:
@@ -125,57 +107,57 @@ def write_combined_workbook(
         if genotype is not None and has_minimum_total_sequences(row[0]):
             subtypes_by_gt[genotype].append(row)
 
-    workbook = Workbook()
-    worksheet = workbook.active
-    worksheet.title = "Combined_RAS_Profile"
-    header_fill = PatternFill(fill_type="solid", fgColor="F2F2F2")
-    gt_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
-    bold = Font(bold=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    workbook = xlsxwriter.Workbook(output_path)
+    worksheet = workbook.add_worksheet("Combined_RAS_Profile")
+    cell_format = workbook.add_format({"align": "center", "valign": "vcenter", "text_wrap": True})
+    header_format = workbook.add_format({"bold": True, "bg_color": "#F2F2F2", "align": "center", "valign": "vcenter", "text_wrap": True})
+    gt_format = workbook.add_format({"bold": True, "bg_color": "#D9EAF7", "align": "center", "valign": "vcenter", "text_wrap": True})
+    mean_diff_format = workbook.add_format({"align": "center", "valign": "vcenter", "text_wrap": True, "num_format": "0.0"})
+    superscript_format = workbook.add_format({"font_script": 1})
+    headers = [*positions, "MeanDiff"]
+    worksheet.set_column(0, 0, 24)
+    worksheet.set_column(1, len(headers) - 1, 12)
+    for column, value in enumerate(headers):
+        worksheet.write_blank(0, column, None, header_format) if value is None else worksheet.write(0, column, value, header_format)
 
-    worksheet.append([*positions, "MeanDiff"])
-    for cell in worksheet[1]:
-        cell.fill = header_fill
-        cell.font = bold
+    def write_variant_cell(row: int, column: int, variants: list[tuple[str, str]], cell_style) -> None:
+        if not variants:
+            worksheet.write_blank(row, column, None, cell_style)
+            return
+        rich_parts: list[object] = []
+        for index, (amino_acid, frequency) in enumerate(variants):
+            if index and index % 2 == 0:
+                amino_acid = f"\n{amino_acid}"
+            rich_parts.extend((amino_acid, superscript_format, frequency))
+        result = worksheet.write_rich_string(row, column, *rich_parts, cell_style)
+        if result:
+            raise RuntimeError(f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}")
 
     output_rows = 0
+    worksheet_row = 1
     for genotype in sorted(gt_by_number, key=int):
         gt_row = gt_by_number[genotype]
-        worksheet.append(
-            [gt_row[0]] + [most_frequent_variant_to_rich_text(value) for value in gt_row[1:]] + [None]
-        )
+        worksheet.write(worksheet_row, 0, gt_row[0], gt_format)
+        for column, value in enumerate(gt_row[1:], start=1):
+            variant = most_frequent_variant(value)
+            write_variant_cell(worksheet_row, column, [variant] if variant else [], gt_format)
+        worksheet.write_blank(worksheet_row, len(headers) - 1, None, gt_format)
         output_rows += 1
-        for cell in worksheet[worksheet.max_row]:
-            cell.fill = gt_fill
-            cell.font = bold
+        worksheet_row += 1
 
         gt_amino_acids = [most_frequent_variant(value) for value in gt_row[1:]]
         for subtype_row in subtypes_by_gt.get(genotype, []):
             subtype_values = subtype_row[1:]
-            worksheet.append(
-                [subtype_row[0]]
-                + [
-                    variants_to_rich_text(
-                        value,
-                        threshold,
-                        {gt_variant[0]} if gt_variant is not None else None,
-                    )
-                    for value, gt_variant in zip(subtype_values, gt_amino_acids)
-                ]
-                + [mean_diff(subtype_values, gt_amino_acids, threshold)]
-            )
+            worksheet.write(worksheet_row, 0, subtype_row[0], cell_format)
+            for column, (value, gt_variant) in enumerate(zip(subtype_values, gt_amino_acids), start=1):
+                write_variant_cell(worksheet_row, column, filtered_variants(value, threshold, {gt_variant[0]} if gt_variant is not None else None), cell_format)
+            worksheet.write_number(worksheet_row, len(headers) - 1, mean_diff(subtype_values, gt_amino_acids, threshold), mean_diff_format)
             output_rows += 1
-            worksheet.cell(worksheet.max_row, worksheet.max_column).number_format = "0.0"
-        worksheet.append([])
+            worksheet_row += 1
+        worksheet_row += 1
 
-    for row in worksheet.iter_rows():
-        for cell in row:
-            cell.alignment = Alignment(horizontal="center")
-    worksheet.column_dimensions["A"].width = 24
-    for column in range(2, worksheet.max_column + 1):
-        worksheet.column_dimensions[get_column_letter(column)].width = 12
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    workbook.save(output_path)
+    workbook.close()
     return len(gt_by_number), output_rows
 
 
