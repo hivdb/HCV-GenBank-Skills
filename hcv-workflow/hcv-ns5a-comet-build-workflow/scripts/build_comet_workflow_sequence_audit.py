@@ -43,7 +43,12 @@ def main():
   calls={r['name'].strip().split('.')[0]:r.get('subtype','').strip() for r in csv.DictReader(f) if r.get('name','').strip() and r.get('virus','').strip().upper()=='HCV'}
  assigned={x for x in meta_kept if VALID_CALL.fullmatch(calls.get(x,''))}; missing=meta_kept-set(calls); unassigned=(meta_kept&set(calls))-assigned
  qwb=load_workbook(a.qc_workbook,read_only=True,data_only=True);qws=qwb.active;qh,qix=headers(qws); qrows=list(qws.iter_rows(min_row=2,values_only=True));qwb.close()
- qacc={str(r[qix['AccessionID']] or '').strip() for r in qrows}; q_assigned=assigned&qacc; qcpass={str(r[qix['AccessionID']] or '').strip() for r in qrows if str(r[qix.get('AlignmentQCStatus','')] or '').strip()=='PASS'}
+ qacc={str(r[qix['AccessionID']] or '').strip() for r in qrows}
+ # The QC workbook is the output of AA extraction.  Count its non-empty AA
+ # rows directly instead of reconstructing a COMET-only subset: the workflow
+ # applies priority subtype assignments before AA extraction.
+ q_with_aa={str(r[qix['AccessionID']] or '').strip() for r in qrows if str(r[qix.get('AASequence','')] or '').strip()}
+ qcpass={str(r[qix['AccessionID']] or '').strip() for r in qrows if str(r[qix.get('AASequence','')] or '').strip() and str(r[qix.get('AlignmentQCStatus','')] or '').strip()=='PASS'}
  qreasons=Counter()
  for r in qrows:
   ac=str(r[qix['AccessionID']] or '').strip()
@@ -57,16 +62,15 @@ def main():
  cutoff_rule=(f'{a.combined_subtype_cutoff} or fewer' if a.combined_subtype_cutoff_exclusive else f'fewer than {a.combined_subtype_cutoff}')
  cw=load_workbook(a.combined_profile_workbook,read_only=True,data_only=True);cws=cw.active; labels=[str(r[0] or '') for r in cws.iter_rows(min_row=2,max_col=1,values_only=True)];cw.close(); combined=[SUBTYPE.match(x) for x in labels]; combined=[m for m in combined if m]
  out=Workbook();summary=out.active;summary.title='Sequence_Audit';summary.append(['Step','Sequences retained','Sequences filtered out','Filtering applied'])
- profile_missing=(qcpass&assigned)-profile
- priority_profile=profile-(qcpass&assigned)
- entries=[('Ref-selection rows',len(rows),0,'Input rows in selected worksheet'),('Ref-selection eligibility',len(selected)+len(check_refids),len(rows)-len(selected)-len(check_refids),'Exclude Num Pts = Exclude; known quasispecies RefIDs'),('Raw FASTA accessions',len(raw_before_check),0,'FASTA files matching RefIDs eligible before the Check exclusion'),('RefID Check exclusion',len(raw),len(check_raw),'RefID marked Check'),('Metadata match',len(meta_kept),len(raw-meta),'Accession absent from Accessions_metadata.csv'),('COMET CSV match',len(meta_kept)-len(missing),len(missing),'Accession absent from COMET CSV'),('COMET subtype validation',len(assigned),len(unassigned),'COMET unassigned/invalid subtype'),('AA extraction',len(q_assigned),len(assigned-qacc),'No extracted AA row'),('Alignment QC pass',len(qcpass&assigned),len(q_assigned-qcpass),'AlignmentQCStatus is not PASS'),('Non-COMET priority subtype additions',len(qcpass&assigned)+len(priority_profile),0,f'{len(priority_profile)} QC-passed accessions retained by the non-COMET priority subtype rule'),('Profile accessions',len(profile),len(profile_missing),'All eligible QC-passed accessions included; none excluded by profile builder' if not profile_missing else a.profile_filter_reason),('Combined-profile subtype cutoff',cutoff_retained_count,cutoff_excluded_count,f'Exclude subtypes with {cutoff_rule} profile accessions; genotypes 7 and 8 are retained regardless ({len(cutoff_excluded)} subtype groups excluded)'),('Combined profile',sum(int(m.group(3)) for m in combined),0,f'{len(combined)} subtype rows; count is summed RAS-position coverage, not unique accessions')]
+ profile_missing=qcpass-profile
+ entries=[('Ref-selection rows',len(rows),0,'Input rows in selected worksheet'),('Ref-selection eligibility',len(selected)+len(check_refids),len(rows)-len(selected)-len(check_refids),'Exclude Num Pts = Exclude; known quasispecies RefIDs'),('Raw FASTA accessions',len(raw_before_check),0,'FASTA files matching RefIDs eligible before the Check exclusion'),('RefID Check exclusion',len(raw),len(check_raw),'RefID marked Check'),('Metadata match',len(meta_kept),len(raw-meta),'Accession absent from Accessions_metadata.csv'),('COMET CSV match',len(meta_kept)-len(missing),len(missing),'Accession absent from COMET CSV'),('COMET subtype validation',len(assigned),len(unassigned),'COMET unassigned/invalid subtype'),('Before alignment QC',len(q_with_aa),len(qacc-q_with_aa),'Non-empty AASequence after COMET and priority-subtype assignment'),('After alignment QC',len(qcpass),len(q_with_aa-qcpass),'AlignmentQCStatus is PASS'),('Profile accessions',len(profile),len(profile_missing),'All eligible QC-passed accessions included; none excluded by profile builder' if not profile_missing else a.profile_filter_reason),('Combined-profile subtype cutoff',cutoff_retained_count,cutoff_excluded_count,f'Exclude subtypes with {cutoff_rule} profile accessions; genotypes 7 and 8 are retained regardless ({len(cutoff_excluded)} subtype groups excluded)'),('Combined profile',sum(int(m.group(3)) for m in combined),0,f'{len(combined)} subtype rows; count is summed RAS-position coverage, not unique accessions')]
  for x in entries:summary.append(x)
  details=out.create_sheet('Filtered_Out_Reasons');details.append(['Stage','Reason','SequenceOrRowCount'])
  for k,v in sorted(reasons.items()):details.append(['Ref-selection',k,v])
  details.append(['RefID Check exclusion','RefID marked Check',len(check_raw)])
  details.append(['Metadata','Accession absent from Accessions_metadata.csv',len(raw-meta)])
  details.append(['COMET','Accession absent from COMET CSV',len(missing)]);details.append(['COMET','COMET unassigned/invalid subtype',len(unassigned)])
- details.append(['AA extraction','No extracted AA row',len(assigned-qacc)])
+ details.append(['Before alignment QC','No extracted AA row',len(qacc-q_with_aa)])
  for k,v in sorted(qreasons.items()):details.append(['Alignment QC',k,v])
  if profile_missing:details.append(['Profile accessions',a.profile_filter_reason,len(profile_missing)])
  details.append(['Combined profile',f'Subtype has {cutoff_rule} profile accessions',cutoff_excluded_count])
