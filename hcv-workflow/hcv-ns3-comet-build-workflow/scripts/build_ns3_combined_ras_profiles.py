@@ -92,7 +92,7 @@ def write_combined_workbook(
     gt_rows: list[list[object]],
     subtype_rows: list[list[object]],
     threshold: float,
-) -> tuple[int, int]:
+) -> tuple[int, int, list[dict[str, object]]]:
     gt_by_number = {
         genotype: row
         for row in gt_rows
@@ -140,6 +140,7 @@ def write_combined_workbook(
             raise RuntimeError(f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}")
 
     output_rows = 0
+    high_mean_diff_subtypes: list[dict[str, object]] = []
     worksheet_row = 1
     for genotype in sorted(gt_by_number, key=int):
         gt_row = gt_by_number[genotype]
@@ -166,13 +167,16 @@ def write_combined_workbook(
             worksheet.write(worksheet_row, 0, subtype_row[0], cell_format)
             for column, (value, gt_variant) in enumerate(zip(subtype_values, gt_amino_acids), start=1):
                 write_variant_cell(worksheet_row, column, filtered_variants(value, threshold, {gt_variant[0]} if gt_variant is not None else None), cell_format, all_gt_consensus_aas[column - 1])
-            worksheet.write_number(worksheet_row, len(headers) - 1, mean_diff(subtype_values, gt_amino_acids, threshold), mean_diff_format)
+            subtype_mean_diff = round(mean_diff(subtype_values, gt_amino_acids, threshold), 1)
+            worksheet.write_number(worksheet_row, len(headers) - 1, subtype_mean_diff, mean_diff_format)
+            if subtype_mean_diff >= 2.5:
+                high_mean_diff_subtypes.append({"subtype": str(subtype_row[0]), "mean_diff": subtype_mean_diff})
             output_rows += 1
             worksheet_row += 1
         worksheet_row += 1
 
     workbook.close()
-    return len(gt_by_number), output_rows
+    return len(gt_by_number), output_rows, high_mean_diff_subtypes
 
 
 def main() -> int:
@@ -187,7 +191,7 @@ def main() -> int:
     subtype_positions, subtype_rows = read_profile_workbook(subtype_path)
     if positions != subtype_positions:
         raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
-    genotype_count, output_rows = write_combined_workbook(
+    genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
         output_path, positions, gt_rows, subtype_rows, args.subtype_frequency_threshold
     )
     full_profile_subtype_count = len(subtype_rows)
@@ -201,6 +205,7 @@ def main() -> int:
                 "output_xlsx": str(output_path.resolve()),
                 "genotype_count": genotype_count,
                 "profile_row_count": output_rows,
+                "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
                 "full_profile_subtype_count": full_profile_subtype_count,
                 "full_profile_subtype_at_least_10_sequence_count": full_profile_subtype_at_least_10_count,
                 "subtype_frequency_threshold": args.subtype_frequency_threshold,

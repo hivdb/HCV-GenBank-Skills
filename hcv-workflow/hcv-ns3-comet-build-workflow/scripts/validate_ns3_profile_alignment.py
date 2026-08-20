@@ -88,7 +88,7 @@ def qc_row(
         "AlignmentQCCoordinateSpan": f"{start}-{end} ({coordinate_span} columns; {len(sequence)} AA)",
         "AlignmentQCComparedAA": compared,
         "AlignmentQCMutationCount": mutations,
-        "AlignmentQCMutationPercent": round(mutation_percent, 3),
+        "AlignmentQCMutationPercent": round(mutation_percent, 1),
     }
 
 

@@ -38,11 +38,8 @@ def shannon_entropy(counts: list[int]) -> float:
     return entropy
 
 
-def round_sig(value: float, digits: int = 2) -> float:
-    if value == 0:
-        return 0.0
-    places = digits - int(math.floor(math.log10(abs(value)))) - 1
-    return round(value, places)
+def round_sig(value: float, digits: int = 1) -> float:
+    return round(value, digits)
 
 
 def genotype_sort_key(label: str) -> tuple[int, str]:
@@ -121,6 +118,8 @@ def style_sheet(ws) -> None:
         cell.alignment = Alignment(horizontal="center")
     for row in ws.iter_rows(min_row=2, min_col=2):
         for cell in row:
+            if isinstance(cell.value, float):
+                cell.number_format = "0.0"
             cell.alignment = Alignment(horizontal="center")
 
 

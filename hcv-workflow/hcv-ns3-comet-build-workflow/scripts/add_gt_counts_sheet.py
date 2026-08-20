@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def format_percent(value: float) -> str:
-    return f"{value:.2%}" if 0 < value < 0.001 else f"{value:.1%}"
+    return f"{value:.1%}"
 
 
 def main() -> None:
@@ -68,7 +68,7 @@ def main() -> None:
         summary_ws.append([gt, counts[gt], counts[gt] / total_rows if total_rows else 0])
     summary_ws.append(["Total", total_rows, 1 if total_rows else 0])
     for cell in summary_ws["C"][1:]:
-        cell.number_format = "[<0.001]0.00%;0.0%"
+        cell.number_format = "0.0%"
 
     wb.save(workbook_path)
 

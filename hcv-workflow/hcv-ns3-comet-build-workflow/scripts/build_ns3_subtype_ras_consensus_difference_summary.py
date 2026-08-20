@@ -204,7 +204,7 @@ def write_workbook(
         ])
     for row in worksheet.iter_rows(min_row=2, min_col=5, max_col=5):
         for cell in row:
-            cell.number_format = "0.00"
+            cell.number_format = "0.0"
     for column, width in {"A": 12, "B": 12, "C": 22, "D": 20, "E": 31}.items():
         worksheet.column_dimensions[column].width = width
     worksheet.freeze_panes = "A2"

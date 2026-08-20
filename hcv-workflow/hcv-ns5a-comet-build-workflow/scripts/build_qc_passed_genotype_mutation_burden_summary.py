@@ -31,7 +31,7 @@ def percentile(values: list[float], percent: float) -> float:
 
 
 def display_number(value: float) -> str | int:
-    rounded = round(value, 3)
+    rounded = round(value, 1)
     return int(rounded) if rounded.is_integer() else rounded
 
 
