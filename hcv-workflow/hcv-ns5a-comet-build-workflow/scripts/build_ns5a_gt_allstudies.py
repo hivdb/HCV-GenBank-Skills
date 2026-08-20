@@ -528,7 +528,7 @@ def main() -> int:
     #     encoding="utf-8",
     # )
     # (job_dir / "workflow_request.txt").write_text(
-    #     Path("hcv-workflow/hcv-ns5a-build-workflow/notes/ns5a_gt_distance_workflow_2026-05-13.md").read_text(encoding="utf-8"),
+    #     Path("hcv-workflow/hcv-ns5a-comet-build-workflow/notes/ns5a_gt_distance_workflow_2026-05-13.md").read_text(encoding="utf-8"),
     #     encoding="utf-8",
     # )
 
