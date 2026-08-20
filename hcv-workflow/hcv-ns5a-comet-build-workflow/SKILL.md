@@ -32,50 +32,52 @@ Run the workflow in this order. For an individual step, invoke its listed script
    - Python: `filter_refid_fastas_by_metadata.py`
 8. Create COMET assignment files and remove missing or unassigned records.
    - Python: `prepare_comet_ns5a_assignments.py`
-9. Build the COMET genotype study workbook.
+9. Select priority non-COMET assignments for later genotype and subtype workbooks.
+   - Python: `select_noncomet_priority_assignments.py`
+10. Build the COMET genotype study workbook.
    - Python: `build_ns5a_comet_gt_allstudies.py`
    - Python: `add_gt_counts_sheet.py`
-10. Build the COMET subtype study workbook, applying non-COMET priority additions and overrides.
+11. Build the COMET subtype study workbook.
    - Python: `build_ns5a_comet_subtype_allstudies.py`
-11. Extract genotype-position amino-acid sequences from the selected FASTA pool.
+12. Extract genotype-position amino-acid sequences from the selected FASTA pool.
    - Python: `build_ns5a_subtype_with_gt_aa.py`
-12. Validate profile alignment coordinates.
+13. Validate profile alignment coordinates.
    - Python: `validate_ns5a_profile_alignment.py`
-13. Summarize QC-passed genotype mutation burden and calculate profile-input counts.
+14. Summarize QC-passed genotype mutation burden and calculate profile-input counts.
    - Python: `build_qc_passed_genotype_mutation_burden_summary.py`
    - Python: `build_ns5a_completeprofiles_tabspergt.py --report-only`
-14. Build complete genotype and subtype profile workbooks, then identify priority non-COMET profile accessions.
+15. Build complete genotype and subtype profile workbooks, then identify priority non-COMET profile accessions.
    - Python: `build_ns5a_completeprofiles_tabspergt.py`
    - Python: `export_noncomet_priority_profile_accessions.py`
-15. Export genotype and subtype consensus FASTA files.
+16. Export genotype and subtype consensus FASTA files.
    - Python: `export_ns5a_consensus_fasta.py`
-16. Align subtype consensus sequences to the fixed GT1_1a coordinate system.
+17. Align subtype consensus sequences to the fixed GT1_1a coordinate system.
    - Python: `align_ns5a_subtype_consensuses_to_gt1a.py`
-17. Compare COMET consensus sequences with genotype and subtype references.
+18. Compare COMET consensus sequences with genotype and subtype references.
    - Python: `export_gt_reference_consensus_differences.py`
    - Python: `build_ns5a_subtype_consensus_reference_distance.py`
-18. Build genotype and subtype RAS profiles.
+19. Build genotype and subtype RAS profiles.
    - Python: `build_ns5a_gt_ras_profiles.py`
    - Python: `build_ns5a_subtype_ras_profiles.py`
-19. Build the combined RAS profile, update its coverage labels, and create its COMET coverage and sequence-audit reports.
+20. Build the combined RAS profile, update its coverage labels, and create its COMET coverage and sequence-audit reports.
    - Python: `build_ns5a_combined_ras_profiles.py`
    - Python: `replace_comet_profile_coverage_range_with_mean_diff.py`
    - Python: `build_comet_subtype_ras_coverage_report.py`
    - Python: `build_comet_workflow_sequence_audit.py`
-20. Summarize subtype RAS differences from genotype consensus.
+21. Summarize subtype RAS differences from genotype consensus.
    - Python: `build_ns5a_subtype_ras_consensus_difference_summary.py`
-21. Build the genotype amino-acid consensus distance matrix.
+22. Build the genotype amino-acid consensus distance matrix.
    - Python: `build_ns5a_gt_aa_distance_matrix.py`
-22. Build subtype amino-acid distance matrices.
+23. Build subtype amino-acid distance matrices.
    - Python: `build_ns5a_subtype_aa_distance_matrices.py`
-23. Build paired genotype and subtype AA/NA distance matrices for RAS positions and positions 24–93.
+24. Build paired genotype and subtype AA/NA distance matrices for RAS positions and positions 24–93.
    - Python: `build_ns5a_aa_distance_matrices.py` (run once for each position set)
    - Python: `build_ns5a_na_distance_matrices.py` (run once for each position set)
-24. Build genotype and subtype RAS entropy reports.
+25. Build genotype and subtype RAS entropy reports.
    - Python: `build_ns5a_ras_entropy.py`
-25. Create an annotated combined RAS profile with `MeanDiff` and `PositionDiff` values.
+26. Create an annotated combined RAS profile with `MeanDiff` and `PositionDiff` values.
    - Python: `add_combined_profile_nonconsensus_row.py`
-26. Publish the shared ICTV reference/consensus comparison report.
+27. Publish the shared ICTV reference/consensus comparison report.
    - Python: `add_subtype_consensus_mutation_summaries.py`
 
 Run the Python orchestrator for full workflows or a named stage:
@@ -113,7 +115,7 @@ Each step writes its files under `outputs/comet-NS5A/<order>_<step-name>/` (for 
 The discovery step keeps every row with a `RefID` from the configured `IncludedNS5ARefs_StatusInclude.xlsx` selection workbook; it does not apply a `Num Pts` filter.
 After discovery, the runner copies matched FASTA files into `03_stage-refid-fastas/included_refid_fastas/`, then creates the filtered copy and `kept_accessions.csv` manifest in `06_filter-refid-fastas/`. Step 7 reads that manifest, copies the filtered FASTAs into `07_prepare-comet-assignments/included_refid_fastas/`, and removes missing or unassigned records only from the Step 7 copy. Downstream steps use the Step 7 copy.
 The metadata filtering step writes its metadata CSVs in `04_filter-accession-metadata/`; the per-RefID rules and CSVs are in `05_split-refid-metadata/refid_metadata/`.
-The COMET subtype step gives priority to non-COMET genotype and subtype assignments for retained accessions called `1d` and for genotype 7 or 8 accessions. It also adds priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
+The priority-assignment stage selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 
 ## Outputs
 
@@ -123,6 +125,7 @@ The workflow writes NS5A outputs under `outputs/comet-NS5A/`, in numbered step f
 - `NS5A_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `02_discover-refid-fastas/`
 - copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
+- `NS5A_NonComet_Priority_Assignments.csv` under `08_select-noncomet-priority-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`

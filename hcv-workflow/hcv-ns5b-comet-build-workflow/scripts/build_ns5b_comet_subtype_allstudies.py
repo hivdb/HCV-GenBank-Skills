@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--genotype-workbook", required=True)
     parser.add_argument("--comet-subtype-csv", required=True)
-    parser.add_argument("--noncomet-coverage-csv", required=True)
+    parser.add_argument("--priority-assignments-csv", required=True)
     parser.add_argument("--output-dir", required=True)
     return parser.parse_args()
 
@@ -32,14 +32,14 @@ def load_subtypes(path: Path) -> dict[str, str]:
     return assignments
 
 
-def load_noncomet_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str, str, str]]:
+def load_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str, str, str]]:
     assignments: dict[str, tuple[str, str, str, str, str]] = {}
     with path.open(encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
             accession = str(row.get("Accession") or "").strip()
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
-            if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
+            if accession:
                 assignments[accession.split(".", 1)[0]] = ("", "", accession, genotype, subtype)
     return assignments
 
@@ -47,7 +47,7 @@ def load_noncomet_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str
 def main() -> int:
     args = parse_args()
     assignments = load_subtypes(Path(args.comet_subtype_csv))
-    noncomet_priority_subtypes = load_noncomet_priority_subtypes(Path(args.noncomet_coverage_csv))
+    noncomet_priority_subtypes = load_priority_subtypes(Path(args.priority_assignments_csv))
     workbook = load_workbook(args.genotype_workbook, read_only=True, data_only=True)
     sheet = workbook[workbook.sheetnames[0]]
     header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]

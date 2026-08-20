@@ -65,7 +65,7 @@ After discovery, the runner copies all matched RefID FASTA files into `03_stage-
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `17` accession is listed in `17.csv`; `30` source_isolate contains `day1`; `192` source_isolate contains `day1`; `346` source_isolate contains `baseline`; `891` source_isolate contains a token from `Ha01` through `Ha97`; `943` source_isolate contains `day 1`; `1051` source_isolate contains a token from `1a` through `51a`. The manual accession list is a durable input in `HCVData/Ref-selection/NS5_Ref_filter/NS5B/`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
-The COMET genotype and subtype steps give priority to non-COMET assignments for retained accessions called `1d` and for genotype 7 or 8 accessions. They also add priority non-COMET accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for these selected rows so added accessions are available.
+The priority-assignment stage selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 
 Complete-profile construction retains an accession only when it has callable amino-acid coverage at every NS5B RAS position: 150, 159, 206, 282, 316, 320, and 321. Missing, `X`, stop (`*`), or non-standard calls at any of these positions exclude that accession from the profile and its downstream RAS and distance reports.
 
@@ -77,6 +77,7 @@ The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
 - `NS5B_matched_fasta_files.txt`
 - discovery `filtered_rows.xlsx` under `outputs/comet-NS5B/temp/.../find_refid_fastas/...`
 - copied included RefID FASTA files under `03_stage-refid-fastas/`, the preserved filtered copy and `kept_accessions.csv` under `06_filter-refid-fastas/`, and the COMET-filtered copy under `07_prepare-comet-assignments/`
+- `NS5B_NonComet_Priority_Assignments.csv` under `08_select-noncomet-priority-assignments/`
 - `included_accessions_metadata.csv`
 - `missing_accessions_from_metadata.txt`
 - `refid_metadata/RefID_<RefID>_metadata.csv`

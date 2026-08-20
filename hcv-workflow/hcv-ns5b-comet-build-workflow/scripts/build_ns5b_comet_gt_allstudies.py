@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fasta-dir", required=True)
     parser.add_argument("--comet-genotype-csv", required=True)
-    parser.add_argument("--noncomet-coverage-csv", required=True)
+    parser.add_argument("--priority-assignments-csv", required=True)
     parser.add_argument("--output-dir", required=True)
     return parser.parse_args()
 
@@ -36,14 +36,14 @@ def load_comet(path: Path) -> dict[str, str]:
     return assignments
 
 
-def load_noncomet_priority_genotypes(path: Path) -> dict[str, tuple[str, str, str, str]]:
+def load_priority_genotypes(path: Path) -> dict[str, tuple[str, str, str, str]]:
     assignments: dict[str, tuple[str, str, str, str]] = {}
     with path.open(encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
             accession = str(row.get("Accession") or "").strip()
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
-            if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
+            if accession:
                 assignments[accession.split(".", 1)[0]] = ("", "", accession, genotype)
     return assignments
 
@@ -51,7 +51,7 @@ def load_noncomet_priority_genotypes(path: Path) -> dict[str, tuple[str, str, st
 def main() -> int:
     args = parse_args()
     assignments = load_comet(Path(args.comet_genotype_csv))
-    noncomet_priority_genotypes = load_noncomet_priority_genotypes(Path(args.noncomet_coverage_csv))
+    noncomet_priority_genotypes = load_priority_genotypes(Path(args.priority_assignments_csv))
     rows: list[tuple[str, str, str, str, str]] = []
     seen_accessions: set[str] = set()
     override_count = 0

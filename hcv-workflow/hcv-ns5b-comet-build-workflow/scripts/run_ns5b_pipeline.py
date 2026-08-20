@@ -29,7 +29,7 @@ RAS_POSITIONS = "150,159,206,282,316,320,321"
 RANGE_POSITIONS = ",".join(str(position) for position in range(150, 322))
 STEP_NAMES = (
     "prepare-workdirs", "discover-refid-fastas", "stage-refid-fastas", "filter-accession-metadata",
-    "split-refid-metadata", "filter-refid-fastas", "prepare-comet-assignments", "build-genotype-workbook",
+    "split-refid-metadata", "filter-refid-fastas", "prepare-comet-assignments", "select-noncomet-priority-assignments", "build-genotype-workbook",
     "add-genotype-counts", "build-subtype-workbook", "extract-profile-aa", "validate-profile-alignment",
     "summarize-qc-mutation-burden", "report-profile-input-counts", "build-complete-profiles",
     "export-noncomet-priority-accessions", "export-consensus-fastas", "align-subtype-consensus-to-gt1a",
@@ -173,6 +173,7 @@ class Pipeline:
         self.filtered_fasta_dir = self.step_dir("filter-refid-fastas") / "included_refid_fastas"
         self.kept_accessions_csv = self.step_dir("filter-refid-fastas") / "kept_accessions.csv"
         self.included_fasta_dir = self.step_dir("prepare-comet-assignments") / "included_refid_fastas"
+        self.priority_assignments_csv = self.step_dir("select-noncomet-priority-assignments") / "NS5B_NonComet_Priority_Assignments.csv"
         self.aa_workbook = self.step_dir("validate-profile-alignment") / "NS5B_Profile_Input_Alignment_QC.xlsx"
         self.profile_accessions_csv = self.step_dir("build-complete-profiles") / "NS5B_Profile_Accessions_QC_Pass.csv"
 
@@ -305,9 +306,10 @@ class Pipeline:
             Step("split-refid-metadata", "create per-RefID metadata filters", lambda: (self.run("prepare_ns5b_pipeline_workdirs.py", "--clean-dir", self.refid_metadata_dir), self.run("split_refid_metadata_csv.py", "--input-csv", self.metadata_dir / "included_accessions_metadata.csv", "--output-dir", self.refid_metadata_dir))),
             Step("filter-refid-fastas", "filter staged FASTA records by RefID metadata", lambda: (shutil.copytree(self.staged_fasta_dir, self.filtered_fasta_dir, dirs_exist_ok=True), self.run("filter_refid_fastas_by_metadata.py", "--metadata-dir", self.refid_metadata_dir, "--fasta-dir", self.filtered_fasta_dir, "--kept-accessions-output", self.kept_accessions_csv))),
             Step("prepare-comet-assignments", "create COMET calls and remove unassigned records", prepare_comet),
-            Step("build-genotype-workbook", "build the COMET genotype workbook with non-COMET priority assignments", lambda: self.run("build_ns5b_comet_gt_allstudies.py", "--fasta-dir", self.included_fasta_dir, "--comet-genotype-csv", comet_gt_csv, "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--output-dir", self.step_dir("build-genotype-workbook"), stdout_path=summary("build-genotype-workbook"))),
+            Step("select-noncomet-priority-assignments", "select non-COMET assignments that override or supplement COMET", lambda: self.run("select_noncomet_priority_assignments.py", "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--output-csv", self.priority_assignments_csv, stdout_path=summary("select-noncomet-priority-assignments"))),
+            Step("build-genotype-workbook", "build the COMET genotype workbook", lambda: self.run("build_ns5b_comet_gt_allstudies.py", "--fasta-dir", self.included_fasta_dir, "--comet-genotype-csv", comet_gt_csv, "--priority-assignments-csv", self.priority_assignments_csv, "--output-dir", self.step_dir("build-genotype-workbook"), stdout_path=summary("build-genotype-workbook"))),
             Step("add-genotype-counts", "add the genotype-count worksheet", lambda: self.run("add_gt_counts_sheet.py", "--workbook", gt_workbook)),
-            Step("build-subtype-workbook", "build COMET subtype workbook with non-COMET priorities", lambda: self.run("build_ns5b_comet_subtype_allstudies.py", "--genotype-workbook", gt_workbook, "--comet-subtype-csv", comet_subtype_csv, "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--output-dir", self.step_dir("build-subtype-workbook"), stdout_path=summary("build-subtype-workbook"))),
+            Step("build-subtype-workbook", "build the COMET subtype workbook", lambda: self.run("build_ns5b_comet_subtype_allstudies.py", "--genotype-workbook", gt_workbook, "--comet-subtype-csv", comet_subtype_csv, "--priority-assignments-csv", self.priority_assignments_csv, "--output-dir", self.step_dir("build-subtype-workbook"), stdout_path=summary("build-subtype-workbook"))),
             Step("extract-profile-aa", "extract genotype-position amino-acid sequences", extract_aa),
             Step("validate-profile-alignment", "write alignment QC columns and flagged-accession report", lambda: self.run("validate_ns5b_profile_alignment.py", "--input-workbook", self.step_dir("extract-profile-aa") / "NS5B_Profile_Input_Source.xlsx", "--gt-aa-json", self.gt_aa_json, "--output-workbook", self.aa_workbook, "--flagged-accessions-csv", self.step_dir("validate-profile-alignment") / "NS5B_Profile_Alignment_QC_Flagged_Accessions.csv", stdout_path=summary("validate-profile-alignment"))),
             Step("summarize-qc-mutation-burden", "summarize QC-passed genotype mutation burden", lambda: self.run("build_qc_passed_genotype_mutation_burden_summary.py", "--input-workbook", self.aa_workbook, "--output-csv", self.step_dir("summarize-qc-mutation-burden") / "NS5B_QC_Passed_Genotype_Mutation_Burden_Summary.csv")),

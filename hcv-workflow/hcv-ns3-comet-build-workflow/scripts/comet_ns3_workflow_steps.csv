@@ -6,6 +6,7 @@ filter-accession-metadata,filter_accessions_metadata_by_fasta.py
 split-refid-metadata,prepare_ns3_pipeline_workdirs.py;split_refid_metadata_csv.py
 filter-refid-fastas,filter_refid_fastas_by_metadata.py
 prepare-comet-assignments,prepare_comet_ns3_assignments.py
+select-noncomet-priority-assignments,select_noncomet_priority_assignments.py
 build-genotype-workbook,build_ns3_comet_gt_allstudies.py
 add-genotype-counts,add_gt_counts_sheet.py
 build-subtype-workbook,build_ns3_comet_subtype_allstudies.py
