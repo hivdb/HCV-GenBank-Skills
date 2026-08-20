@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 pipeline.local.toml
+~$*
 HCVData/FASTA/
 HCVData/HCV-all-seq-subtype/all.fasta
 HCVData/HCV-all-seq-subtype/Accessions.csv

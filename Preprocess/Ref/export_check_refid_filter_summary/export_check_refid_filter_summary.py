@@ -15,7 +15,7 @@ FILTERS = {
         "30": "source_isolate contains Day1", "2116": "source_collection_date before 2011",
         "943": "source_isolate contains Day 1", "2150": "source_isolate contains b",
         "600": "source_isolate does not contain failure", "884": "source_isolate contains Pre-TH",
-        "499": "source_isolate contains HCC", "2227": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS3/2227_Nguyen_(2015)_w_metadata_filtered.csv",
+        "499": "source_isolate contains HCC",
         "661": "source_isolation_source equals plasma", "2168": "source_isolate contains pre",
         "1356": "source_isolate does not contain IC", "192": "source_isolate contains day 1",
         "2138": "source_isolate contains Week 0", "346": "source_isolate contains baseline/D0",

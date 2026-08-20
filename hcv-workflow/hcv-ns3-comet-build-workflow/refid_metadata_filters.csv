@@ -17,4 +17,3 @@ RefID,Field,Operator,Value
 2150,source_isolate,contains,b
 2168,source_isolate,contains,pre
 2178,source_isolation_source,equals,plasma
-2227,Accession,in_accession_list,2227_Nguyen_(2015)_w_metadata_filtered.csv

@@ -95,8 +95,6 @@ def refid_filter_description(refid: str) -> str:
         return "source_isolate contains pre"
     if refid == "2178":
         return "source_isolation_source == plasma"
-    if refid == "2227":
-        return "Accession in 2227_Nguyen_(2015)_w_metadata_filtered.csv"
     raise KeyError(refid)
 
 
@@ -157,7 +155,7 @@ def row_is_kept(refid: str, row: dict[str, str]) -> bool:
 
 
 def filtered_refids() -> set[str]:
-    return {"30", "85", "142", "192", "346", "499", "600", "661", "884", "943", "1356", "2008", "2110", "2116", "2138", "2150", "2168", "2178", "2227"}
+    return {"30", "85", "142", "192", "346", "499", "600", "661", "884", "943", "1356", "2008", "2110", "2116", "2138", "2150", "2168", "2178"}
 
 
 def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -185,7 +183,6 @@ def main() -> int:
     }
     accession_filters = {
         "85": load_accessions(accession_list_dir / "85.csv"),
-        "2227": load_accessions(accession_list_dir / "2227_Nguyen_(2015)_w_metadata_filtered.csv")
     }
     rows_by_refid: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in rows:
