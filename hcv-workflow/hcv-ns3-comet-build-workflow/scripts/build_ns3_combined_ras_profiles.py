@@ -92,17 +92,18 @@ def write_combined_workbook(
     gt_rows: list[list[object]],
     subtype_rows: list[list[object]],
     threshold: float,
+    include_all_rows: bool = False,
 ) -> tuple[int, int, list[dict[str, object]]]:
     gt_by_number = {
         genotype: row
         for row in gt_rows
         if (genotype := genotype_from_label(row[0])) is not None
-        and has_minimum_total_sequences(row[0])
+        and (include_all_rows or has_minimum_total_sequences(row[0]))
     }
     subtypes_by_gt: dict[str, list[list[object]]] = defaultdict(list)
     for row in subtype_rows:
         genotype = genotype_from_label(row[0])
-        if genotype is not None and has_minimum_total_sequences(row[0]):
+        if genotype is not None and "_" in str(row[0]) and (include_all_rows or has_minimum_total_sequences(row[0])):
             subtypes_by_gt[genotype].append(row)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -189,6 +190,9 @@ def main() -> int:
 
     positions, gt_rows = read_profile_workbook(gt_path)
     subtype_positions, subtype_rows = read_profile_workbook(subtype_path)
+    if subtype_positions == [*positions, "MeanDiff"]:
+        subtype_positions = subtype_positions[:-1]
+        subtype_rows = [row[:-1] for row in subtype_rows]
     if positions != subtype_positions:
         raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
     genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
@@ -205,6 +209,7 @@ def main() -> int:
                 "output_xlsx": str(output_path.resolve()),
                 "genotype_count": genotype_count,
                 "profile_row_count": output_rows,
+                "included_subtype_count": output_rows - genotype_count,
                 "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
                 "full_profile_subtype_count": full_profile_subtype_count,
                 "full_profile_subtype_at_least_10_sequence_count": full_profile_subtype_at_least_10_count,

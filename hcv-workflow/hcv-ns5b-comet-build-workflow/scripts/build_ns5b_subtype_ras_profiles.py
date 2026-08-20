@@ -18,6 +18,8 @@ from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from build_ns5b_combined_ras_profiles import read_profile_workbook, write_combined_workbook
+
 
 DEFAULT_RESISTANCE_POSITIONS = [150, 159, 206, 282, 316, 320, 321]
 EXCLUDED_AAS = {"X", "*"}
@@ -32,6 +34,7 @@ def parse_args() -> argparse.Namespace:
         description="Build subtype-level NS5B resistance-position AA profile summary in Excel."
     )
     parser.add_argument("--subtype-profile-workbook", required=True)
+    parser.add_argument("--gt-ras-profile-workbook", required=True)
     parser.add_argument("--gt-aa-json", required=True)
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument(
@@ -199,6 +202,12 @@ def write_excel(path: Path, grid: list[list[GridCell]], positions: list[int]) ->
     wb.save(path)
 
 
+def grid_to_profile_rows(grid: list[list[GridCell]]) -> tuple[list[object], list[list[object]]]:
+    headers = list(grid[0]); headers[0] = None
+    rows = [[row[0], *["".join(f"{aa}{pct}" for aa, pct in value) if isinstance(value, list) else value for value in row[1:]]] for row in grid[1:]]
+    return headers, rows
+
+
 def main() -> int:
     args = parse_args()
     subtype_profile_workbook = Path(args.subtype_profile_workbook).expanduser()
@@ -209,16 +218,24 @@ def main() -> int:
 
     profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(subtype_profile_workbook, positions)
     grid = build_grid(profile_rows, subtype_counts, position_coverage, positions)
+    headers, subtype_rows = grid_to_profile_rows(grid)
+    gt_headers, gt_rows = read_profile_workbook(Path(args.gt_ras_profile_workbook).expanduser())
+    if headers != gt_headers:
+        raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / "NS5B_Subtype_RAS_Profiles.xlsx"
-    write_excel(excel_path, grid, positions)
+    genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
+        excel_path, headers, gt_rows, subtype_rows, FREQUENCY_THRESHOLD_PERCENT, include_all_rows=True
+    )
 
     summary = {
         "excel": str(excel_path.resolve()),
         "gene": TARGET_GENE,
         "positions": positions,
         "frequency_threshold_percent": FREQUENCY_THRESHOLD_PERCENT,
+        "included_subtype_count": output_rows - genotype_count,
+        "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
     }
     print(json.dumps(summary, indent=2))
     return 0

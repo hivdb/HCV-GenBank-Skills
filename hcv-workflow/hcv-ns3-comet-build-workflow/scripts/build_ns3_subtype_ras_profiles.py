@@ -17,6 +17,8 @@ from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Alignment, Font, PatternFill
 
+from build_ns3_combined_ras_profiles import read_profile_workbook, write_combined_workbook
+
 
 RESISTANCE_POSITIONS = [36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175]
 EXCLUDED_AAS = {"X", "*"}
@@ -30,6 +32,7 @@ def parse_args() -> argparse.Namespace:
         description="Build subtype-level NS3 resistance-position AA profile summary in Excel."
     )
     parser.add_argument("--subtype-profile-workbook", required=True)
+    parser.add_argument("--gt-ras-profile-workbook", required=True)
     parser.add_argument("--gt-aa-json", required=True)
     parser.add_argument("--output-dir", default="outputs")
     return parser.parse_args()
@@ -68,7 +71,9 @@ def variants_to_rich_text(variants: VariantCell) -> CellRichText | str:
     if not variants:
         return ""
     parts: list[str | TextBlock] = []
-    for aa, pct in variants:
+    for index, (aa, pct) in enumerate(variants):
+        if index and index % 2 == 0:
+            aa = f"\n{aa}"
         parts.append(aa)
         parts.append(TextBlock(InlineFont(vertAlign="superscript"), pct))
     return CellRichText(*parts)
@@ -157,25 +162,40 @@ def write_excel(path: Path, grid: list[list[GridCell]]) -> None:
     wb = Workbook()
     ws = wb.active
     ws.title = "Subtype_Resistance_Profile"
-    block_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+    header_fill = PatternFill(fill_type="solid", fgColor="FFF2F2F2")
     bold = Font(bold=True)
 
     for row_idx, row in enumerate(grid, start=1):
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.value = variants_to_rich_text(value) if isinstance(value, list) else value
-        first = row[0]
-        if isinstance(first, str) and first.startswith("GT"):
-            for cell in ws[row_idx]:
-                cell.fill = block_fill
-                cell.font = bold
         for cell in ws[row_idx]:
-            cell.alignment = Alignment(horizontal="center")
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            if row_idx == 1:
+                cell.fill = header_fill
+                cell.font = bold
 
     from openpyxl.utils import get_column_letter
     for col in range(1, len(RESISTANCE_POSITIONS) + 2):
-        ws.column_dimensions[get_column_letter(col)].width = 12 if col > 1 else 18
+        ws.column_dimensions[get_column_letter(col)].width = 12 if col > 1 else 24
     wb.save(path)
+
+
+def grid_to_profile_rows(grid: list[list[GridCell]]) -> tuple[list[object], list[list[object]]]:
+    positions = list(grid[0])
+    positions[0] = None
+    rows: list[list[object]] = []
+    for row in grid[1:]:
+        rows.append([
+            row[0],
+            *[
+                "".join(f"{amino_acid}{frequency}" for amino_acid, frequency in value)
+                if isinstance(value, list)
+                else value
+                for value in row[1:]
+            ],
+        ])
+    return positions, rows
 
 
 def main() -> int:
@@ -187,15 +207,23 @@ def main() -> int:
 
     profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(subtype_profile_workbook)
     grid = build_grid(profile_rows, subtype_counts, position_coverage)
+    positions, subtype_rows = grid_to_profile_rows(grid)
+    gt_positions, gt_rows = read_profile_workbook(Path(args.gt_ras_profile_workbook).expanduser())
+    if positions != gt_positions:
+        raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / "NS3_Subtype_RAS_Profiles.xlsx"
-    write_excel(excel_path, grid)
+    genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
+        excel_path, positions, gt_rows, subtype_rows, FREQUENCY_THRESHOLD_PERCENT, include_all_rows=True
+    )
 
     summary = {
         "excel": str(excel_path.resolve()),
         "positions": RESISTANCE_POSITIONS,
         "frequency_threshold_percent": FREQUENCY_THRESHOLD_PERCENT,
+        "included_subtype_count": output_rows - genotype_count,
+        "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
     }
     print(json.dumps(summary, indent=2))
     return 0
