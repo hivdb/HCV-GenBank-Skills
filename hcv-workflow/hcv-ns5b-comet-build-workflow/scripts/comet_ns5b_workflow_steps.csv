@@ -24,6 +24,7 @@ build-genotype-ras-profile,build_ns5b_gt_ras_profiles.py
 build-subtype-ras-profile,build_ns5b_subtype_ras_profiles.py
 build-combined-ras-reports,build_ns5b_combined_ras_profiles.py;replace_comet_profile_coverage_range_with_mean_diff.py;build_comet_subtype_ras_coverage_report.py;build_comet_workflow_sequence_audit.py
 add-nonconsensus-row,add_combined_profile_nonconsensus_row.py
+build-90pct-range-coverage-combined-profile,build_ns5b_completeprofiles_tabspergt.py --min-range-coverage 0.9 --range-start 150 --range-end 321;build_ns5b_gt_ras_profiles.py;build_ns5b_subtype_ras_profiles.py;build_ns5b_combined_ras_profiles.py;replace_comet_profile_coverage_range_with_mean_diff.py
 summarize-subtype-ras-differences,build_ns5b_subtype_ras_consensus_difference_summary.py
 build-genotype-aa-consensus-distance,build_ns5b_gt_aa_distance_matrix.py
 build-subtype-aa-consensus-distance,build_ns5b_subtype_aa_distance_matrices.py

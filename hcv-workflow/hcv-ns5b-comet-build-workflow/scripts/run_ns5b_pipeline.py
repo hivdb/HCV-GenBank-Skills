@@ -36,6 +36,7 @@ STEP_NAMES = (
     "export-noncomet-priority-accessions", "export-consensus-fastas", "align-subtype-consensus-to-gt1a",
     "compare-reference-consensus", "build-genotype-ras-profile", "build-subtype-ras-profile",
     "build-combined-ras-reports", "add-nonconsensus-row",
+    "build-90pct-range-coverage-combined-profile",
     "summarize-subtype-ras-differences", "build-genotype-aa-consensus-distance",
     "build-subtype-aa-consensus-distance", "build-paired-distance-matrices", "build-ras-entropy",
     "publish-ictv-report",
@@ -181,6 +182,12 @@ class Pipeline:
 
     def step_dir(self, name: str) -> Path:
         return self.output_dir / f"{STEP_ORDER[name]:02d}_{name}"
+
+    def profile_accessions_for_current_step(self) -> Path:
+        if self.current_step_order == STEP_ORDER["build-90pct-range-coverage-combined-profile"]:
+            return self.step_dir("build-90pct-range-coverage-combined-profile") / "NS5B_Profile_Accessions_90Pct_Range_Coverage.csv"
+        return self.profile_accessions_csv
+
     def ensure_summary_directories(self) -> None:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         for name in STEP_NAMES:
@@ -239,8 +246,9 @@ class Pipeline:
 
     def print_accession_counts(self, input_accessions: set[str]) -> None:
         included_accessions: set[str] = set()
-        if self.current_step_order >= STEP_ORDER["build-complete-profiles"] and self.profile_accessions_csv.is_file():
-            with self.profile_accessions_csv.open(encoding="utf-8", newline="") as handle:
+        profile_accessions_csv = self.profile_accessions_for_current_step()
+        if self.current_step_order >= STEP_ORDER["build-complete-profiles"] and profile_accessions_csv.is_file():
+            with profile_accessions_csv.open(encoding="utf-8", newline="") as handle:
                 for row in csv.DictReader(handle):
                     accession = (row.get("accession") or row.get("AccessionID") or row.get("Accession") or "").strip()
                     if accession:
@@ -280,9 +288,10 @@ class Pipeline:
         counts: dict[str, tuple[set[str], int]] = {"7": (set(), 0), "8": (set(), 0)}
         stage = ""
         subtype_workbook = self.step_dir("build-subtype-workbook") / "NS5B_Subtype_AllStudies_WSeqs.xlsx"
-        if self.current_step_order >= STEP_ORDER["build-complete-profiles"] and self.profile_accessions_csv.is_file():
-            stage = "complete-profile eligibility"
-            with self.profile_accessions_csv.open(encoding="utf-8", newline="") as handle:
+        profile_accessions_csv = self.profile_accessions_for_current_step()
+        if self.current_step_order >= STEP_ORDER["build-complete-profiles"] and profile_accessions_csv.is_file():
+            stage = "90%-range-coverage profile eligibility" if profile_accessions_csv != self.profile_accessions_csv else "complete-profile eligibility"
+            with profile_accessions_csv.open(encoding="utf-8", newline="") as handle:
                 for row in csv.DictReader(handle):
                     genotype = (row.get("genotype") or "").strip().removeprefix("GT")
                     subtype = (row.get("subtype") or "").strip().lower()
@@ -386,6 +395,23 @@ class Pipeline:
         comet_gt_csv = self.temp_root / "comet_ns5b_genotype_assignments.csv"
         comet_subtype_csv = self.comet_subtype_assignments_csv
 
+        def build_90pct_range_coverage_combined_profile() -> None:
+            step_dir = self.step_dir("build-90pct-range-coverage-combined-profile")
+            complete_profile_dir = step_dir / "complete_profiles"
+            gt_profile_90pct = complete_profile_dir / "NS5B_GT_CompleteProfiles_TabsPerGT.xlsx"
+            subtype_profile_90pct = complete_profile_dir / "NS5B_Subtype_CompleteProfiles_TabsPerGT.xlsx"
+            profile_accessions_90pct = step_dir / "NS5B_Profile_Accessions_90Pct_Range_Coverage.csv"
+            gt_ras_dir = step_dir / "gt_ras_profile"
+            gt_ras_90pct = gt_ras_dir / "NS5B_GT_RAS_Profiles.xlsx"
+            subtype_ras_dir = step_dir / "subtype_ras_profile"
+            subtype_ras_90pct = subtype_ras_dir / "NS5B_Subtype_RAS_Profiles.xlsx"
+            combined_90pct = step_dir / "NS5B_Combined_RAS_Profiles_90Pct_Range_Coverage.xlsx"
+            self.run("build_ns5b_completeprofiles_tabspergt.py", "--input-workbook", self.aa_workbook, "--output-dir", complete_profile_dir, "--profile-accessions-csv", profile_accessions_90pct, "--min-range-coverage", "0.9", "--range-start", "150", "--range-end", "321", stdout_path=summary("build-90pct-range-coverage-combined-profile"))
+            self.run("build_ns5b_gt_ras_profiles.py", "--gt-profile-workbook", gt_profile_90pct, "--gt-aa-json", self.gt_aa_json, "--output-dir", gt_ras_dir)
+            self.run("build_ns5b_subtype_ras_profiles.py", "--subtype-profile-workbook", subtype_profile_90pct, "--gt-ras-profile-workbook", gt_ras_90pct, "--gt-aa-json", self.gt_aa_json, "--output-dir", subtype_ras_dir)
+            self.run("build_ns5b_combined_ras_profiles.py", "--gt-ras-profile-workbook", gt_ras_90pct, "--subtype-ras-profile-workbook", subtype_ras_90pct, "--output-xlsx", combined_90pct)
+            self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", combined_90pct, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", profile_accessions_90pct)
+
         def prepare() -> None:
             self.run("prepare_ns5b_pipeline_workdirs.py", "--clean-dir", self.output_dir)
 
@@ -443,6 +469,7 @@ class Pipeline:
             Step("build-subtype-ras-profile", "build subtype RAS profile", lambda: (self.run("build_ns5b_subtype_ras_profiles.py", "--subtype-profile-workbook", subtype_profile, "--gt-ras-profile-workbook", gt_ras, "--gt-aa-json", self.gt_aa_json, "--output-dir", self.step_dir("build-subtype-ras-profile"), stdout_path=summary("build-subtype-ras-profile")), self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", subtype_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv))),
             Step("build-combined-ras-reports", "build combined RAS, coverage, and sequence-audit reports", lambda: (self.run("build_ns5b_combined_ras_profiles.py", "--gt-ras-profile-workbook", gt_ras, "--subtype-ras-profile-workbook", subtype_ras, "--output-xlsx", combined_ras, stdout_path=summary("build-combined-ras-reports")), self.run("replace_comet_profile_coverage_range_with_mean_diff.py", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv), self.run("build_comet_subtype_ras_coverage_report.py", "--gene", "NS5B", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--output-xlsx", self.step_dir("build-combined-ras-reports") / "NS5B_Subtype_RAS_Coverage_Report.xlsx"), self.run("build_comet_workflow_sequence_audit.py", "--gene", "NS5B", "--selection-workbook", self.excel_file, "--selection-sheet", self.sheet_name, "--fasta-dir", self.fasta_pool, "--metadata-csv", self.metadata_csv, "--comet-csv", self.comet_csv, "--qc-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--combined-profile-workbook", combined_ras, "--combined-subtype-cutoff", "10", "--profile-filter-reason", "Missing or non-callable amino acid at one or more required RAS positions (150, 159, 206, 282, 316, 320, 321)", "--output-xlsx", self.step_dir("build-combined-ras-reports") / "NS5B_Workflow_Sequence_Audit.xlsx"))),
             Step("add-nonconsensus-row", "create annotated combined profile with MeanDiff and PositionDiff", lambda: self.run("add_combined_profile_nonconsensus_row.py", "--combined-profile-workbook", combined_ras, "--output-workbook", annotated_combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus)),
+            Step("build-90pct-range-coverage-combined-profile", "build a combined profile from accessions with at least 90% non-X coverage of NS5B positions 150-321", build_90pct_range_coverage_combined_profile),
             Step("summarize-subtype-ras-differences", "summarize subtype RAS differences from genotype consensus", lambda: self.run("build_ns5b_subtype_ras_consensus_difference_summary.py", "--combined-profile-workbook", combined_ras, "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype-consensus-fasta", gt_consensus, "--output-xlsx", self.step_dir("summarize-subtype-ras-differences") / "NS5B_Subtype_RAS_Consensus_Difference_Summary.xlsx", "--output-png", self.step_dir("summarize-subtype-ras-differences") / "NS5B_Subtype_RAS_Consensus_Difference_Trend.png", stdout_path=summary("summarize-subtype-ras-differences"))),
             Step("build-genotype-aa-consensus-distance", "build genotype consensus amino-acid distance matrix", lambda: self.run("build_ns5b_gt_aa_distance_matrix.py", "--input-fasta", gt_consensus, "--aligned-fasta", self.step_dir("build-genotype-aa-consensus-distance") / "NS5B_GT_Consensus_aligned.fasta", "--output-xlsx", self.step_dir("build-genotype-aa-consensus-distance") / "NS5B_GT_Consensus_AA_Distance_Pos150_321.xlsx", "--details-xlsx", summary("build-genotype-aa-consensus-distance", "NS5B_GT_Consensus_AA_Distance_Pos150_321_details.xlsx"), "--start", "150", "--end", "321", stdout_path=summary("build-genotype-aa-consensus-distance", "last_run_summary.txt"))),
             Step("build-subtype-aa-consensus-distance", "build subtype consensus amino-acid distance matrices", lambda: self.run("build_ns5b_subtype_aa_distance_matrices.py", "--input-fasta", subtype_consensus, "--subtype-profile-workbook", subtype_profile, "--min-subtype-sequences", "10", "--output-xlsx", self.step_dir("build-subtype-aa-consensus-distance") / "NS5B_Subtype_Consensus_AA_Distance_Pos150_321.xlsx", "--temp-dir", self.step_dir("build-subtype-aa-consensus-distance"), "--start", "150", "--end", "321", stdout_path=summary("build-subtype-aa-consensus-distance", "last_run_summary.txt"))),

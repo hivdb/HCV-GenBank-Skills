@@ -26,6 +26,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="outputs", help="Base output directory.")
     parser.add_argument("--profile-accessions-csv", help="CSV listing accessions included in profile construction.")
     parser.add_argument(
+        "--min-range-coverage",
+        type=float,
+        default=0.0,
+        help="Minimum non-X coverage fraction across --range-start through --range-end (default: no range filter).",
+    )
+    parser.add_argument("--range-start", type=int, default=150)
+    parser.add_argument("--range-end", type=int, default=321)
+    parser.add_argument(
         "--report-only",
         action="store_true",
         help="Print profile-input accession counts without creating workbooks.",
@@ -63,7 +71,22 @@ def missing_ras_positions(start: int, aa_sequence: str) -> list[int]:
     return missing
 
 
-def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]]:
+def has_minimum_range_coverage(
+    start: int, sequence: str, range_start: int, range_end: int, minimum_coverage: float
+) -> bool:
+    if minimum_coverage <= 0:
+        return True
+    covered = sum(
+        1
+        for position in range(range_start, range_end + 1)
+        if 0 <= position - start < len(sequence) and sequence[position - start].upper() != "X"
+    )
+    return covered / (range_end - range_start + 1) >= minimum_coverage
+
+
+def load_rows(
+    workbook_path: Path, minimum_range_coverage: float = 0.0, range_start: int = 150, range_end: int = 321
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
     header = [str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))]
@@ -76,6 +99,7 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
     unassigned_genotype_accessions: set[str] = set()
     unassigned_subtype_accessions: set[str] = set()
     incomplete_ras_accessions: set[str] = set()
+    insufficient_range_coverage_accessions: set[str] = set()
     for values in ws.iter_rows(min_row=2, values_only=True):
         if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
             continue
@@ -98,6 +122,9 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
         if missing_ras_positions(start_position, sequence):
             incomplete_ras_accessions.add(accession)
             continue
+        if not has_minimum_range_coverage(start_position, sequence, range_start, range_end, minimum_range_coverage):
+            insufficient_range_coverage_accessions.add(accession)
+            continue
         rows.append(
             {
                 "AccessionID": accession,
@@ -114,6 +141,7 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
         "ignored_unassigned_subtype_accession_count": len(unassigned_subtype_accessions),
         "ignored_unassigned_accession_count": len(unassigned_genotype_accessions | unassigned_subtype_accessions),
         "ignored_incomplete_ras_coverage_accession_count": len(incomplete_ras_accessions),
+        "ignored_insufficient_range_coverage_accession_count": len(insufficient_range_coverage_accessions),
     }
 
 
@@ -236,7 +264,13 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     script_temp_dir()
 
-    rows, ignored_counts = load_rows(input_workbook)
+    if not 0.0 <= args.min_range_coverage <= 1.0:
+        raise ValueError("--min-range-coverage must be between 0 and 1")
+    if args.range_start > args.range_end:
+        raise ValueError("--range-start must not exceed --range-end")
+    rows, ignored_counts = load_rows(
+        input_workbook, args.min_range_coverage, args.range_start, args.range_end
+    )
     counts = {**accession_counts(rows), **ignored_counts}
     if args.report_only:
         print(json.dumps(counts))
@@ -268,6 +302,8 @@ def main() -> int:
         "gt_sequence_counts": gt_summary,
         "subtype_group_count": sum(len(v) for v in rows_by_gt_subtype.values()),
         "required_ras_positions": list(REQUIRED_RAS_POSITIONS),
+        "minimum_range_coverage": args.min_range_coverage,
+        "range_coverage_positions": [args.range_start, args.range_end],
         "profile_input_rule": "Every retained accession has a callable amino-acid at every required RAS position.",
         "note": "CountWithAA and CountWithAAAlone are identical because current AA sequences contain single-letter calls, not explicit mixtures.",
     }

@@ -27,6 +27,7 @@ Use this skill for the full NS5B high-throughput build workflow. The first step 
 16. Build the combined RAS profile and update its coverage labels.
     - `build_ns5b_combined_ras_profiles/build_ns5b_combined_ras_profiles.py`
     - `replace_comet_profile_coverage_range_with_mean_diff/replace_comet_profile_coverage_range_with_mean_diff.py`
+17. Build a separate combined RAS profile using only accessions with at least 90% non-`X` coverage across NS5B positions 150–321.
 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 
@@ -69,6 +70,7 @@ The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.
 The priority-assignment stage selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 
 Complete-profile construction retains an accession only when it has callable amino-acid coverage at every NS5B RAS position: 150, 159, 206, 282, 316, 320, and 321. Missing, `X`, stop (`*`), or non-standard calls at any of these positions exclude that accession from the profile and its downstream RAS and distance reports.
+The `build-90pct-range-coverage-combined-profile` step is separate from the standard combined profile. It applies the same RAS requirements plus at least 90% non-`X` coverage across positions 150–321, and writes its own profile-accession list and intermediate profiles.
 
 ## Outputs
 
@@ -97,6 +99,7 @@ The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
 - `NS5B_GT_RAS_Profiles.xlsx`
 - `NS5B_Subtype_RAS_Profiles.xlsx`
 - `NS5B_Subtype_RAS_Profiles_Explicit_AA.xlsx` (all reportable subtype amino acids at RAS positions; used by the ICTV publication step)
+- `NS5B_Combined_RAS_Profiles_90Pct_Range_Coverage.xlsx` under `26_build-90pct-range-coverage-combined-profile/` (combined profile restricted to at least 90% coverage of positions 150–321)
 - paired AA/NA RAS and position-range distance workbooks under `outputs/`
 
 ## Operating Rules
