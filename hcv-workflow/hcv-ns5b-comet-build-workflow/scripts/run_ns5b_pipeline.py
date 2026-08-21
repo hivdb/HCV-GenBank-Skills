@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -253,6 +254,28 @@ class Pipeline:
         print(f"Excluded accessions: {len(input_accessions - included_accessions)}")
         print(f"Final included accessions: {len(included_accessions)}")
 
+    def print_complete_profile_genotype_distribution(self) -> None:
+        if not self.profile_accessions_csv.is_file():
+            return
+        counts: dict[str, int] = {}
+        with self.profile_accessions_csv.open(encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                genotype = (row.get("genotype") or "").strip().removeprefix("GT")
+                if genotype:
+                    counts[genotype] = counts.get(genotype, 0) + 1
+        total = sum(counts.values())
+        if not total:
+            return
+        def percent(count: int) -> str:
+            value = 100.0 * count / total
+            decimal_places = max(0, -int(math.floor(math.log10(value)))) if value else 0
+            return f"{value:.{decimal_places}f}%"
+        distribution = ", ".join(
+            f"GT{genotype} ({percent(count)}, {count})"
+            for genotype, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+        )
+        print(f"Complete-profile genotype distribution: {distribution}")
+
     def print_gt7_gt8_subtype_counts(self) -> None:
         counts: dict[str, tuple[set[str], int]] = {"7": (set(), 0), "8": (set(), 0)}
         stage = ""
@@ -460,6 +483,8 @@ def main() -> int:
             step.action()
         finally:
             pipeline.print_accession_counts(input_accessions)
+            if step.order == STEP_ORDER["build-complete-profiles"]:
+                pipeline.print_complete_profile_genotype_distribution()
             if step.order > STEP_ORDER["stage-refid-fastas"]:
                 pipeline.print_gt7_gt8_subtype_counts()
     print("NS5B pipeline complete")
