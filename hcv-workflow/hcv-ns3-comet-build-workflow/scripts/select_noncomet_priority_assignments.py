@@ -11,21 +11,14 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local-assignments-csv", required=True)
+    parser.add_argument("--noncomet-coverage-csv", required=True)
     parser.add_argument("--fasta-dir", required=True, help="RefID-prefixed FASTA pool used to resolve priority accessions.")
-    parser.add_argument("--comet-unassigned-csv", required=True, help="Current-workflow COMET missing/unassigned report.")
     parser.add_argument("--output-csv", required=True)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    with Path(args.comet_unassigned_csv).open(encoding="utf-8-sig", newline="") as source:
-        comet_unassigned_accessions = {
-            (row.get("accession") or "").strip().split(".", 1)[0]
-            for row in csv.DictReader(source)
-            if (row.get("column_name") or "").strip().lower() == "unassigned"
-        }
     refid_by_accession: dict[str, tuple[str, str]] = {}
     for fasta_path in sorted(Path(args.fasta_dir).glob("*.fasta")):
         refid, _, refname = fasta_path.stem.partition("_")
@@ -33,21 +26,21 @@ def main() -> int:
             if line.startswith(">"):
                 accession = line[1:].strip().split(maxsplit=1)[0].split(".", 1)[0]
                 refid_by_accession.setdefault(accession, (refid, refname))
-    with Path(args.local_assignments_csv).open(encoding="utf-8-sig", newline="") as source:
+    with Path(args.noncomet_coverage_csv).open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
-        if not reader.fieldnames:
-            raise RuntimeError(f"No header found in {args.local_assignments_csv}")
-        rows = []
-        for row in reader:
-            accession = (row.get("accession") or "").strip()
-            genotype = (row.get("genotype") or "").strip().removeprefix("GT")
-            subtype = (row.get("subtype") or "").strip().lower()
-            if not accession or not genotype.isdigit() or not subtype:
-                continue
-            accession_key = accession.split(".", 1)[0]
-            if subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8")) or accession_key in comet_unassigned_accessions:
-                rows.append({"Accession": accession, "ClosestGenotype": genotype, "ClosestSubtype": subtype})
-        fieldnames = ["Accession", "ClosestGenotype", "ClosestSubtype", "RefID", "RefName"]
+        fieldnames = reader.fieldnames
+        if not fieldnames:
+            raise RuntimeError(f"No header found in {args.noncomet_coverage_csv}")
+        rows = [
+            row for row in reader
+            if (row.get("Accession") or "").strip()
+            and (
+                (row.get("ClosestSubtype") or "").strip().lower() == "1d"
+                or (row.get("ClosestGenotype") or "").strip().lower() in {"7", "8"}
+                or (row.get("ClosestSubtype") or "").strip().lower().startswith(("7", "8"))
+            )
+        ]
+        fieldnames = [*fieldnames, *(name for name in ("RefID", "RefName") if name not in fieldnames)]
     for row in rows:
         refid, refname = refid_by_accession.get((row.get("Accession") or "").strip().split(".", 1)[0], ("", ""))
         row["RefID"], row["RefName"] = refid, refname

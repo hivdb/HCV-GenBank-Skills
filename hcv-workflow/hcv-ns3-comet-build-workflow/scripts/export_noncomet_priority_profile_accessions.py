@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile-accessions-csv", required=True)
     parser.add_argument("--comet-subtype-csv", required=True)
-    parser.add_argument("--local-assignments-csv", required=True)
+    parser.add_argument("--noncomet-coverage-csv", required=True)
     parser.add_argument("--output-csv", required=True)
     return parser.parse_args()
 
@@ -30,11 +30,11 @@ def main() -> None:
         comet_subtypes = {accession_key(row.get("name") or row.get("accession")): str(row.get("subtype") or "").strip().lower() for row in csv.DictReader(handle)}
 
     priority_subtypes: dict[str, str] = {}
-    with Path(args.local_assignments_csv).open(encoding="utf-8-sig", newline="") as handle:
+    with Path(args.noncomet_coverage_csv).open(encoding="utf-8-sig", newline="") as handle:
         for row in csv.DictReader(handle):
-            accession = accession_key(row.get("accession"))
-            genotype = str(row.get("genotype") or "").strip().removeprefix("GT").lower()
-            subtype = str(row.get("subtype") or "").strip().lower()
+            accession = accession_key(row.get("Accession"))
+            genotype = str(row.get("ClosestGenotype") or "").strip().lower()
+            subtype = str(row.get("ClosestSubtype") or "").strip().lower()
             if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
                 priority_subtypes[accession] = subtype
 
