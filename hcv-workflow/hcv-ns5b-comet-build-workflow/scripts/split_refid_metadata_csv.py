@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -69,17 +68,11 @@ def text_contains(row: dict[str, str], column: str, needle: str) -> bool:
     return needle.casefold() in (row.get(column) or "").casefold()
 
 
-def source_isolate_contains_ha01_to_ha97(row: dict[str, str]) -> bool:
-    text = row.get("source_isolate") or ""
-    return bool(re.search(r"(?<![A-Za-z0-9])Ha(0[1-9]|[1-8][0-9]|9[0-7])(?![A-Za-z0-9])", text, re.IGNORECASE))
-
-
 def refid_filter_description(refid: str) -> str:
     descriptions = {
         "142": "Accession in 142.csv",
         "30": "source_isolate contains day1",
         "346": "source_isolate contains baseline",
-        "891": "source_isolate contains Ha01 through Ha97",
         "943": "source_isolate contains day 1",
     }
     return descriptions[refid]
@@ -90,15 +83,13 @@ def row_is_kept(refid: str, row: dict[str, str]) -> bool:
         return text_contains(row, "source_isolate", "day1")
     if refid == "346":
         return text_contains(row, "source_isolate", "baseline")
-    if refid == "891":
-        return source_isolate_contains_ha01_to_ha97(row)
     if refid == "943":
         return text_contains(row, "source_isolate", "day 1")
     raise KeyError(refid)
 
 
 def filtered_refids() -> set[str]:
-    return {"30", "142", "346", "891", "943"}
+    return {"30", "142", "346", "943"}
 
 
 def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -196,7 +187,8 @@ def main() -> int:
     print(f"input_accession_count={len(input_accessions)}")
     print(f"output_accession_count={len(output_accessions)}")
     print(f"input_row_count={len(rows)}")
-    print(f"filtered_refids={','.join(sorted(filtered_refids()))}")
+    print(f"filtered_refids={','.join(sorted(filtered_refids(), key=int))}")
+    print(f"filtered_refid_count={len(summary_rows)}")
     print(f"output_dir={output_dir.resolve()}")
     for row in summary_rows:
         list_audit: list[str] = []

@@ -47,7 +47,7 @@ KNOWN_QUASISPECIES_REFIDS = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Read one Excel worksheet, collect every non-empty RefID, and find matching "
+            "Read one Excel worksheet, collect RefIDs with a detailed include status, and find matching "
             "FASTA files by filename prefix."
         )
     )
@@ -56,6 +56,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fasta-dir", required=True, help="Directory containing FASTA files")
     parser.add_argument("--output-dir", default="outputs", help="Base output directory")
     parser.add_argument("--refid-column", default="RefID", help="Column name holding RefID values")
+    parser.add_argument(
+        "--status-column",
+        default="Status",
+        help="Column used to print statuses of the form 'include <details>'",
+    )
     parser.add_argument(
         "--positive-column",
         action="append",
@@ -70,9 +75,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--exclude-known-quasispecies-refids",
-        action="store_true",
-        default=True,
-        help="Exclude the built-in RefID set used by downstream genotype/subtype workflows (default: enabled)",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Exclude the built-in RefID set used by downstream genotype/subtype workflows (default: disabled)",
     )
     return parser.parse_args()
 
@@ -109,10 +114,16 @@ def parse_positive_number(value: Any) -> float | None:
         return None
 
 
+def is_special_include_status(status: str) -> bool:
+    status_parts = status.casefold().split(maxsplit=1)
+    return len(status_parts) == 2 and status_parts[0] == "include"
+
+
 def load_matching_refids(
     excel_file: Path,
     sheet_name: str,
     refid_column: str,
+    status_column: str,
     positive_columns: list[str],
     excluded_refids: set[str],
 ) -> tuple[list[str], list[dict[str, Any]], list[str], list[tuple[Any, ...]], dict[str, Any]]:
@@ -124,6 +135,7 @@ def load_matching_refids(
     rows = list(sheet.iter_rows(values_only=True))
     if not rows:
         raise RuntimeError(f"Worksheet '{sheet_name}' is empty")
+    print(f"Input rows: {len(rows) - 1}")
 
     headers = [normalize_header(value) for value in rows[0]]
     header_index = {header: idx for idx, header in enumerate(headers) if header}
@@ -135,6 +147,7 @@ def load_matching_refids(
             raise RuntimeError(f"Column '{column}' was not found in worksheet '{sheet_name}'")
 
     refid_idx = header_index[refid_column]
+    status_idx = header_index.get(status_column)
     positive_indices = {column: header_index[column] for column in positive_columns}
 
     matching_refids: list[str] = []
@@ -142,12 +155,16 @@ def load_matching_refids(
     result_rows: list[tuple[Any, ...]] = []
     scanned_rows = 0
     qualifying_rows = 0
+    special_include_status_rows = 0
     skipped_missing_refid = 0
     skipped_additional_positive_filter = 0
     skipped_excluded_refid = 0
 
     for row in rows[1:]:
         scanned_rows += 1
+        status = str(row[status_idx] if status_idx is not None and status_idx < len(row) and row[status_idx] is not None else "").strip()
+        has_special_include_status = is_special_include_status(status)
+        special_include_status_rows += has_special_include_status
         failed_positive_filter = False
         positive_values: dict[str, float] = {}
         for column, idx in positive_indices.items():
@@ -175,6 +192,7 @@ def load_matching_refids(
         matching_rows.append(
             {
                 "refid": refid,
+                "status": status,
                 **positive_values,
             }
         )
@@ -184,6 +202,7 @@ def load_matching_refids(
         "headers": headers,
         "rows_scanned": scanned_rows,
         "qualifying_rows": qualifying_rows,
+        "special_include_status_rows": special_include_status_rows,
         "skipped_missing_refid": skipped_missing_refid,
         "skipped_additional_positive_filter": skipped_additional_positive_filter,
         "skipped_excluded_refid": skipped_excluded_refid,
@@ -237,6 +256,11 @@ def write_result_sheet(path: Path, headers: list[str], rows: list[tuple[Any, ...
     workbook.save(path)
 
 
+def refid_sort_key(row: dict[str, Any]) -> tuple[int, int | str]:
+    refid = row["refid"]
+    return (0, int(refid)) if refid.isdigit() else (1, refid)
+
+
 def main() -> int:
     args = parse_args()
     excel_file = Path(args.excel_file).expanduser()
@@ -259,6 +283,7 @@ def main() -> int:
         excel_file,
         args.sheet,
         args.refid_column,
+        args.status_column,
         args.positive_column,
         excluded_refids,
     )
@@ -277,6 +302,7 @@ def main() -> int:
         "sheet": args.sheet,
         "fasta_dir": str(fasta_dir.resolve()),
         "refid_column": args.refid_column,
+        "status_column": args.status_column,
         "excluded_refids": sorted(excluded_refids),
         "refid_count": len(refids),
         "matched_file_count": len(matched_files),
@@ -291,7 +317,10 @@ def main() -> int:
     }
     write_json(job_dir / "summary.json", summary)
 
-    print(json.dumps(summary, indent=2, ensure_ascii=True))
+    for row in sorted(matching_rows, key=refid_sort_key):
+        if is_special_include_status(row["status"]):
+            print(f"RefID {row['refid']}: {row['status']}")
+    print(f"FASTA files found: {len(matched_files)}")
     return 0
 
 

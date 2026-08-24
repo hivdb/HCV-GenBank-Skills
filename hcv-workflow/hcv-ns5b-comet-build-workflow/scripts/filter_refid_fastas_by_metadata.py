@@ -31,6 +31,10 @@ def refid_from_fasta_path(path: Path) -> str | None:
     return match.group(1) if match else None
 
 
+def refid_sort_key(refid: str) -> tuple[int, int | str]:
+    return (0, int(refid)) if refid.isdigit() else (1, refid)
+
+
 def load_metadata_accessions(path: Path) -> set[str]:
     with path.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -141,7 +145,9 @@ def main() -> int:
     print(f"staged_fasta_accessions_removed={len(input_accessions - output_accessions)}")
     print(f"refid_fasta_files_filtered={filtered_fasta_refids}")
     print(f"filter_rules_without_matching_fasta={missing_fasta_count}")
-    for refid, before_count, after_count in per_refid_counts:
+    sorted_per_refid_counts = sorted(per_refid_counts, key=lambda item: refid_sort_key(item[0]))
+    print(f"filtered_refids={','.join(refid for refid, _before_count, _after_count in sorted_per_refid_counts)}")
+    for refid, before_count, after_count in sorted_per_refid_counts:
         print(
             f"refid_filter_result=RefID:{refid},"
             f"BeforeRows:{before_count},AfterRows:{after_count},"

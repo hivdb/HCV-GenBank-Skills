@@ -1,10 +1,8 @@
 RefID,Field,Operator,Value
 30,source_isolate,contains,Day1
-85,Accession,in_accession_list,85.csv
 142,source_isolate,contains,baseline
-192,source_isolate,contains,day 1
+192,source_isolate,contains,day1
 346,source_isolate,contains,baseline/D0
-499,source_isolate,contains,HCC
 600,source_isolate,not_contains,failure
 661,source_isolation_source,equals,plasma
 884,source_isolate,contains,Pre-TH
@@ -13,7 +11,6 @@ RefID,Field,Operator,Value
 2008,source_isolate,not_contains,chimpanzee
 2110,source_isolate,contains,T0
 2116,source_collection_date,year_before,2011
-2138,source_isolate,contains,Week 0
 2150,source_isolate,contains,b
 2168,source_isolate,contains,pre
 2178,source_isolation_source,equals,plasma

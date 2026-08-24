@@ -75,16 +75,12 @@ def fasta_accession_count(fasta_dir: Path | None, refid: str) -> int | None:
 def refid_filter_description(refid: str) -> str:
     if refid == "30":
         return "source_isolate contains Day1"
-    if refid == "85":
-        return "Accession in 85.csv"
     if refid == "142":
         return "source_isolate contains baseline"
     if refid == "192":
-        return "source_isolate contains day 1"
+        return "source_isolate contains day1"
     if refid == "346":
         return "source_isolate contains baseline/D0"
-    if refid == "499":
-        return "source_isolate contains HCC"
     if refid == "600":
         return "source_isolate does not contain failure"
     if refid == "661":
@@ -101,8 +97,6 @@ def refid_filter_description(refid: str) -> str:
         return "source_isolate contains T0"
     if refid == "2116":
         return "source_collection_date before 2011"
-    if refid == "2138":
-        return "source_isolate contains Week 0"
     if refid == "2150":
         return "source_isolate contains b"
     if refid == "2168":
@@ -135,11 +129,9 @@ def row_is_kept(refid: str, row: dict[str, str]) -> bool:
     if refid == "142":
         return text_contains(row, "source_isolate", "baseline")
     if refid == "192":
-        return text_contains(row, "source_isolate", "day 1")
+        return text_contains(row, "source_isolate", "day1")
     if refid == "346":
         return text_contains(row, "source_isolate", "baseline/D0")
-    if refid == "499":
-        return text_contains(row, "source_isolate", "HCC")
     if refid == "600":
         return text_does_not_contain(row, "source_isolate", "failure")
     if refid == "661":
@@ -157,8 +149,6 @@ def row_is_kept(refid: str, row: dict[str, str]) -> bool:
     if refid == "2116":
         year = first_year(row.get("source_collection_date") or "")
         return year is not None and year < 2011
-    if refid == "2138":
-        return text_contains(row, "source_isolate", "Week 0")
     if refid == "2150":
         return text_contains(row, "source_isolate", "b")
     if refid == "2168":
@@ -169,7 +159,7 @@ def row_is_kept(refid: str, row: dict[str, str]) -> bool:
 
 
 def filtered_refids() -> set[str]:
-    return {"30", "85", "142", "192", "346", "499", "600", "661", "884", "943", "1356", "2008", "2110", "2116", "2138", "2150", "2168", "2178"}
+    return {"30", "142", "192", "346", "600", "661", "884", "943", "1356", "2008", "2110", "2116", "2150", "2168", "2178"}
 
 
 def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -260,7 +250,8 @@ def main() -> int:
     print(f"input_accession_count={len(input_accessions)}")
     print(f"output_accession_count={len(output_accessions)}")
     print(f"input_row_count={len(rows)}")
-    print(f"filtered_refids={','.join(sorted(filtered_refids()))}")
+    print(f"filtered_refids={','.join(sorted(filtered_refids(), key=int))}")
+    print(f"filtered_refid_count={len(summary_rows)}")
     print(f"output_dir={output_dir.resolve()}")
     for row in summary_rows:
         print("filter_result:")

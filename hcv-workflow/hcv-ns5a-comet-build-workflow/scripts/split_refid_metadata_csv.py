@@ -218,7 +218,8 @@ def main() -> int:
     print(f"input_accession_count={len(input_accessions)}")
     print(f"output_accession_count={len(output_accessions)}")
     print(f"input_row_count={len(rows)}")
-    print(f"filtered_refids={','.join(rule.refid for rule in rules)}")
+    print(f"filtered_refids={','.join(rule.refid for rule in sorted(rules, key=lambda rule: int(rule.refid)))}")
+    print(f"filtered_refid_count={len(summary_rows)}")
     print(f"output_dir={output_dir.resolve()}")
     for row in summary_rows:
         print("filter_result:")

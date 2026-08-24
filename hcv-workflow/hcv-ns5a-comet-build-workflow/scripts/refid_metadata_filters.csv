@@ -1,12 +1,6 @@
 RefID,Field,Operator,Value
 17,Accession,in_accession_list,17.csv
-29,source_isolate,contains,SCRN
-50,source_isolate,contains,week 0
-85,Accession,in_accession_list,85.csv
-123,source_isolate,not_contains,TF
 142,source_isolate,contains,baseline
-165,Accession,in_accession_list,165.csv
-192,source_isolate,contains,day1
 288,source_isolate,contains,pre
 346,source_isolate,contains,baseline/D0
 535,Accession,in_accession_list,535.csv

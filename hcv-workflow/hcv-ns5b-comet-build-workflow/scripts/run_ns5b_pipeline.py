@@ -416,7 +416,7 @@ class Pipeline:
             self.run("prepare_ns5b_pipeline_workdirs.py", "--clean-dir", self.output_dir)
 
         def discover() -> None:
-            output = self.run("find_refid_fastas.py", "--excel-file", self.excel_file, "--sheet", self.sheet_name, "--fasta-dir", self.fasta_pool, "--output-dir", self.discovery_tmp, stdout_path=self.discovery_tmp / "discovery_ns5b.json")
+            output = self.run("find_refid_fastas.py", "--excel-file", self.excel_file, "--sheet", self.sheet_name, "--fasta-dir", self.fasta_pool, "--output-dir", self.discovery_tmp, stdout_path=self.discovery_tmp / "discovery_ns5b.json", stream_output=True)
             del output
             matches = sorted(self.discovery_tmp.glob("refid_fasta_*/matched_fasta_files.txt"))
             if len(matches) != 1:
