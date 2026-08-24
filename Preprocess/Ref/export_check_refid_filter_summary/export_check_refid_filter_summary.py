@@ -30,9 +30,8 @@ FILTERS = {
     },
     "NS5B": {
         "891": "source_isolate contains token Ha01 through Ha97", "30": "source_isolate contains day1",
-        "943": "source_isolate contains day 1", "1051": "source_isolate contains token 1a through 51a",
-        "192": "source_isolate contains day1", "17": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS5B/17.csv",
-        "346": "source_isolate contains baseline",
+        "142": "Accession membership list: HCVData/Ref-selection/NS5_Ref_filter/NS5B/142.csv",
+        "943": "source_isolate contains day 1", "346": "source_isolate contains baseline",
     },
 }
 

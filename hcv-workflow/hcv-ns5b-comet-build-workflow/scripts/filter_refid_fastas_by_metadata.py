@@ -110,6 +110,7 @@ def main() -> int:
 
     filtered_fasta_refids = 0
     missing_fasta_count = 0
+    per_refid_counts: list[tuple[str, int, int]] = []
 
     for metadata_path in metadata_paths:
         refid = refid_from_metadata_path(metadata_path)
@@ -130,6 +131,7 @@ def main() -> int:
         write_fasta(fasta_path, kept_records)
 
         filtered_fasta_refids += 1
+        per_refid_counts.append((refid, len(records), len(kept_records)))
 
     output_accessions = collect_fasta_accessions(fasta_dir)
     kept_accessions_output = Path(args.kept_accessions_output).expanduser()
@@ -139,6 +141,12 @@ def main() -> int:
     print(f"staged_fasta_accessions_removed={len(input_accessions - output_accessions)}")
     print(f"refid_fasta_files_filtered={filtered_fasta_refids}")
     print(f"filter_rules_without_matching_fasta={missing_fasta_count}")
+    for refid, before_count, after_count in per_refid_counts:
+        print(
+            f"refid_filter_result=RefID:{refid},"
+            f"BeforeRows:{before_count},AfterRows:{after_count},"
+            f"RemovedRows:{before_count - after_count}"
+        )
     print(f"kept_accessions_manifest={kept_accessions_output}")
     return 0
 
