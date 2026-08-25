@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export Original_NS5B rows whose Status begins with 'include' or 'short'."""
+"""Export Original_NS5B rows whose Status begins with 'include'."""
 from __future__ import annotations
 
 import argparse
@@ -33,7 +33,7 @@ def main() -> None:
         destination_row = output_sheet.max_row + 1 if row[0].row != 1 else 1
         if row[0].row != 1:
             status = str(row[headers["Status"] - 1].value or "").strip()
-            if not status.casefold().startswith(("include", "short")):
+            if not status.casefold().startswith("include"):
                 continue
         for cell in row:
             copied = output_sheet.cell(row=destination_row, column=cell.column, value=cell.value)
