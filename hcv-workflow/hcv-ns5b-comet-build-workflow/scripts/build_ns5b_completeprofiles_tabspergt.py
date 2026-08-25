@@ -16,7 +16,9 @@ from openpyxl import Workbook, load_workbook
 
 
 AA_ORDER = list("ACDEFGHIKLMNPQRSTVWY") + ["*"]
-PROFILE_REQUIRED_POSITIONS = (282,)
+REQUIRED_POSITION = 282
+OTHER_RAS_POSITIONS = (150, 159, 206, 316, 320, 321)
+MINIMUM_CALLABLE_OTHER_RAS_POSITIONS = 4
 CALLABLE_AAS = frozenset(AA_ORDER) - {"*"}
 
 
@@ -60,15 +62,18 @@ def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
     return job_dir
 
 
-def missing_profile_positions(start: int, aa_sequence: str) -> list[int]:
-    """Return profile-required positions not covered by a callable amino-acid call."""
-    missing: list[int] = []
+def has_profile_required_positions(start: int, aa_sequence: str) -> bool:
+    """Return whether position 282 and at least four other RAS positions are callable."""
     sequence = aa_sequence.upper()
-    for position in PROFILE_REQUIRED_POSITIONS:
+    callable_positions: set[int] = set()
+    for position in (REQUIRED_POSITION, *OTHER_RAS_POSITIONS):
         offset = position - start
-        if offset < 0 or offset >= len(sequence) or sequence[offset] not in CALLABLE_AAS:
-            missing.append(position)
-    return missing
+        if 0 <= offset < len(sequence) and sequence[offset] in CALLABLE_AAS:
+            callable_positions.add(position)
+    return (
+        REQUIRED_POSITION in callable_positions
+        and len(callable_positions & set(OTHER_RAS_POSITIONS)) >= MINIMUM_CALLABLE_OTHER_RAS_POSITIONS
+    )
 
 
 def has_minimum_range_coverage(
@@ -119,7 +124,7 @@ def load_rows(
             continue
         start_position = int(start)
         sequence = str(aa_sequence).strip()
-        if missing_profile_positions(start_position, sequence):
+        if not has_profile_required_positions(start_position, sequence):
             incomplete_ras_accessions.add(accession)
             continue
         if not has_minimum_range_coverage(start_position, sequence, range_start, range_end, minimum_range_coverage):
@@ -256,8 +261,8 @@ def write_subtype_workbook(path: Path, rows_by_gt_subtype: dict[str, dict[str, l
 def main() -> int:
     args = parse_args()
     print(
-        "NS5B complete-profile requirement: every retained sequence must have a "
-        "callable amino-acid at position 282.",
+        "NS5B complete-profile requirement: every retained sequence must have a callable "
+        "amino-acid at position 282 and at least four other RAS positions.",
         flush=True,
     )
     input_workbook = Path(args.input_workbook).expanduser()
@@ -301,10 +306,12 @@ def main() -> int:
         "subtype_workbook": str(subtype_path.resolve()),
         "gt_sequence_counts": gt_summary,
         "subtype_group_count": sum(len(v) for v in rows_by_gt_subtype.values()),
-        "profile_required_positions": list(PROFILE_REQUIRED_POSITIONS),
+        "required_position": REQUIRED_POSITION,
+        "other_ras_positions": list(OTHER_RAS_POSITIONS),
+        "minimum_callable_other_ras_positions": MINIMUM_CALLABLE_OTHER_RAS_POSITIONS,
         "minimum_range_coverage": args.min_range_coverage,
         "range_coverage_positions": [args.range_start, args.range_end],
-        "profile_input_rule": "Every retained accession has a callable amino-acid at NS5B position 282.",
+        "profile_input_rule": "Every retained accession has a callable amino-acid at NS5B position 282 and at least four other RAS positions.",
         "note": "CountWithAA and CountWithAAAlone are identical because current AA sequences contain single-letter calls, not explicit mixtures.",
     }
     print(json.dumps(summary, indent=2))
