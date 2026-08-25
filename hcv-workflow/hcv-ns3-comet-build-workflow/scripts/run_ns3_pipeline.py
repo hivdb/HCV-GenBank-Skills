@@ -166,6 +166,7 @@ class Pipeline:
         self.metadata_csv = path_value(value("accessions_metadata_csv", "ACCESSIONS_METADATA_CSV", "HCVData/Accessions_metadata.csv"))
         self.comet_csv = path_value(value("comet_subtyping_csv", "COMET_SUBTYPING_CSV", "HCVData/HCV-all-seq-subtype/all_comet_subtype.csv"))
         self.noncomet_coverage_csv = path_value(value("noncomet_coverage_csv", "NONCOMET_COVERAGE_CSV", "HCVData/HCV-all-seq-subtype/NS3_AllSeq_NonComet_Coverage.csv"))
+        self.reference_subtypes_csv = REPO_ROOT / "HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
         self.temp_root = path_value(value("temp_root", "TEMP_ROOT", str(self.step_dir("prepare-comet-assignments"))))
         self.discovery_tmp = self.step_dir("discover-refid-fastas")
         self.matched_txt = self.discovery_tmp / "NS3_matched_fasta_files.txt"
@@ -410,7 +411,7 @@ class Pipeline:
             Step("discover-refid-fastas", "discover selected RefID FASTA files", discover),
             Step("stage-refid-fastas", "copy discovered FASTA files into the staging directory", lambda: (self.staged_fasta_dir.mkdir(parents=True, exist_ok=True), self.run("stage_matched_refid_fastas.py", "--matched-files", self.matched_txt, "--output-dir", self.staged_fasta_dir))),
             Step("prepare-comet-assignments", "create COMET calls and remove missing or unassigned records", prepare_comet),
-            Step("select-noncomet-priority-assignments", "select non-COMET assignments that override or supplement COMET", lambda: self.run("select_noncomet_priority_assignments.py", "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--fasta-dir", self.fasta_pool, "--output-csv", self.priority_assignments_csv, stdout_path=summary("select-noncomet-priority-assignments"))),
+            Step("select-noncomet-priority-assignments", "select non-COMET and reference assignments that override or supplement COMET", lambda: self.run("select_noncomet_priority_assignments.py", "--noncomet-coverage-csv", self.noncomet_coverage_csv, "--reference-subtypes-csv", self.reference_subtypes_csv, "--fasta-dir", self.fasta_pool, "--output-csv", self.priority_assignments_csv, stdout_path=summary("select-noncomet-priority-assignments"))),
             Step("filter-accession-metadata", "filter master metadata to COMET-filtered FASTA accessions", lambda: self.run("filter_accessions_metadata_by_fasta.py", "--fasta-dir", self.included_fasta_dir, "--metadata-csv", self.metadata_csv, "--output-dir", self.metadata_dir)),
             Step("split-refid-metadata", "create per-RefID metadata filters", lambda: (self.run("prepare_ns3_pipeline_workdirs.py", "--clean-dir", self.refid_metadata_dir), self.run("split_refid_metadata_csv.py", "--input-csv", self.metadata_dir / "included_accessions_metadata.csv", "--output-dir", self.refid_metadata_dir, "--source-fasta-dir", self.staged_fasta_dir, "--comet-fasta-dir", self.included_fasta_dir))),
             Step("filter-refid-fastas", "filter COMET-filtered FASTA records by RefID metadata", lambda: (shutil.copytree(self.included_fasta_dir, self.filtered_fasta_dir, dirs_exist_ok=True), self.run("filter_refid_fastas_by_metadata.py", "--metadata-dir", self.refid_metadata_dir, "--fasta-dir", self.filtered_fasta_dir, "--kept-accessions-output", self.kept_accessions_csv))),
