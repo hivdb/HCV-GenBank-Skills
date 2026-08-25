@@ -16,7 +16,7 @@ from openpyxl import Workbook, load_workbook
 
 
 AA_ORDER = list("ACDEFGHIKLMNPQRSTVWY") + ["*"]
-REQUIRED_RAS_POSITIONS = (150, 159, 206, 282, 316, 320, 321)
+PROFILE_REQUIRED_POSITIONS = (282,)
 CALLABLE_AAS = frozenset(AA_ORDER) - {"*"}
 
 
@@ -60,11 +60,11 @@ def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
     return job_dir
 
 
-def missing_ras_positions(start: int, aa_sequence: str) -> list[int]:
-    """Return required RAS positions not covered by a callable amino-acid call."""
+def missing_profile_positions(start: int, aa_sequence: str) -> list[int]:
+    """Return profile-required positions not covered by a callable amino-acid call."""
     missing: list[int] = []
     sequence = aa_sequence.upper()
-    for position in REQUIRED_RAS_POSITIONS:
+    for position in PROFILE_REQUIRED_POSITIONS:
         offset = position - start
         if offset < 0 or offset >= len(sequence) or sequence[offset] not in CALLABLE_AAS:
             missing.append(position)
@@ -119,7 +119,7 @@ def load_rows(
             continue
         start_position = int(start)
         sequence = str(aa_sequence).strip()
-        if missing_ras_positions(start_position, sequence):
+        if missing_profile_positions(start_position, sequence):
             incomplete_ras_accessions.add(accession)
             continue
         if not has_minimum_range_coverage(start_position, sequence, range_start, range_end, minimum_range_coverage):
@@ -256,8 +256,8 @@ def write_subtype_workbook(path: Path, rows_by_gt_subtype: dict[str, dict[str, l
 def main() -> int:
     args = parse_args()
     print(
-        "NS5B complete-profile requirement: every retained sequence must cover all "
-        "callable RAS positions (150, 159, 206, 282, 316, 320, 321).",
+        "NS5B complete-profile requirement: every retained sequence must have a "
+        "callable amino-acid at position 282.",
         flush=True,
     )
     input_workbook = Path(args.input_workbook).expanduser()
@@ -301,10 +301,10 @@ def main() -> int:
         "subtype_workbook": str(subtype_path.resolve()),
         "gt_sequence_counts": gt_summary,
         "subtype_group_count": sum(len(v) for v in rows_by_gt_subtype.values()),
-        "required_ras_positions": list(REQUIRED_RAS_POSITIONS),
+        "profile_required_positions": list(PROFILE_REQUIRED_POSITIONS),
         "minimum_range_coverage": args.min_range_coverage,
         "range_coverage_positions": [args.range_start, args.range_end],
-        "profile_input_rule": "Every retained accession has a callable amino-acid at every required RAS position.",
+        "profile_input_rule": "Every retained accession has a callable amino-acid at NS5B position 282.",
         "note": "CountWithAA and CountWithAAAlone are identical because current AA sequences contain single-letter calls, not explicit mixtures.",
     }
     print(json.dumps(summary, indent=2))
