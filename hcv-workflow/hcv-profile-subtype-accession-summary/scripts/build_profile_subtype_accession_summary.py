@@ -16,11 +16,16 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUTS = {
     "#NS3A": REPO_ROOT / "outputs/comet-NS3/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
     "#NS5A": REPO_ROOT / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
-    "#NS5B": REPO_ROOT / "outputs/comet-NS5B/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+}
+DEFAULT_NS5B_VARIANTS = {
+    "standard": REPO_ROOT / "outputs/comet-NS5B/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+    "position-282": REPO_ROOT / "outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+    "position-282-four-ras": REPO_ROOT / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
 }
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs/hcv-profile-subtype-accession-summary"
-COUNT_COLUMNS = tuple(DEFAULT_INPUTS)
+COUNT_COLUMNS = ("#NS3A", "#NS5A", "#NS5B")
 DISPLAY_THRESHOLD = 10
+ALWAYS_INCLUDE_GENOTYPES = frozenset({"7", "8"})
 PROFILE_LABEL = re.compile(r"^GT(?P<genotype>\d+)_(?P<subtype>[^ ]+) \((?P<count>\d+),")
 
 
@@ -74,28 +79,20 @@ def write_xlsx(path: Path, title: str, headers: list[str], rows: list[list[objec
     workbook.save(path)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ns3-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS3A"])
-    parser.add_argument("--ns5a-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS5A"])
-    parser.add_argument("--ns5b-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS5B"])
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    args = parser.parse_args()
-
+def build_summary(ns3_ras_profile: Path, ns5a_ras_profile: Path, ns5b_ras_profile: Path, output_dir: Path) -> dict[str, object]:
     grouped_by_gene = {
-        "#NS3A": load_subtype_counts(args.ns3_ras_profile),
-        "#NS5A": load_subtype_counts(args.ns5a_ras_profile),
-        "#NS5B": load_subtype_counts(args.ns5b_ras_profile),
+        "#NS3A": load_subtype_counts(ns3_ras_profile),
+        "#NS5A": load_subtype_counts(ns5a_ras_profile),
+        "#NS5B": load_subtype_counts(ns5b_ras_profile),
     }
     keys = set().union(*(grouped.keys() for grouped in grouped_by_gene.values()))
     rows = []
     for genotype, subtype in sorted(keys, key=lambda key: (genotype_sort_key(key[0]), subtype_sort_key(key[1]))):
         counts = [grouped_by_gene[column].get((genotype, subtype), 0) for column in COUNT_COLUMNS]
-        if all(count < DISPLAY_THRESHOLD for count in counts):
+        if genotype not in ALWAYS_INCLUDE_GENOTYPES and all(count < DISPLAY_THRESHOLD for count in counts):
             continue
         rows.append([genotype, subtype, *counts])
 
-    output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.csv"
     xlsx_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.xlsx"
@@ -106,10 +103,10 @@ def main() -> int:
     gene_lists = [
         [
             (subtype, count)
-            for (_, subtype), count in sorted(
+            for (genotype, subtype), count in sorted(
                 grouped_by_gene[column].items(), key=lambda item: (genotype_sort_key(item[0][0]), subtype_sort_key(item[0][1]))
             )
-            if count >= DISPLAY_THRESHOLD
+            if genotype in ALWAYS_INCLUDE_GENOTYPES or count >= DISPLAY_THRESHOLD
         ]
         for column in COUNT_COLUMNS
     ]
@@ -124,14 +121,32 @@ def main() -> int:
     write_csv(gene_list_csv_path, gene_list_headers, gene_list_rows)
     write_xlsx(gene_list_xlsx_path, "Subtype_Counts_By_Gene", gene_list_headers, gene_list_rows, (2, 4, 6))
 
-    print(json.dumps({
+    return {
         "csv": str(csv_path.resolve()),
         "xlsx": str(xlsx_path.resolve()),
         "subtype_group_count": len(rows),
         "by_gene_csv": str(gene_list_csv_path.resolve()),
         "by_gene_xlsx": str(gene_list_xlsx_path.resolve()),
         "by_gene_row_count": len(gene_list_rows),
-    }))
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--ns3-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS3A"])
+    parser.add_argument("--ns5a-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS5A"])
+    parser.add_argument("--ns5b-ras-profile", type=Path, help="Generate one summary with this NS5B RAS profile instead of all default variants.")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    args = parser.parse_args()
+
+    if args.ns5b_ras_profile:
+        summaries = {"custom": build_summary(args.ns3_ras_profile, args.ns5a_ras_profile, args.ns5b_ras_profile, args.output_dir)}
+    else:
+        summaries = {
+            variant: build_summary(args.ns3_ras_profile, args.ns5a_ras_profile, ns5b_ras_profile, args.output_dir / variant)
+            for variant, ns5b_ras_profile in DEFAULT_NS5B_VARIANTS.items()
+        }
+    print(json.dumps({"summaries": summaries}, indent=2))
     return 0
 
 
