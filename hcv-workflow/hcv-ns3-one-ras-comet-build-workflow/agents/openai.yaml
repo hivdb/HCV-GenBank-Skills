@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV NS3 One-RAS COMET Build"
+  short_description: "Build NS3 reports requiring one callable RAS position"
+  default_prompt: "Use $hcv-ns3-one-ras-comet-build-workflow to run or inspect the NS3 COMET build scripts that require a callable amino acid at one NS3 RAS position."

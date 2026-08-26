@@ -1,0 +1,8 @@
+RefID,Field,Operator,Value
+17,Accession,in_accession_list,17.csv
+142,source_isolate,contains,baseline
+288,source_isolate,contains,pre
+346,source_isolate,contains,baseline/D0
+535,Accession,in_accession_list,535.csv
+600,source_isolate,not_contains,failure
+661,source_isolation_source,equals,plasma
