@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV NS5A All-RAS COMET Build"
+  short_description: "Build NS5A reports requiring all callable RAS positions"
+  default_prompt: "Use $hcv-ns5a-all-ras-comet-build-workflow to run or inspect NS5A build scripts that require callable amino acids at every NS5A RAS position."
