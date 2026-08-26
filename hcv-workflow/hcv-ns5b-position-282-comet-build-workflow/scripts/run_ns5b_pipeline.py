@@ -85,15 +85,7 @@ def load_config(config_path: Path) -> dict[str, str]:
         for section_name in ("common", "ns5b_comet", "ns5b_position_282"):
             section = config.get(section_name, {})
             if isinstance(section, dict):
-                for key, value in section.items():
-                    if section_name != "ns5b_position_282" and key == "output_dir":
-                        continue
-                    environment_key = (
-                        "NS5B_POSITION_282_OUTPUT_DIR"
-                        if section_name == "ns5b_position_282" and key == "output_dir"
-                        else key.upper()
-                    )
-                    values[environment_key] = str(value)
+                values.update({key.upper(): str(value) for key, value in section.items()})
     return values
 
 
@@ -166,11 +158,7 @@ class Pipeline:
         self.sheet_name = value("sheet_name", "SHEET_NAME")
         self.fasta_pool = path_value(value("fasta_pool", "FASTA_POOL"))
         self.genbank_dir = path_value(value("genbank_dir", "GENBANK_DIR"))
-        output_dir = args.output_dir or values.get(
-            "NS5B_POSITION_282_OUTPUT_DIR",
-            "outputs/comet-NS5B-position-282",
-        )
-        self.output_dir = path_value(output_dir)
+        self.output_dir = path_value(value("output_dir", "OUTPUT_DIR", "outputs/comet-NS5B-position-282"))
         self.reference_fasta = path_value(value("reference_fasta", "REFERENCE_FASTA", "HCVData/HCV_GT_RefSeqs.fasta"))
         self.subtype_json = path_value(value("subtype_json", "SUBTYPE_JSON", "HCVData/HCV_Subtype_Refs_By_Genome_NA.json"))
         self.gt_aa_json = path_value(value("gt_aa_json", "GT_AA_JSON", "HCVData/HCV_GT_Refs_By_Gene_AA.json"))

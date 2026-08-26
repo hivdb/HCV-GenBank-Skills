@@ -47,7 +47,7 @@ Configuration stays in the repository base folder. The wrapper loads:
 
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
-The variant inherits shared inputs from `[ns5b_comet]`. Set `sheet_name` in `[ns5b_position_282]` of `pipeline.local.toml` only when this variant needs a different worksheet; set `output_dir` there only to override its default output folder. This variant ignores generic and `[ns5b_comet]` output settings.
+The variant inherits settings from `[common]` and `[ns5b_comet]`. Add `[ns5b_position_282]` to `pipeline.local.toml` to set its isolated `output_dir` and, when needed, a different `sheet_name`.
 Each stage writes its outputs under a numbered directory in `outputs/comet-NS5B-position-282/`.
 Step 11 caches RefID FASTAs and parallelizes accession preparation/AA extraction and BLASTX with four workers by default; set `NS5B_WORKERS` or pass `--workers` to tune this.
 
