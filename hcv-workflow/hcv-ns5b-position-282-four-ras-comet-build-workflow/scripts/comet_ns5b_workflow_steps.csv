@@ -1,0 +1,33 @@
+StepName,FunctionScripts
+prepare-workdirs,prepare_ns5b_pipeline_workdirs.py
+discover-refid-fastas,find_refid_fastas.py
+stage-refid-fastas,stage_matched_refid_fastas.py
+prepare-comet-assignments,prepare_comet_ns5b_assignments.py
+select-noncomet-priority-assignments,select_noncomet_priority_assignments.py
+filter-accession-metadata,filter_accessions_metadata_by_fasta.py
+split-refid-metadata,prepare_ns5b_pipeline_workdirs.py;split_refid_metadata_csv.py
+filter-refid-fastas,filter_refid_fastas_by_metadata.py
+build-genotype-workbook,build_ns5b_comet_gt_allstudies.py
+add-genotype-counts,add_gt_counts_sheet.py
+build-subtype-workbook,build_ns5b_comet_subtype_allstudies.py
+extract-profile-aa,build_ns5b_subtype_with_gt_aa.py
+validate-profile-alignment,validate_ns5b_profile_alignment.py
+summarize-qc-mutation-burden,build_qc_passed_genotype_mutation_burden_summary.py
+report-profile-input-counts,build_ns5b_completeprofiles_tabspergt.py --report-only
+build-complete-profiles,build_ns5b_completeprofiles_tabspergt.py
+merge-subtype-complete-profiles,merge_ns5b_subtype_completeprofiles.py
+export-noncomet-priority-accessions,export_noncomet_priority_profile_accessions.py
+export-consensus-fastas,export_ns5b_consensus_fasta.py
+align-subtype-consensus-to-gt1a,align_ns5b_subtype_consensuses_to_gt1a.py
+compare-reference-consensus,export_gt_reference_consensus_differences.py;build_ns5b_subtype_consensus_reference_distance.py
+build-genotype-ras-profile,build_ns5b_gt_ras_profiles.py
+build-subtype-ras-profile,build_ns5b_subtype_ras_profiles.py
+build-combined-ras-reports,build_ns5b_combined_ras_profiles.py;replace_comet_profile_coverage_range_with_mean_diff.py;build_comet_subtype_ras_coverage_report.py;build_comet_workflow_sequence_audit.py
+add-nonconsensus-row,add_combined_profile_nonconsensus_row.py
+build-90pct-range-coverage-combined-profile,build_ns5b_completeprofiles_tabspergt.py --min-range-coverage 0.9 --range-start 150 --range-end 321;build_ns5b_gt_ras_profiles.py;build_ns5b_subtype_ras_profiles.py;build_ns5b_combined_ras_profiles.py;replace_comet_profile_coverage_range_with_mean_diff.py
+summarize-subtype-ras-differences,build_ns5b_subtype_ras_consensus_difference_summary.py
+build-genotype-aa-consensus-distance,build_ns5b_gt_aa_distance_matrix.py
+build-subtype-aa-consensus-distance,build_ns5b_subtype_aa_distance_matrices.py
+build-paired-distance-matrices,build_ns5b_aa_distance_matrices.py;build_ns5b_na_distance_matrices.py
+build-ras-entropy,build_ns5b_ras_entropy.py
+publish-ictv-report,add_subtype_consensus_mutation_summaries.py
