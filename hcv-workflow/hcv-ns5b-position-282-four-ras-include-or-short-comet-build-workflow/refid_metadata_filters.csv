@@ -1,0 +1,7 @@
+RefID,Field,Operator,Value
+17,Accession,in_accession_list,17.csv
+30,source_isolate,contains,day1
+192,source_isolate,contains,day1
+346,source_isolate,contains,baseline
+943,source_isolate,contains,day 1
+1051,source_isolate,matches_regex,"(?<![A-Za-z0-9])([1-9]|[1-4][0-9]|5[01])a(?![A-Za-z0-9])"

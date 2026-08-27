@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ras-positions", default=",".join(map(str, RAS_POSITIONS)))
     parser.add_argument("--output-workbook", required=True)
     parser.add_argument("--flagged-accessions-csv", required=True)
-    parser.add_argument("--high-divergence-percent", type=float, default=15.0)
+    parser.add_argument("--high-divergence-percent", type=float, default=30.0)
     parser.add_argument("--min-divergence-coverage", type=int, default=150)
     return parser.parse_args()
 
