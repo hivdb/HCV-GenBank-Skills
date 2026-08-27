@@ -60,15 +60,28 @@ def write_csv(path: Path, headers: list[str], rows: list[list[object]]) -> None:
         writer.writerows(rows)
 
 
-def write_xlsx(path: Path, title: str, headers: list[str], rows: list[list[object]], count_columns: tuple[int, ...]) -> None:
+def write_xlsx(
+    path: Path,
+    title: str,
+    headers: list[str],
+    rows: list[list[object]],
+    count_columns: tuple[int, ...],
+    *,
+    suppress_repeated_first_column: bool = False,
+) -> None:
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = title
     worksheet.append(headers)
     for cell in worksheet[1]:
         cell.font = Font(bold=True)
+    previous_first_value: object = None
     for row in rows:
-        worksheet.append(row)
+        output_row = list(row)
+        if suppress_repeated_first_column and output_row[0] == previous_first_value:
+            output_row[0] = ""
+        worksheet.append(output_row)
+        previous_first_value = row[0]
     for column in count_columns:
         for cells in worksheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for cell in cells:
@@ -97,7 +110,14 @@ def build_summary(ns3_ras_profile: Path, ns5a_ras_profile: Path, ns5b_ras_profil
     csv_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.csv"
     xlsx_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.xlsx"
     write_csv(csv_path, ["Genotype", "Subtype", *COUNT_COLUMNS], rows)
-    write_xlsx(xlsx_path, "Subtype_Accession_Counts", ["Genotype", "Subtype", *COUNT_COLUMNS], rows, (3, 4, 5))
+    write_xlsx(
+        xlsx_path,
+        "Subtype_Accession_Counts",
+        ["Genotype", "Subtype", *COUNT_COLUMNS],
+        rows,
+        (3, 4, 5),
+        suppress_repeated_first_column=True,
+    )
 
     gene_list_headers = ["NS3 subtype", "#NS3", "NS5A subtype", "#NS5A", "NS5B subtype", "#NS5B"]
     gene_lists = [
