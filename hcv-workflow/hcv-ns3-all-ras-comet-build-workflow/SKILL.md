@@ -74,6 +74,8 @@ Complete-profile construction additionally requires a callable standard amino ac
 
 ## Outputs
 
+The final GT7/GT8 local-assignment comparison step reads `outputs/folder_assignments/NS3_assignments.csv` and writes the workflow/local subtype comparison workbook and CSV in its own numbered output directory.
+
 The workflow writes NS3 outputs under `outputs/comet-NS3-all-ras/`, including:
 
 - `NS3_GT_AllStudies.xlsx` (Comet genotype calls plus per-GT NS3 nucleotide distances and aligned-nucleotide counts)

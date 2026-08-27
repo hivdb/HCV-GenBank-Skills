@@ -121,6 +121,8 @@ Complete-profile construction requires a callable standard amino acid at one or 
 
 ## Outputs
 
+The final GT7/GT8 local-assignment comparison step reads `outputs/folder_assignments/NS5A_assignments.csv` and writes the workflow/local subtype comparison workbook and CSV in its own numbered output directory.
+
 The workflow writes NS5A outputs under `outputs/comet-NS5A-one-ras/`, in numbered step folders, including:
 
 - `NS5A_GT_AllStudies.xlsx`

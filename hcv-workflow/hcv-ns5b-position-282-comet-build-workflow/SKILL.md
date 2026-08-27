@@ -74,6 +74,8 @@ The `build-90pct-range-coverage-combined-profile` step is separate from the stan
 
 ## Outputs
 
+The final GT7/GT8 local-assignment comparison step reads `outputs/folder_assignments/NS5B_assignments.csv` and writes the workflow/local subtype comparison workbook and CSV in its own numbered output directory.
+
 The workflow writes NS5B outputs under `outputs/comet-NS5B-position-282/`, including:
 
 - `NS5B_GT_AllStudies.xlsx`

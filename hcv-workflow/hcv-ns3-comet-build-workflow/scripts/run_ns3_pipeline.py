@@ -43,6 +43,7 @@ STEP_NAMES = (
     "build-paired-distance-matrices", "build-subtype-profile-coverage", "build-ras-entropy",
     "publish-ictv-report",
     "audit-gt7-gt8-sequences",
+    "compare-gt7-gt8-local-assignments",
 )
 STEP_ORDER = {name: number for number, name in enumerate(STEP_NAMES, start=1)}
 
@@ -140,6 +141,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--accessions-metadata-csv")
     parser.add_argument("--comet-subtyping-csv")
     parser.add_argument("--noncomet-coverage-csv")
+    parser.add_argument("--local-ns3-assignments-csv")
     parser.add_argument("--temp-root")
     parser.add_argument("--python-bin")
     return parser.parse_args()
@@ -167,6 +169,7 @@ class Pipeline:
         self.metadata_csv = path_value(value("accessions_metadata_csv", "ACCESSIONS_METADATA_CSV", "HCVData/Accessions_metadata.csv"))
         self.comet_csv = path_value(value("comet_subtyping_csv", "COMET_SUBTYPING_CSV", "HCVData/HCV-all-seq-subtype/all_comet_subtype.csv"))
         self.noncomet_coverage_csv = path_value(value("noncomet_coverage_csv", "NONCOMET_COVERAGE_CSV", "HCVData/HCV-all-seq-subtype/NS3_AllSeq_NonComet_Coverage.csv"))
+        self.local_ns3_assignments_csv = path_value(value("local_ns3_assignments_csv", "LOCAL_NS3_ASSIGNMENTS_CSV", "outputs/folder_assignments/NS3_assignments.csv"))
         self.reference_subtypes_csv = REPO_ROOT / "HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
         self.temp_root = path_value(value("temp_root", "TEMP_ROOT", str(self.step_dir("prepare-comet-assignments"))))
         self.discovery_tmp = self.step_dir("discover-refid-fastas")
@@ -441,6 +444,7 @@ class Pipeline:
             Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns3_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.step_dir("build-ras-entropy") / "NS3_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.step_dir("build-ras-entropy") / "NS3_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build-ras-entropy", "last_run_summary.txt"))),
             Step("publish-ictv-report", "publish the NS3 ICTV comparison report", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns5a-comet-build-workflow" / "scripts" / "add_subtype_consensus_mutation_summaries.py"), "--gene", "NS3", "--comparison-workbook", self.step_dir("compare-reference-consensus") / "HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx", "--ras-workbook", explicit_subtype_ras, "--combined-profile-workbook", combined_ras, "--comparison-output-dir", self.step_dir("compare-reference-consensus"), "--ns3-output-dir", self.step_dir("build-subtype-ras-profile"), "--shared-report-dir", self.step_dir("publish-ictv-report") / "shared_report")),
             Step("audit-gt7-gt8-sequences", "audit GT7 and GT8 kept/excluded sequences against each previous workflow step", lambda: self.run("build_ns3_gt7_gt8_step_audit.py", "--pipeline-output-dir", self.output_dir, "--output-csv", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit.csv", "--accessions-csv", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit_Accessions.csv", "--summary-xlsx", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit_Summary.xlsx", "--summary-markdown", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit_Summary.md")),
+            Step("compare-gt7-gt8-local-assignments", "compare GT7 and GT8 workflow subtype calls with local NS3 assignments", lambda: self.run("compare_ns3_gt7_gt8_local_assignments.py", "--subtype-workbook", subtype_workbook, "--local-assignments-csv", self.local_ns3_assignments_csv, "--output-xlsx", self.step_dir("compare-gt7-gt8-local-assignments") / "NS3_GT7_GT8_Local_Assignment_Comparison.xlsx", "--output-csv", self.step_dir("compare-gt7-gt8-local-assignments") / "NS3_GT7_GT8_Local_Assignment_Comparison.csv", stdout_path=summary("compare-gt7-gt8-local-assignments"))),
         ]
 
 
