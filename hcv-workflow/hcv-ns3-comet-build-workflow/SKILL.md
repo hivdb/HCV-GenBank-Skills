@@ -30,6 +30,7 @@ Use this skill for the full NS3 high-throughput build workflow. The first step r
 17. `add_combined_profile_nonconsensus_row/add_combined_profile_nonconsensus_row.py`
 18. `build_ns3_subtype_ras_consensus_difference_summary/build_ns3_subtype_ras_consensus_difference_summary.py`
 19. `build_ns3_subtype_profile_coverage_report/build_ns3_subtype_profile_coverage_report.py` (GT5 subtype 5a coverage audit)
+20. `build_ns3_gt7_gt8_step_audit.py` (GT7/GT8 retention and exclusion audit compared with the previous workflow step)
 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 
@@ -104,6 +105,7 @@ The workflow writes NS3 outputs under `outputs/comet-NS3/`, including:
 - `NS3_Combined_RAS_Profiles.xlsx`
 - `NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx` (per-subtype mean and median RAS AA differences from genotype consensus)
 - `NS3_GT5_5a_Profile_Coverage.xlsx`, `NS3_GT5_5a_Profile_Position_Coverage.csv`, and `NS3_GT5_5a_Profile_Position_Coverage.png` (accession-level, per-position, and charted subtype 5a coverage across full NS3 positions 1-631; the chart includes ambiguous and stop calls)
+- `NS3_GT7_GT8_Step_Sequence_Audit.csv`, `NS3_GT7_GT8_Step_Sequence_Audit_Accessions.csv`, and `NS3_GT7_GT8_Step_Sequence_Audit_Summary.xlsx` (per-step GT7/GT8 kept counts, exclusions compared with the preceding step, accession-level evidence, and an Excel key-changes summary)
 
 ## Operating Rules
 

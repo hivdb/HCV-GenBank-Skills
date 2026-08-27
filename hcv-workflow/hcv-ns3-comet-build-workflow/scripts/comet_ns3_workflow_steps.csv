@@ -31,3 +31,4 @@ build-paired-distance-matrices,build_ns3_aa_distance_matrices.py;build_ns3_na_di
 build-subtype-profile-coverage,build_ns3_subtype_profile_coverage_report.py
 build-ras-entropy,build_ns3_ras_entropy.py
 publish-ictv-report,add_subtype_consensus_mutation_summaries.py
+audit-gt7-gt8-sequences,build_ns3_gt7_gt8_step_audit.py

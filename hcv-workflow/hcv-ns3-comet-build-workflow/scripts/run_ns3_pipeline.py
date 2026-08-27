@@ -42,6 +42,7 @@ STEP_NAMES = (
     "build-genotype-aa-consensus-distance", "build-subtype-aa-consensus-distance",
     "build-paired-distance-matrices", "build-subtype-profile-coverage", "build-ras-entropy",
     "publish-ictv-report",
+    "audit-gt7-gt8-sequences",
 )
 STEP_ORDER = {name: number for number, name in enumerate(STEP_NAMES, start=1)}
 
@@ -439,6 +440,7 @@ class Pipeline:
             Step("build-subtype-profile-coverage", "build the NS3 genotype 5 subtype 5a coverage audit", lambda: self.run("build_ns3_subtype_profile_coverage_report.py", "--profile-input-workbook", self.aa_workbook, "--profile-accessions-csv", self.profile_accessions_csv, "--genotype", "5", "--subtype", "5a", "--range-start", "1", "--range-end", "631", "--output-xlsx", self.step_dir("build-subtype-profile-coverage") / "NS3_GT5_5a_Profile_Coverage.xlsx", "--position-coverage-csv", self.step_dir("build-subtype-profile-coverage") / "NS3_GT5_5a_Profile_Position_Coverage.csv", "--position-coverage-png", self.step_dir("build-subtype-profile-coverage") / "NS3_GT5_5a_Profile_Position_Coverage.png")),
             Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns3_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.step_dir("build-ras-entropy") / "NS3_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.step_dir("build-ras-entropy") / "NS3_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build-ras-entropy", "last_run_summary.txt"))),
             Step("publish-ictv-report", "publish the NS3 ICTV comparison report", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns5a-comet-build-workflow" / "scripts" / "add_subtype_consensus_mutation_summaries.py"), "--gene", "NS3", "--comparison-workbook", self.step_dir("compare-reference-consensus") / "HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS3.xlsx", "--ras-workbook", explicit_subtype_ras, "--combined-profile-workbook", combined_ras, "--comparison-output-dir", self.step_dir("compare-reference-consensus"), "--ns3-output-dir", self.step_dir("build-subtype-ras-profile"), "--shared-report-dir", self.step_dir("publish-ictv-report") / "shared_report")),
+            Step("audit-gt7-gt8-sequences", "audit GT7 and GT8 kept/excluded sequences against each previous workflow step", lambda: self.run("build_ns3_gt7_gt8_step_audit.py", "--pipeline-output-dir", self.output_dir, "--output-csv", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit.csv", "--accessions-csv", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit_Accessions.csv", "--summary-xlsx", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit_Summary.xlsx", "--summary-markdown", self.step_dir("audit-gt7-gt8-sequences") / "NS3_GT7_GT8_Step_Sequence_Audit_Summary.md")),
         ]
 
 

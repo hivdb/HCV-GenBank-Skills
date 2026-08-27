@@ -39,7 +39,7 @@ STEP_NAMES = (
     "build-90pct-range-coverage-combined-profile",
     "summarize-subtype-ras-differences", "build-genotype-aa-consensus-distance",
     "build-subtype-aa-consensus-distance", "build-paired-distance-matrices", "build-ras-entropy",
-    "publish-ictv-report",
+    "publish-ictv-report", "audit-gt7-gt8-sequences",
 )
 STEP_ORDER = {name: number for number, name in enumerate(STEP_NAMES, start=1)}
 
@@ -477,6 +477,7 @@ class Pipeline:
             Step("build-paired-distance-matrices", "build paired AA and NA RAS/range distance matrices", paired_distances),
             Step("build-ras-entropy", "build genotype and subtype RAS entropy reports", lambda: self.run("build_ns5b_ras_entropy.py", "--gt-profile-workbook", gt_profile, "--subtype-profile-workbook", subtype_profile, "--gt-output-xlsx", self.step_dir("build-ras-entropy") / "NS5B_GT_RAS_Entropy.xlsx", "--subtype-output-xlsx", self.step_dir("build-ras-entropy") / "NS5B_Subtype_RAS_Entropy.xlsx", stdout_path=summary("build-ras-entropy", "last_run_summary.txt"))),
             Step("publish-ictv-report", "publish the NS5B ICTV comparison report", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns5a-comet-build-workflow" / "scripts" / "add_subtype_consensus_mutation_summaries.py"), "--gene", "NS5B", "--comparison-workbook", self.step_dir("compare-reference-consensus") / "HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_NS5B.xlsx", "--ras-workbook", explicit_subtype_ras, "--combined-profile-workbook", combined_ras, "--comparison-output-dir", self.step_dir("compare-reference-consensus"), "--ns5b-output-dir", self.step_dir("build-subtype-ras-profile"), "--shared-report-dir", self.step_dir("publish-ictv-report") / "shared_report")),
+            Step("audit-gt7-gt8-sequences", "audit GT7 and GT8 kept/excluded sequences against each previous workflow step", lambda: self.run(str(REPO_ROOT / "hcv-workflow" / "hcv-ns3-comet-build-workflow" / "scripts" / "build_ns3_gt7_gt8_step_audit.py"), "--pipeline-output-dir", self.output_dir, "--gene", "NS5B", "--output-csv", self.step_dir("audit-gt7-gt8-sequences") / "NS5B_GT7_GT8_Step_Sequence_Audit.csv", "--accessions-csv", self.step_dir("audit-gt7-gt8-sequences") / "NS5B_GT7_GT8_Step_Sequence_Audit_Accessions.csv", "--summary-xlsx", self.step_dir("audit-gt7-gt8-sequences") / "NS5B_GT7_GT8_Step_Sequence_Audit_Summary.xlsx", "--summary-markdown", self.step_dir("audit-gt7-gt8-sequences") / "NS5B_GT7_GT8_Step_Sequence_Audit_Summary.md")),
         ]
 
 
