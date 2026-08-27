@@ -15,7 +15,7 @@ The script reads the NS3, NS5A, and NS5B `*_Subtype_RAS_Profiles.xlsx` files. It
 
 ## Summary versions
 
-Running with no arguments generates these three version subfolders under `outputs/hcv-profile-subtype-accession-summary/`. Each uses the stage-23 `*_Subtype_RAS_Profiles.xlsx` workbooks from the listed workflows. The two generated Excel workbook filenames include the version condition.
+Running with no arguments generates these three version subfolders under `outputs/hcv-profile-subtype-accession-summary/`. Each also contains an `all-subtypes/` subfolder that retains every subtype, including counts below 10. Each uses the stage-23 `*_Subtype_RAS_Profiles.xlsx` workbooks from the listed workflows. The two generated Excel workbook filenames include the version condition.
 
 | Version | NS3 workflow | NS5A workflow | NS5B workflow | Summary output subfolder |
 | --- | --- | --- | --- | --- |

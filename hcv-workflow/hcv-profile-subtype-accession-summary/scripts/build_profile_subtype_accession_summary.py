@@ -106,6 +106,7 @@ def build_summary(
     ns5b_ras_profile: Path,
     output_dir: Path,
     condition: str,
+    include_all_subtypes: bool = False,
 ) -> dict[str, object]:
     grouped_by_gene = {
         "#NS3A": load_subtype_counts(ns3_ras_profile),
@@ -116,9 +117,10 @@ def build_summary(
     rows = []
     for genotype, subtype in sorted(keys, key=lambda key: (genotype_sort_key(key[0]), subtype_sort_key(key[1]))):
         counts = [grouped_by_gene[column].get((genotype, subtype), 0) for column in COUNT_COLUMNS]
-        if genotype not in ALWAYS_INCLUDE_GENOTYPES and all(count < DISPLAY_THRESHOLD for count in counts):
+        if not include_all_subtypes and genotype not in ALWAYS_INCLUDE_GENOTYPES and all(count < DISPLAY_THRESHOLD for count in counts):
             continue
         rows.append([genotype, subtype, *counts])
+    rows.append(["Total", "", *[sum(int(row[column]) for row in rows) for column in range(2, 5)]])
 
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.csv"
@@ -140,7 +142,7 @@ def build_summary(
             for (genotype, subtype), count in sorted(
                 grouped_by_gene[column].items(), key=lambda item: (genotype_sort_key(item[0][0]), subtype_sort_key(item[0][1]))
             )
-            if genotype in ALWAYS_INCLUDE_GENOTYPES or count >= DISPLAY_THRESHOLD
+            if include_all_subtypes or genotype in ALWAYS_INCLUDE_GENOTYPES or count >= DISPLAY_THRESHOLD
         ]
         for column in COUNT_COLUMNS
     ]
@@ -150,6 +152,10 @@ def build_summary(
         for values in gene_lists:
             row.extend(values[row_index] if row_index < len(values) else ("", ""))
         gene_list_rows.append(row)
+    total_row: list[object] = []
+    for values in gene_lists:
+        total_row.extend(["Total", sum(count for _, count in values)])
+    gene_list_rows.append(total_row)
     gene_list_csv_path = output_dir / "HCV_Profile_Subtype_Counts_By_Gene.csv"
     gene_list_xlsx_path = output_dir / f"HCV_Profile_Subtype_Counts_By_Gene_{condition}.xlsx"
     write_csv(gene_list_csv_path, gene_list_headers, gene_list_rows)
@@ -158,10 +164,10 @@ def build_summary(
     return {
         "csv": str(csv_path.resolve()),
         "xlsx": str(xlsx_path.resolve()),
-        "subtype_group_count": len(rows),
+        "subtype_group_count": len(rows) - 1,
         "by_gene_csv": str(gene_list_csv_path.resolve()),
         "by_gene_xlsx": str(gene_list_xlsx_path.resolve()),
-        "by_gene_row_count": len(gene_list_rows),
+        "by_gene_row_count": len(gene_list_rows) - 1,
     }
 
 
@@ -187,16 +193,15 @@ def main() -> int:
             )
         }
     else:
-        summaries = {
-            variant: build_summary(
-                profiles["#NS3A"],
-                profiles["#NS5A"],
-                profiles["#NS5B"],
-                args.output_dir / variant,
-                variant,
+        summaries = {}
+        for variant, profiles in DEFAULT_VARIANTS.items():
+            summaries[variant] = build_summary(
+                profiles["#NS3A"], profiles["#NS5A"], profiles["#NS5B"], args.output_dir / variant, variant
             )
-            for variant, profiles in DEFAULT_VARIANTS.items()
-        }
+            summaries[f"{variant}/all-subtypes"] = build_summary(
+                profiles["#NS3A"], profiles["#NS5A"], profiles["#NS5B"], args.output_dir / variant / "all-subtypes", variant,
+                include_all_subtypes=True,
+            )
     print(json.dumps({"summaries": summaries}, indent=2))
     return 0
 
