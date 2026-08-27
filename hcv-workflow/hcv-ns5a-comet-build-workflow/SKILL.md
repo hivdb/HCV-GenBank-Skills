@@ -120,7 +120,7 @@ The priority-assignment stage uses `HCVData/Reference_seqs/HCV_Subtype_Refs_AA_A
 
 ## Outputs
 
-The final GT7/GT8 local-assignment comparison step reads `outputs/folder_assignments/NS5A_assignments.csv` and writes the workflow/local subtype comparison workbook and CSV in its own numbered output directory.
+The final GT7/GT8 comparison step reads `HCVData/HCV-all-seq-subtype/NS5A_AllSeq_NonComet_Coverage.csv` and writes the workflow/non-COMET-coverage subtype comparison workbook and CSV in its own numbered output directory.
 
 The workflow writes NS5A outputs under `outputs/comet-NS5A/`, in numbered step folders, including:
 

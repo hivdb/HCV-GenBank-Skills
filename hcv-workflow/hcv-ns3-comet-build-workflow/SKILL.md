@@ -31,7 +31,7 @@ Use this skill for the full NS3 high-throughput build workflow. The first step r
 18. `build_ns3_subtype_ras_consensus_difference_summary/build_ns3_subtype_ras_consensus_difference_summary.py`
 19. `build_ns3_subtype_profile_coverage_report/build_ns3_subtype_profile_coverage_report.py` (GT5 subtype 5a coverage audit)
 20. `build_ns3_gt7_gt8_step_audit.py` (GT7/GT8 retention and exclusion audit compared with the previous workflow step)
-21. `compare_ns3_gt7_gt8_local_assignments.py` (compare GT7/GT8 workflow subtype calls with local `NS3_assignments.csv` calls)
+21. `compare_ns3_gt7_gt8_local_assignments.py` (compare GT7/GT8 workflow subtype calls with `NS3_AllSeq_NonComet_Coverage.csv` calls)
 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 
@@ -62,7 +62,7 @@ Each stage writes its outputs under a numbered directory in `outputs/comet-NS3/`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
 - `HCV_GT_Refs_By_Gene_AA.json`
 - `HCVData/HCV-all-seq-subtype/NS3_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET subtype 1d and genotype 7/8 overrides and additions
-- `outputs/folder_assignments/NS3_assignments.csv` from `hcv-folder-genotype-subtype-assignment` for the GT7/GT8 local-assignment comparison; set `local_ns3_assignments_csv` in `[ns3_comet]`, `LOCAL_NS3_ASSIGNMENTS_CSV`, or `--local-ns3-assignments-csv` to use another file.
+- `HCVData/HCV-all-seq-subtype/NS3_AllSeq_NonComet_Coverage.csv` for the final GT7/GT8 comparison.
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 
 The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on `NumPatients`, `Num Pts`, `NS3Count`, or `Notes`.

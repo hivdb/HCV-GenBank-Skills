@@ -16,7 +16,7 @@ Run the bundled script from the repository root. It calls the repository's non-C
 
 The output files are `NS3_AllSeq_NonComet_Coverage.csv`, `NS5A_AllSeq_NonComet_Coverage.csv`, and `NS5B_AllSeq_NonComet_Coverage.csv`.
 
-Each table has five columns: `Accession`, `ClosestGenotype`, `ClosestSubtype`, `ReferenceOverlapAA`, and `FullyCover`. The genotype and subtype calls come from the non-COMET genotype-first, genotype-matched-subtype workflow. Blank assignment fields mean the sequence did not meet the assignment threshold for that gene.
+Each table has seven columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePident`, `ClosestSubtype`, `ClosestSubtypePident`, `ReferenceOverlapAA`, and `FullyCover`. The percent-identity columns are the BLAST percent identities for the best genotype and genotype-matched subtype hits. Blank assignment fields mean the sequence did not meet the assignment threshold for that gene.
 
 `ReferenceOverlapAA` is blank when the best genotype alignment does not overlap the requested target range. When it overlaps, it reports the overlapping reference amino-acid interval, including partial overlap.
 

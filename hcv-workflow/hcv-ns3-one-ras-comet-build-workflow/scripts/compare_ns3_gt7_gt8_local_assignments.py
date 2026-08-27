@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gene", help=argparse.SUPPRESS)
     parser.add_argument("--subtype-workbook", required=True)
-    parser.add_argument("--local-assignments-csv", required=True)
+    parser.add_argument("--coverage-csv", required=True)
     parser.add_argument("--reference-subtypes-csv", type=Path, default=REFERENCE_SUBTYPES_CSV)
     parser.add_argument("--all-comet-subtype-csv", type=Path, default=ALL_COMET_SUBTYPE_CSV)
     parser.add_argument("--profile-accessions-csv", type=Path)
@@ -69,17 +69,23 @@ def read_workflow_rows(path: Path) -> list[dict[str, str]]:
 def read_local_assignments(path: Path) -> dict[str, list[dict[str, str]]]:
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        required = {"accession", "gene", "genotype", "subtype", "subtype_reference_accession"}
+        required = {"Accession", "ClosestGenotype", "ClosestSubtype"}
         missing = sorted(required - set(reader.fieldnames or []))
         if missing:
             raise RuntimeError(f"{path} is missing required columns: {', '.join(missing)}")
         assignments: dict[str, list[dict[str, str]]] = defaultdict(list)
         for row in reader:
-            if str(row.get("gene") or "").strip().upper() != "NS3":
-                continue
-            key = accession_key(row.get("accession"))
+            accession = str(row.get("Accession") or "").strip()
+            key = accession_key(accession)
             if key:
-                assignments[key].append({name: str(row.get(name) or "").strip() for name in reader.fieldnames})
+                assignments[key].append({
+                    "accession": accession,
+                    "genotype": str(row.get("ClosestGenotype") or "").strip(),
+                    "subtype": str(row.get("ClosestSubtype") or "").strip(),
+                    "subtype_reference_accession": "",
+                    "subtype_aligned_nt": "",
+                    "subtype_pident": str(row.get("ClosestSubtypePident") or "").strip(),
+                })
     return assignments
 
 
@@ -204,18 +210,17 @@ def write_report(rows: list[dict[str, str]], output_xlsx: Path, output_csv: Path
 def main() -> int:
     args = parse_args()
     subtype_workbook = Path(args.subtype_workbook)
-    local_assignments_csv = Path(args.local_assignments_csv)
+    coverage_csv = Path(args.coverage_csv)
     profile_accessions_csv = Path(args.profile_accessions_csv) if args.profile_accessions_csv else next(iter(sorted(subtype_workbook.parent.parent.glob("*_build-complete-profiles/*_Profile_Accessions_QC_Pass.csv"))), None)
     if not subtype_workbook.is_file():
         raise SystemExit(f"NS3 subtype workbook was not found: {subtype_workbook}")
-    if not local_assignments_csv.is_file():
+    if not coverage_csv.is_file():
         raise SystemExit(
-            f"Local NS3 assignments were not found: {local_assignments_csv}. "
-            "Run hcv-folder-genotype-subtype-assignment first, or pass --local-ns3-assignments-csv."
+            f"Non-COMET coverage CSV was not found: {coverage_csv}."
         )
     if profile_accessions_csv is None or not profile_accessions_csv.is_file():
         raise SystemExit(f"Profile RAS-coverage accessions CSV was not found for {subtype_workbook}")
-    rows = compare_rows(read_workflow_rows(subtype_workbook), read_local_assignments(local_assignments_csv), read_reference_accessions(Path(args.reference_subtypes_csv)), read_all_comet_subtypes(Path(args.all_comet_subtype_csv)), read_profile_accessions(profile_accessions_csv))
+    rows = compare_rows(read_workflow_rows(subtype_workbook), read_local_assignments(coverage_csv), read_reference_accessions(Path(args.reference_subtypes_csv)), read_all_comet_subtypes(Path(args.all_comet_subtype_csv)), read_profile_accessions(profile_accessions_csv))
     write_report(rows, Path(args.output_xlsx), Path(args.output_csv))
     print(json.dumps({
         "workflow_gt7_gt8_accession_count": len(rows),

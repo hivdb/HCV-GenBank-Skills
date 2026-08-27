@@ -15,23 +15,23 @@ from openpyxl.styles import Font
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_VARIANTS = {
     "all-ras": {
-        "#NS3A": REPO_ROOT / "outputs/comet-NS3-all-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
+        "#NS3": REPO_ROOT / "outputs/comet-NS3-all-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
         "#NS5A": REPO_ROOT / "outputs/comet-NS5A-all-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
         "#NS5B": REPO_ROOT / "outputs/comet-NS5B-all-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     },
     "one-ras": {
-        "#NS3A": REPO_ROOT / "outputs/comet-NS3-one-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
+        "#NS3": REPO_ROOT / "outputs/comet-NS3-one-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
         "#NS5A": REPO_ROOT / "outputs/comet-NS5A-one-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
         "#NS5B": REPO_ROOT / "outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     },
     "position-282-four-ras": {
-        "#NS3A": REPO_ROOT / "outputs/comet-NS3/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
+        "#NS3": REPO_ROOT / "outputs/comet-NS3/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
         "#NS5A": REPO_ROOT / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
         "#NS5B": REPO_ROOT / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     },
 }
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs/hcv-profile-subtype-accession-summary"
-COUNT_COLUMNS = ("#NS3A", "#NS5A", "#NS5B")
+COUNT_COLUMNS = ("#NS3", "#NS5A", "#NS5B")
 DISPLAY_THRESHOLD = 10
 ALWAYS_INCLUDE_GENOTYPES = frozenset({"7", "8"})
 PROFILE_LABEL = re.compile(r"^GT(?P<genotype>\d+)_(?P<subtype>[^ ]+) \((?P<count>\d+),")
@@ -109,7 +109,7 @@ def build_summary(
     include_all_subtypes: bool = False,
 ) -> dict[str, object]:
     grouped_by_gene = {
-        "#NS3A": load_subtype_counts(ns3_ras_profile),
+        "#NS3": load_subtype_counts(ns3_ras_profile),
         "#NS5A": load_subtype_counts(ns5a_ras_profile),
         "#NS5B": load_subtype_counts(ns5b_ras_profile),
     }
@@ -196,10 +196,10 @@ def main() -> int:
         summaries = {}
         for variant, profiles in DEFAULT_VARIANTS.items():
             summaries[variant] = build_summary(
-                profiles["#NS3A"], profiles["#NS5A"], profiles["#NS5B"], args.output_dir / variant, variant
+                profiles["#NS3"], profiles["#NS5A"], profiles["#NS5B"], args.output_dir / variant, variant
             )
             summaries[f"{variant}/all-subtypes"] = build_summary(
-                profiles["#NS3A"], profiles["#NS5A"], profiles["#NS5B"], args.output_dir / variant / "all-subtypes", variant,
+                profiles["#NS3"], profiles["#NS5A"], profiles["#NS5B"], args.output_dir / variant / "all-subtypes", variant,
                 include_all_subtypes=True,
             )
     print(json.dumps({"summaries": summaries}, indent=2))

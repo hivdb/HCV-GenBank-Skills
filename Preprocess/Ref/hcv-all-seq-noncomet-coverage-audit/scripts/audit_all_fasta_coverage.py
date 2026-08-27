@@ -100,7 +100,10 @@ def main() -> None:
             "--min-aligned-nt", str(args.min_aligned_nt), "--threads", str(args.threads),
         ], "assigning genotype and subtype")
         hits_by_gene = coverage_hits(input_fasta, temp_dir / "coverage", args.threads)
-        fields = ["Accession", "ClosestGenotype", "ClosestSubtype", "ReferenceOverlapAA", "FullyCover"]
+        fields = [
+            "Accession", "ClosestGenotype", "ClosestGenotypePident",
+            "ClosestSubtype", "ClosestSubtypePident", "ReferenceOverlapAA", "FullyCover",
+        ]
         assignments_by_gene = {gene: assignments(assignment_dir / f"{gene}_assignments.csv") for gene in GENES}
         output_paths = {gene: args.output_dir / f"{gene}_AllSeq_NonComet_Coverage.csv" for gene in GENES}
         with ExitStack() as stack:
@@ -128,7 +131,9 @@ def main() -> None:
                                 fully_cover = "Yes"
                     writers[gene].writerow({
                         "Accession": accession, "ClosestGenotype": assignment.get("genotype", ""),
-                        "ClosestSubtype": assignment.get("subtype", ""), "ReferenceOverlapAA": reference_overlap,
+                        "ClosestGenotypePident": assignment.get("genotype_pident", ""),
+                        "ClosestSubtype": assignment.get("subtype", ""),
+                        "ClosestSubtypePident": assignment.get("subtype_pident", ""), "ReferenceOverlapAA": reference_overlap,
                         "FullyCover": fully_cover,
                     })
                 show_accession_progress(completed, len(accessions))
