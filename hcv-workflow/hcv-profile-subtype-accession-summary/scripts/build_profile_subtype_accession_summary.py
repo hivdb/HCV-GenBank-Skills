@@ -13,14 +13,22 @@ from openpyxl.styles import Font
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_INPUTS = {
-    "#NS3A": REPO_ROOT / "outputs/comet-NS3/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
-    "#NS5A": REPO_ROOT / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
-}
-DEFAULT_NS5B_VARIANTS = {
-    "all-ras": REPO_ROOT / "outputs/comet-NS5B-all-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
-    "position-282": REPO_ROOT / "outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
-    "position-282-four-ras": REPO_ROOT / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+DEFAULT_VARIANTS = {
+    "all-ras": {
+        "#NS3A": REPO_ROOT / "outputs/comet-NS3-all-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
+        "#NS5A": REPO_ROOT / "outputs/comet-NS5A-all-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
+        "#NS5B": REPO_ROOT / "outputs/comet-NS5B-all-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+    },
+    "one-ras": {
+        "#NS3A": REPO_ROOT / "outputs/comet-NS3-one-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
+        "#NS5A": REPO_ROOT / "outputs/comet-NS5A-one-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
+        "#NS5B": REPO_ROOT / "outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+    },
+    "position-282-four-ras": {
+        "#NS3A": REPO_ROOT / "outputs/comet-NS3/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
+        "#NS5A": REPO_ROOT / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
+        "#NS5B": REPO_ROOT / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+    },
 }
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs/hcv-profile-subtype-accession-summary"
 COUNT_COLUMNS = ("#NS3A", "#NS5A", "#NS5B")
@@ -92,7 +100,13 @@ def write_xlsx(
     workbook.save(path)
 
 
-def build_summary(ns3_ras_profile: Path, ns5a_ras_profile: Path, ns5b_ras_profile: Path, output_dir: Path) -> dict[str, object]:
+def build_summary(
+    ns3_ras_profile: Path,
+    ns5a_ras_profile: Path,
+    ns5b_ras_profile: Path,
+    output_dir: Path,
+    condition: str,
+) -> dict[str, object]:
     grouped_by_gene = {
         "#NS3A": load_subtype_counts(ns3_ras_profile),
         "#NS5A": load_subtype_counts(ns5a_ras_profile),
@@ -108,7 +122,7 @@ def build_summary(ns3_ras_profile: Path, ns5a_ras_profile: Path, ns5b_ras_profil
 
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.csv"
-    xlsx_path = output_dir / "HCV_Profile_Subtype_Accession_Counts.xlsx"
+    xlsx_path = output_dir / f"HCV_Profile_Subtype_Accession_Counts_{condition}.xlsx"
     write_csv(csv_path, ["Genotype", "Subtype", *COUNT_COLUMNS], rows)
     write_xlsx(
         xlsx_path,
@@ -137,7 +151,7 @@ def build_summary(ns3_ras_profile: Path, ns5a_ras_profile: Path, ns5b_ras_profil
             row.extend(values[row_index] if row_index < len(values) else ("", ""))
         gene_list_rows.append(row)
     gene_list_csv_path = output_dir / "HCV_Profile_Subtype_Counts_By_Gene.csv"
-    gene_list_xlsx_path = output_dir / "HCV_Profile_Subtype_Counts_By_Gene.xlsx"
+    gene_list_xlsx_path = output_dir / f"HCV_Profile_Subtype_Counts_By_Gene_{condition}.xlsx"
     write_csv(gene_list_csv_path, gene_list_headers, gene_list_rows)
     write_xlsx(gene_list_xlsx_path, "Subtype_Counts_By_Gene", gene_list_headers, gene_list_rows, (2, 4, 6))
 
@@ -153,18 +167,35 @@ def build_summary(ns3_ras_profile: Path, ns5a_ras_profile: Path, ns5b_ras_profil
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ns3-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS3A"])
-    parser.add_argument("--ns5a-ras-profile", type=Path, default=DEFAULT_INPUTS["#NS5A"])
+    parser.add_argument("--ns3-ras-profile", type=Path, help="Generate one custom summary with this NS3 RAS profile.")
+    parser.add_argument("--ns5a-ras-profile", type=Path, help="Generate one custom summary with this NS5A RAS profile.")
     parser.add_argument("--ns5b-ras-profile", type=Path, help="Generate one summary with this NS5B RAS profile instead of all default variants.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     args = parser.parse_args()
 
-    if args.ns5b_ras_profile:
-        summaries = {"custom": build_summary(args.ns3_ras_profile, args.ns5a_ras_profile, args.ns5b_ras_profile, args.output_dir)}
+    custom_profiles = (args.ns3_ras_profile, args.ns5a_ras_profile, args.ns5b_ras_profile)
+    if any(custom_profiles):
+        if not all(custom_profiles):
+            parser.error("--ns3-ras-profile, --ns5a-ras-profile, and --ns5b-ras-profile must be provided together.")
+        summaries = {
+            "custom": build_summary(
+                args.ns3_ras_profile,
+                args.ns5a_ras_profile,
+                args.ns5b_ras_profile,
+                args.output_dir,
+                "custom",
+            )
+        }
     else:
         summaries = {
-            variant: build_summary(args.ns3_ras_profile, args.ns5a_ras_profile, ns5b_ras_profile, args.output_dir / variant)
-            for variant, ns5b_ras_profile in DEFAULT_NS5B_VARIANTS.items()
+            variant: build_summary(
+                profiles["#NS3A"],
+                profiles["#NS5A"],
+                profiles["#NS5B"],
+                args.output_dir / variant,
+                variant,
+            )
+            for variant, profiles in DEFAULT_VARIANTS.items()
         }
     print(json.dumps({"summaries": summaries}, indent=2))
     return 0
