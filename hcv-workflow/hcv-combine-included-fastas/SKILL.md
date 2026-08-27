@@ -15,6 +15,6 @@ The defaults read these folders under the repository root:
 
 - `outputs/comet-NS3/temp/run_ns3_pipeline/included_refid_fastas`
 - `outputs/comet-NS5A/temp/run_ns5a_pipeline/included_refid_fastas`
-- `outputs/comet-NS5B/temp/run_ns5b_pipeline/included_refid_fastas`
+- `outputs/comet-NS5B-all-ras/08_filter-refid-fastas/included_refid_fastas`
 
 The script accepts `--ns3-dir`, `--ns5a-dir`, `--ns5b-dir`, and `--output-dir` when a run uses different locations. It concatenates sorted `*.fasta` files without changing FASTA headers or sequences, and reports per-gene input-file and record counts.

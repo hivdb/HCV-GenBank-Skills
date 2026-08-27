@@ -65,7 +65,7 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B/temp")) / Path(__file__).stem
+    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-all-ras/temp")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -529,7 +529,7 @@ def main() -> int:
     #     encoding="utf-8",
     # )
     # (job_dir / "workflow_request.txt").write_text(
-    #     Path("hcv-workflow/hcv-ns5b-comet-build-workflow/notes/ns5b_gt_distance_workflow_2026-05-13.md").read_text(encoding="utf-8"),
+    #     Path("hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/notes/ns5b_gt_distance_workflow_2026-05-13.md").read_text(encoding="utf-8"),
     #     encoding="utf-8",
     # )
 

@@ -51,7 +51,7 @@ Required sibling workflow skills:
 
 - `$hcv-ns3-comet-build-workflow`
 - `$hcv-ns5a-comet-build-workflow`
-- `$hcv-ns5b-comet-build-workflow`
+- `$hcv-ns5b-all-ras-comet-build-workflow`
 
 If any of these are missing, stop and tell the user which previous step to run first. The user only needs to know that this skill uses the gene workflow skills internally; do not explain internal script path wiring unless troubleshooting.
 
@@ -86,6 +86,6 @@ The script writes one `output-root` containing:
 ## Operating Rules
 
 - Keep `export_subtype_consensus_fasta.py` bundled in this skill because it is only used by this workflow.
-- Before running the full workflow, warn the user that `$hcv-ns3-comet-build-workflow`, `$hcv-ns5a-comet-build-workflow`, and `$hcv-ns5b-comet-build-workflow` are required.
+- Before running the full workflow, warn the user that `$hcv-ns3-comet-build-workflow`, `$hcv-ns5a-comet-build-workflow`, and `$hcv-ns5b-all-ras-comet-build-workflow` are required.
 - If the user asks to modify genotype, subtype, AA extraction, or complete-profile behavior, edit the owning gene workflow skill, not this orchestrator.
 - If the user asks to modify consensus FASTA export or consensus-to-GT alignment reporting, edit this skill.

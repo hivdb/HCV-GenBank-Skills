@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B/temp")) / Path(__file__).stem
+    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-all-ras/temp")) / Path(__file__).stem
     path.mkdir(parents=True, exist_ok=True)
     return path
 

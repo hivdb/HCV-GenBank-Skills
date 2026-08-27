@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV NS5B All-RAS COMET Build Workflow"
+  short_description: "Build NS5B genotype, subtype, and RAS reports"
+  default_prompt: "Use $hcv-ns5b-all-ras-comet-build-workflow to run or inspect the NS5B all-RAS COMET build scripts for genotype/subtype study workbooks, complete profiles, and RAS reports."

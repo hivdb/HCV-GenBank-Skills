@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ns5b-dir",
         type=Path,
-        default=REPO_ROOT / "outputs/comet-NS5B/temp/run_ns5b_pipeline/included_refid_fastas",
+        default=REPO_ROOT / "outputs/comet-NS5B-all-ras/08_filter-refid-fastas/included_refid_fastas",
     )
     parser.add_argument("--output-dir", type=Path, default=SKILL_ROOT / "assets")
     return parser.parse_args()

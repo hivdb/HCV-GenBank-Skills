@@ -1,9 +1,9 @@
 ---
-name: hcv-ns5b-comet-build-workflow
+name: hcv-ns5b-all-ras-comet-build-workflow
 description: Use this skill when the user wants to run or inspect the HCV NS5B COMET build scripts that discover RefID FASTA files, create genotype/subtype study workbooks, complete profile workbooks, and genotype/subtype RAS profile reports.
 ---
 
-# HCV NS5B Build Workflow
+# HCV NS5B All-RAS COMET Build Workflow
 
 Use this skill for the full NS5B high-throughput build workflow. The first step reads the configured Excel worksheet, discovers matching RefID FASTA files, and stages those files for downstream NS5B build steps.
 
@@ -32,9 +32,9 @@ Use this skill for the full NS5B high-throughput build workflow. The first step 
 Use the Python orchestrator for complete runs or selected, resumable stages:
 
 ```bash
-python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py --list-steps
-python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py
-python hcv-workflow/hcv-ns5b-comet-build-workflow/scripts/run_ns5b_pipeline.py --step discover-refid-fastas
+python hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/scripts/run_ns5b_pipeline.py --list-steps
+python hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/scripts/run_ns5b_pipeline.py
+python hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/scripts/run_ns5b_pipeline.py --step discover-refid-fastas
 ```
 
 `--list-steps` prints all named stages. `--step <name>` runs only that stage; repeat the flag to run selected stages in order. Selected stages expect their prerequisite outputs to exist. The legacy shell wrapper remains available for compatibility but is no longer the preferred entry point.
@@ -47,8 +47,8 @@ Configuration stays in the repository base folder. The wrapper loads:
 
 Explicit environment variables provided by the caller take precedence over `pipeline.local.toml`.
 The TOML loader is bundled at `load_pipeline_defaults/load_pipeline_defaults.py` and is called with the explicit root config path.
-Set `sheet_name` in the `[ns5b]` section of `pipeline.local.toml` to choose the input worksheet for discovery and genotype assignment.
-Each stage writes its outputs under a numbered directory in `outputs/comet-NS5B/`.
+The variant inherits settings from `[common]` and `[ns5b_comet]`. Add `[ns5b_all_ras]` to `pipeline.local.toml` to set its isolated `output_dir` and, when needed, a different `sheet_name`.
+Each stage writes its outputs under a numbered directory in `outputs/comet-NS5B-all-ras/`.
 Step 11 caches RefID FASTAs and parallelizes accession preparation/AA extraction and BLASTX with four workers by default; set `NS5B_WORKERS` or pass `--workers` to tune this.
 
 ## Inputs
@@ -74,11 +74,11 @@ The `build-90pct-range-coverage-combined-profile` step is separate from the stan
 
 ## Outputs
 
-The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
+The workflow writes NS5B outputs under `outputs/comet-NS5B-all-ras/`, including:
 
 - `NS5B_GT_AllStudies.xlsx`
 - `NS5B_matched_fasta_files.txt`
-- discovery `filtered_rows.xlsx` under `outputs/comet-NS5B/temp/.../find_refid_fastas/...`
+- discovery `filtered_rows.xlsx` under `outputs/comet-NS5B-all-ras/temp/.../find_refid_fastas/...`
 - copied included RefID FASTA files under `03_stage-refid-fastas/`, the COMET-filtered copy under `04_prepare-comet-assignments/`, and the metadata-filtered copy and `kept_accessions.csv` under `08_filter-refid-fastas/`
 - `NS5B_NonComet_Priority_Assignments.csv` under `05_select-noncomet-priority-assignments/`
 - `included_accessions_metadata.csv`
@@ -107,5 +107,5 @@ The workflow writes NS5B outputs under `outputs/comet-NS5B/`, including:
 - Keep NS5B scripts together in this skill folder.
 - Use `scripts/run_ns5b_pipeline.py` for complete runs or `--step <name>` for a specific build step.
 - Keep `.env` and `pipeline.local.toml` in the repository root; do not copy them into this skill folder.
-- Keep temporary outputs under `outputs/comet-NS5B/temp/` so they do not mix with other skills.
+- Keep temporary outputs under `outputs/comet-NS5B-all-ras/temp/` so they do not mix with other skills.
 - Preserve the order above because later reports consume earlier workbooks.

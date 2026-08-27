@@ -19,7 +19,7 @@ Use the stage-23 `NS5B_Subtype_RAS_Profiles.xlsx` input and save each result in 
 
 | Variant | NS5B input | Summary output subfolder |
 | --- | --- | --- |
-| Standard | `outputs/comet-NS5B/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx` | `standard/` |
+| All RAS | `outputs/comet-NS5B-all-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx` | `all-ras/` |
 | Position 282 | `outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx` | `position-282/` |
 | Position 282 plus four RAS positions | `outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx` | `position-282-four-ras/` |
 

@@ -35,7 +35,7 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 - `Preprocess/RefSeq/hcv-accessions-metadata-csv/`: Build accession metadata CSVs from RefID FASTA files and local GenBank archives.
 - `hcv-workflow/hcv-ns3-comet-build-workflow/`: Build NS3 COMET genotype, subtype, complete-profile, and RAS outputs.
 - `hcv-workflow/hcv-ns5a-comet-build-workflow/`: Build NS5A COMET genotype, subtype, complete-profile, and RAS outputs.
-- `hcv-workflow/hcv-ns5b-comet-build-workflow/`: Build NS5B COMET genotype, subtype, complete-profile, and RAS outputs.
+- `hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/`: Build NS5B all-RAS COMET genotype, subtype, complete-profile, and RAS outputs.
 - `hcv-workflow/hcv-metadata-subtype-consensus-workflow/`: Build metadata-driven subtype complete profiles, consensus FASTAs, and consensus-to-genotype alignment reports.
 
 ## Top-Level Scripts
@@ -62,6 +62,6 @@ Skill-specific scripts live inside each skill's `scripts/` directory.
 ├── hcv-workflow/hcv-metadata-subtype-consensus-workflow/
 ├── hcv-workflow/hcv-ns3-comet-build-workflow/
 ├── hcv-workflow/hcv-ns5a-comet-build-workflow/
-├── hcv-workflow/hcv-ns5b-comet-build-workflow/
+├── hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/
 └── scripts/
 ```

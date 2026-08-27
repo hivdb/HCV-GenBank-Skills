@@ -18,7 +18,7 @@ DEFAULT_INPUTS = {
     "#NS5A": REPO_ROOT / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
 }
 DEFAULT_NS5B_VARIANTS = {
-    "standard": REPO_ROOT / "outputs/comet-NS5B/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+    "all-ras": REPO_ROOT / "outputs/comet-NS5B-all-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     "position-282": REPO_ROOT / "outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     "position-282-four-ras": REPO_ROOT / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
 }

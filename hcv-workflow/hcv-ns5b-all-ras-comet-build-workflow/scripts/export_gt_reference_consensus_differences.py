@@ -198,8 +198,8 @@ def main() -> int:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("outputs/comet-NS5B"),
-        help="Directory for generated comparison workbooks (default: outputs/comet-NS5B).",
+        default=Path("outputs/comet-NS5B-all-ras"),
+        help="Directory for generated comparison workbooks (default: outputs/comet-NS5B-all-ras).",
     )
     parser.add_argument(
         "--subtype-reference-dir",

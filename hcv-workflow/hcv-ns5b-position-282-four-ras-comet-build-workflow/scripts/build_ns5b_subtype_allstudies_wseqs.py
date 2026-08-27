@@ -662,7 +662,7 @@ def main() -> int:
     write_xlsx(output_path, output_rows)
     # Historical extra output kept for reference only.
     # (job_dir / "workflow_request.txt").write_text(
-    #     Path("hcv-workflow/hcv-ns5b-comet-build-workflow/notes/ns5b_subtype_distance_workflow_2026-05-13.md").read_text(encoding="utf-8"),
+    #     Path("hcv-workflow/hcv-ns5b-all-ras-comet-build-workflow/notes/ns5b_subtype_distance_workflow_2026-05-13.md").read_text(encoding="utf-8"),
     #     encoding="utf-8",
     # )
     summary = {

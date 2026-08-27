@@ -19,7 +19,7 @@ WORKFLOWS = (
     ("hcv-ns5a-comet-build-workflow", "NS5A", "outputs/comet-NS5A", "All QC-passed, subtype assigned inputs"),
     ("hcv-ns5a-one-ras-comet-build-workflow", "NS5A", "outputs/comet-NS5A-one-ras", "Callable AA at ≥1 NS5A RAS position"),
     ("hcv-ns5a-all-ras-comet-build-workflow", "NS5A", "outputs/comet-NS5A-all-ras", "Callable AA at every NS5A RAS position"),
-    ("hcv-ns5b-comet-build-workflow", "NS5B", "outputs/comet-NS5B", "Callable AA at every required RAS position: 150, 159, 206, 282, 316, 320, 321"),
+    ("hcv-ns5b-all-ras-comet-build-workflow", "NS5B", "outputs/comet-NS5B-all-ras", "Callable AA at every required RAS position: 150, 159, 206, 282, 316, 320, 321"),
     ("hcv-ns5b-position-282-comet-build-workflow", "NS5B", "outputs/comet-NS5B-position-282", "Callable AA at position 282"),
     ("hcv-ns5b-position-282-four-ras-comet-build-workflow", "NS5B", "outputs/comet-NS5B-position-282-four-ras", "Callable AA at position 282 plus ≥4 of positions 150, 159, 206, 316, 320, 321"),
 )

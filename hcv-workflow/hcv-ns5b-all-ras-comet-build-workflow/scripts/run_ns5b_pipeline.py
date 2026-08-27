@@ -25,7 +25,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
-SKILL_NAME = "hcv-ns5b-comet-build-workflow"
+SKILL_NAME = "hcv-ns5b-all-ras-comet-build-workflow"
 RAS_POSITIONS = "150,159,206,282,316,320,321"
 RANGE_POSITIONS = ",".join(str(position) for position in range(150, 322))
 STEP_NAMES = (
@@ -82,7 +82,7 @@ def load_config(config_path: Path) -> dict[str, str]:
     if config_path.is_file():
         with config_path.open("rb") as handle:
             config = tomllib.load(handle)
-        for section_name in ("common", "ns5b_comet"):
+        for section_name in ("common", "ns5b_comet", "ns5b_all_ras"):
             section = config.get(section_name, {})
             if isinstance(section, dict):
                 values.update({key.upper(): str(value) for key, value in section.items()})
@@ -158,7 +158,7 @@ class Pipeline:
         self.sheet_name = value("sheet_name", "SHEET_NAME")
         self.fasta_pool = path_value(value("fasta_pool", "FASTA_POOL"))
         self.genbank_dir = path_value(value("genbank_dir", "GENBANK_DIR"))
-        self.output_dir = path_value(value("output_dir", "OUTPUT_DIR", "outputs/comet-NS5B"))
+        self.output_dir = path_value(value("output_dir", "OUTPUT_DIR", "outputs/comet-NS5B-all-ras"))
         self.reference_fasta = path_value(value("reference_fasta", "REFERENCE_FASTA", "HCVData/HCV_GT_RefSeqs.fasta"))
         self.subtype_json = path_value(value("subtype_json", "SUBTYPE_JSON", "HCVData/HCV_Subtype_Refs_By_Genome_NA.json"))
         self.gt_aa_json = path_value(value("gt_aa_json", "GT_AA_JSON", "HCVData/HCV_GT_Refs_By_Gene_AA.json"))
