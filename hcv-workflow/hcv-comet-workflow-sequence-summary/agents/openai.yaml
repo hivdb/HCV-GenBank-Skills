@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV COMET Workflow Summary"
+  short_description: "Summarize HCV COMET workflow inclusion"
+  default_prompt: "Generate the HCV COMET workflow sequence-inclusion summary workbook."
