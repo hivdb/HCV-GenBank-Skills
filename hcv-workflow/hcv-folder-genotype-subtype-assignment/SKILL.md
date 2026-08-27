@@ -16,3 +16,7 @@ The script searches `.fa`, `.fasta`, and `.fna` files recursively. It first assi
 
 Defaults use `HCV_GT_RefSeqs.fasta`, `HCV_Subtype_Refs_By_Genome_NA.json`, and 200 aligned nt. Override them only when the user requests different references or threshold.
 The default output directory is `outputs/folder_assignments`; pass `--output-dir` to override it.
+
+## Related coverage tables
+
+For the documented generation chain of the all-sequence non-COMET coverage tables, read [2026-08-27-noncomet-coverage-generation.md](references/2026-08-27-noncomet-coverage-generation.md).

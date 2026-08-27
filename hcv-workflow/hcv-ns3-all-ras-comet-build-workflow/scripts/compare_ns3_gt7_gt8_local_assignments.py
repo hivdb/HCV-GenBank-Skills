@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare a workflow's GT7/GT8 subtype calls with local gene assignments."""
+"""Compare NS3 workflow GT7/GT8 subtype calls with local NS3 assignments."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from pathlib import Path
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 
-GENE = "NS3"
 REFERENCE_SUBTYPES_CSV = Path(__file__).resolve().parents[3] / "HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
 ALL_COMET_SUBTYPE_CSV = Path(__file__).resolve().parents[3] / "HCVData/HCV-all-seq-subtype/all_comet_subtype.csv"
 
@@ -23,6 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-assignments-csv", required=True)
     parser.add_argument("--reference-subtypes-csv", type=Path, default=REFERENCE_SUBTYPES_CSV)
     parser.add_argument("--all-comet-subtype-csv", type=Path, default=ALL_COMET_SUBTYPE_CSV)
+    parser.add_argument("--profile-accessions-csv", type=Path)
     parser.add_argument("--output-xlsx", required=True)
     parser.add_argument("--output-csv", required=True)
     return parser.parse_args()
@@ -75,7 +75,7 @@ def read_local_assignments(path: Path) -> dict[str, list[dict[str, str]]]:
             raise RuntimeError(f"{path} is missing required columns: {', '.join(missing)}")
         assignments: dict[str, list[dict[str, str]]] = defaultdict(list)
         for row in reader:
-            if str(row.get("gene") or "").strip().upper() != GENE:
+            if str(row.get("gene") or "").strip().upper() != "NS3":
                 continue
             key = accession_key(row.get("accession"))
             if key:
@@ -98,10 +98,26 @@ def read_all_comet_subtypes(path: Path) -> dict[str, dict[str, str]]:
         missing = sorted(required - set(reader.fieldnames or []))
         if missing:
             raise RuntimeError(f"{path} is missing required columns: {', '.join(missing)}")
-        return {accession_key(row.get("name")): {"CometVirus": str(row.get("virus") or "").strip(), "CometSubtype": str(row.get("subtype") or "").strip(), "CometSubtypeBootstrapSupport": str(row.get("bootstrap support") or "").strip()} for row in reader if accession_key(row.get("name"))}
+        return {
+            accession_key(row.get("name")): {
+                "CometVirus": str(row.get("virus") or "").strip(),
+                "CometSubtype": str(row.get("subtype") or "").strip(),
+                "CometSubtypeBootstrapSupport": str(row.get("bootstrap support") or "").strip(),
+            }
+            for row in reader
+            if accession_key(row.get("name"))
+        }
 
 
-def compare_rows(workflow_rows: list[dict[str, str]], local_assignments: dict[str, list[dict[str, str]]], reference_accessions: set[str], all_comet_subtypes: dict[str, dict[str, str]]) -> list[dict[str, str]]:
+def read_profile_accessions(path: Path) -> set[str]:
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or "accession" not in reader.fieldnames:
+            raise RuntimeError(f"{path} is missing the accession column")
+        return {accession_key(row.get("accession")) for row in reader if accession_key(row.get("accession"))}
+
+
+def compare_rows(workflow_rows: list[dict[str, str]], local_assignments: dict[str, list[dict[str, str]]], reference_accessions: set[str], all_comet_subtypes: dict[str, dict[str, str]], profile_accessions: set[str]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for workflow in workflow_rows:
         accession = workflow["AccessionID"]
@@ -112,7 +128,10 @@ def compare_rows(workflow_rows: list[dict[str, str]], local_assignments: dict[st
             "RefName": workflow["RefName"],
             "Accession": accession,
             "IsReferenceSubtypeAccession": "YES" if accession_key(accession) in reference_accessions else "NO",
-            "CometVirus": comet_subtype.get("CometVirus", ""), "CometSubtype": comet_subtype.get("CometSubtype", ""), "CometSubtypeBootstrapSupport": comet_subtype.get("CometSubtypeBootstrapSupport", ""),
+            "CometVirus": comet_subtype.get("CometVirus", ""),
+            "CometSubtype": comet_subtype.get("CometSubtype", ""),
+            "CometSubtypeBootstrapSupport": comet_subtype.get("CometSubtypeBootstrapSupport", ""),
+            "CoversWorkflowRASRequirement": "YES" if accession_key(accession) in profile_accessions else "NO",
             "WorkflowGenotype": workflow["ClosestGT"],
             "WorkflowSubtype": workflow["ClosestSubtype"],
             "WorkflowAssignmentSource": workflow["ClosestSubtypeAssignmentSource"],
@@ -149,14 +168,12 @@ def compare_rows(workflow_rows: list[dict[str, str]], local_assignments: dict[st
 
 def write_report(rows: list[dict[str, str]], output_xlsx: Path, output_csv: Path) -> None:
     fields = [
-        "RefID", "RefName", "Accession", "IsReferenceSubtypeAccession", "CometVirus", "CometSubtype", "CometSubtypeBootstrapSupport", "WorkflowGenotype", "WorkflowSubtype",
-        "WorkflowAssignmentSource", "WorkflowAssignmentColumn", "LocalAssignmentStatus",
-        "LocalGenotype", "LocalSubtype", "LocalSubtypeReferenceAccession",
-        "LocalSubtypeAlignedNt", "LocalSubtypePident", "GenotypeMatchesLocal", "SubtypeMatchesLocal",
+        "Accession", "IsReferenceSubtypeAccession", "CometSubtype", "CometSubtypeBootstrapSupport", "CoversWorkflowRASRequirement",
+        "WorkflowGenotype", "WorkflowSubtype", "LocalSubtypePident",
     ]
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -188,17 +205,19 @@ def main() -> int:
     args = parse_args()
     subtype_workbook = Path(args.subtype_workbook)
     local_assignments_csv = Path(args.local_assignments_csv)
+    profile_accessions_csv = Path(args.profile_accessions_csv) if args.profile_accessions_csv else next(iter(sorted(subtype_workbook.parent.parent.glob("*_build-complete-profiles/*_Profile_Accessions_QC_Pass.csv"))), None)
     if not subtype_workbook.is_file():
         raise SystemExit(f"NS3 subtype workbook was not found: {subtype_workbook}")
     if not local_assignments_csv.is_file():
         raise SystemExit(
-            f"Local {GENE} assignments were not found: {local_assignments_csv}. "
-            "Run hcv-folder-genotype-subtype-assignment first, then pass the resulting assignments CSV."
+            f"Local NS3 assignments were not found: {local_assignments_csv}. "
+            "Run hcv-folder-genotype-subtype-assignment first, or pass --local-ns3-assignments-csv."
         )
-    rows = compare_rows(read_workflow_rows(subtype_workbook), read_local_assignments(local_assignments_csv), read_reference_accessions(Path(args.reference_subtypes_csv)), read_all_comet_subtypes(Path(args.all_comet_subtype_csv)))
+    if profile_accessions_csv is None or not profile_accessions_csv.is_file():
+        raise SystemExit(f"Profile RAS-coverage accessions CSV was not found for {subtype_workbook}")
+    rows = compare_rows(read_workflow_rows(subtype_workbook), read_local_assignments(local_assignments_csv), read_reference_accessions(Path(args.reference_subtypes_csv)), read_all_comet_subtypes(Path(args.all_comet_subtype_csv)), read_profile_accessions(profile_accessions_csv))
     write_report(rows, Path(args.output_xlsx), Path(args.output_csv))
     print(json.dumps({
-        "gene": GENE,
         "workflow_gt7_gt8_accession_count": len(rows),
         "subtype_match_counts": dict(sorted(Counter(row["SubtypeMatchesLocal"] for row in rows).items())),
         "output_xlsx": str(Path(args.output_xlsx).resolve()),
