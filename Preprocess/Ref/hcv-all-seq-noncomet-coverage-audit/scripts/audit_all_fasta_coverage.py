@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
+import re
 import subprocess
 import sys
 import tempfile
 import time
+from collections import defaultdict
 from contextlib import ExitStack
 from pathlib import Path
 
 
 GENES = {"NS3": (36, 175), "NS5A": (26, 93), "NS5B": (150, 321)}
 REPO_ROOT = Path(__file__).resolve().parents[4]
-ASSIGNER = REPO_ROOT / "hcv-workflow" / "hcv-folder-genotype-subtype-assignment" / "scripts" / "assign_folder_genotype_subtype.py"
 GT_REFERENCES = REPO_ROOT / "HCVData" / "HCV_GT_RefSeqs.fasta"
 SUBTYPE_REFERENCES = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
 
@@ -29,9 +31,98 @@ def fasta_accessions(path: Path) -> list[str]:
     return accessions
 
 
-def assignments(path: Path) -> dict[str, dict[str, str]]:
-    with path.open(newline="", encoding="utf-8-sig") as handle:
-        return {row["accession"]: row for row in csv.DictReader(handle)}
+def fasta_records(path: Path) -> dict[str, str]:
+    records: dict[str, str] = {}
+    accession = None
+    sequence: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith(">"):
+            if accession is not None:
+                records[accession] = "".join(sequence).upper()
+            accession = line[1:].split()[0].split(".")[0]
+            sequence = []
+        elif line.strip():
+            sequence.append(re.sub(r"\s+", "", line))
+    if accession is not None:
+        records[accession] = "".join(sequence).upper()
+    return records
+
+
+def write_fasta(path: Path, records: dict[str, str]) -> None:
+    with path.open("w", encoding="utf-8") as handle:
+        for identifier, sequence in records.items():
+            handle.write(f">{identifier}\n{sequence}\n")
+
+
+def blast(query: Path, database: Path, output: Path, threads: int, label: str) -> list[list[str]]:
+    outfmt = "6 qseqid sseqid length mismatch gaps pident evalue bitscore"
+    run_with_spinner([
+        "blastn", "-query", str(query), "-db", str(database), "-dust", "no", "-task", "blastn",
+        "-num_threads", str(threads), "-evalue", "1e-6", "-max_hsps", "1", "-max_target_seqs", "1000",
+        "-outfmt", outfmt, "-out", str(output),
+    ], label)
+    return [line.split("\t") for line in output.read_text(encoding="utf-8").splitlines() if line]
+
+
+def make_database(input_fasta: Path, database: Path) -> None:
+    subprocess.run([
+        "makeblastdb", "-in", str(input_fasta), "-dbtype", "nucl", "-out", str(database), "-parse_seqids",
+    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def assignment_calls(input_fasta: Path, work_dir: Path, threads: int, min_aligned_nt: int) -> dict[str, dict[str, dict[str, str]]]:
+    """Apply the archived assigner's two-stage BLAST method to this input FASTA."""
+    work_dir.mkdir(parents=True, exist_ok=True)
+    records = fasta_records(input_fasta)
+    genotype_db = work_dir / "genotype_refs"
+    make_database(GT_REFERENCES, genotype_db)
+    genotype_hits = blast(input_fasta, genotype_db, work_dir / "genotype.tsv", threads, "assigning genotypes")
+    best_genotype: dict[tuple[str, str], tuple[tuple[float, int], str, list[str]]] = {}
+    for hit in genotype_hits:
+        query, subject = hit[0], hit[1]
+        match = re.search(r"HCV([1-8])(NS3|NS5A|NS5B)", subject)
+        if not match or int(hit[2]) < min_aligned_nt:
+            continue
+        gene, genotype = match.group(2), match.group(1)
+        key, score = (query, gene), (float(hit[7]), int(hit[2]))
+        if key not in best_genotype or score > best_genotype[key][0]:
+            best_genotype[key] = (score, genotype, hit)
+
+    subtype_by_genotype: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for reference in json.loads(SUBTYPE_REFERENCES.read_text(encoding="utf-8")):
+        match = re.search(r"Genotype\s*([1-8][A-Za-z0-9]*)", str(reference.get("genotypeName", "")))
+        sequence = str(reference.get("sequence", "")).upper()
+        if match and sequence:
+            subtype_by_genotype[match.group(1)[0]].append((match.group(1), sequence))
+
+    results: dict[str, dict[str, dict[str, str]]] = {gene: {} for gene in GENES}
+    for gene in GENES:
+        query_ids_by_genotype: dict[str, list[str]] = defaultdict(list)
+        for (accession, hit_gene), (_, genotype, _) in best_genotype.items():
+            if hit_gene == gene:
+                query_ids_by_genotype[genotype].append(accession)
+        for genotype, accessions in query_ids_by_genotype.items():
+            subtype_records = {f"S{index}": sequence for index, (_, sequence) in enumerate(subtype_by_genotype[genotype])}
+            subtype_labels = {f"S{index}": subtype for index, (subtype, _) in enumerate(subtype_by_genotype[genotype])}
+            subtype_fasta, subtype_db = work_dir / f"{gene}_{genotype}_subtypes.fasta", work_dir / f"{gene}_{genotype}_subtypes"
+            write_fasta(subtype_fasta, subtype_records)
+            make_database(subtype_fasta, subtype_db)
+            query_fasta = work_dir / f"{gene}_{genotype}_queries.fasta"
+            write_fasta(query_fasta, {accession: records[accession] for accession in accessions})
+            subtype_hits = blast(query_fasta, subtype_db, work_dir / f"{gene}_{genotype}_subtypes.tsv", threads, f"assigning {gene} genotype {genotype} subtypes")
+            best_subtype: dict[str, tuple[tuple[float, int], list[str]]] = {}
+            for hit in subtype_hits:
+                score = (float(hit[7]), int(hit[2]))
+                if int(hit[2]) >= min_aligned_nt and (hit[0] not in best_subtype or score > best_subtype[hit[0]][0]):
+                    best_subtype[hit[0]] = (score, hit)
+            for accession in accessions:
+                _, assigned_genotype, genotype_hit = best_genotype[(accession, gene)]
+                call = {"genotype": assigned_genotype, "genotype_pident": genotype_hit[5], "subtype": "", "subtype_pident": ""}
+                if accession in best_subtype:
+                    subtype_hit = best_subtype[accession][1]
+                    call.update(subtype=subtype_labels[subtype_hit[1]], subtype_pident=subtype_hit[5])
+                results[gene][accession] = call
+    return results
 
 
 def run_with_spinner(command: list[str], label: str) -> None:
@@ -93,18 +184,12 @@ def main() -> None:
     print(f"Auditing {len(accessions):,} FASTA records", file=sys.stderr)
     with tempfile.TemporaryDirectory(prefix="hcv_allseq_coverage_") as temp:
         temp_dir = Path(temp)
-        assignment_dir = temp_dir / "assignments"
-        run_with_spinner([
-            sys.executable, str(ASSIGNER), "--fasta-dir", str(input_fasta.parent), "--output-dir", str(assignment_dir),
-            "--gt-reference-fasta", str(GT_REFERENCES), "--subtype-json", str(SUBTYPE_REFERENCES),
-            "--min-aligned-nt", str(args.min_aligned_nt), "--threads", str(args.threads),
-        ], "assigning genotype and subtype")
+        assignments_by_gene = assignment_calls(input_fasta, temp_dir / "assignments", args.threads, args.min_aligned_nt)
         hits_by_gene = coverage_hits(input_fasta, temp_dir / "coverage", args.threads)
         fields = [
             "Accession", "ClosestGenotype", "ClosestGenotypePident",
             "ClosestSubtype", "ClosestSubtypePident", "ReferenceOverlapAA", "FullyCover",
         ]
-        assignments_by_gene = {gene: assignments(assignment_dir / f"{gene}_assignments.csv") for gene in GENES}
         output_paths = {gene: args.output_dir / f"{gene}_AllSeq_NonComet_Coverage.csv" for gene in GENES}
         with ExitStack() as stack:
             writers = {}

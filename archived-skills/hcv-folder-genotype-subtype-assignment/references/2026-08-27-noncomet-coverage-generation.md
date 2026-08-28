@@ -32,7 +32,7 @@ Run the coverage-audit script from the repository root:
 The audit script invokes this folder assignment script internally:
 
 ```text
-hcv-workflow/hcv-folder-genotype-subtype-assignment/scripts/assign_folder_genotype_subtype.py
+archived-skills/hcv-folder-genotype-subtype-assignment/scripts/assign_folder_genotype_subtype.py
 ```
 
 It runs `blastn` in two stages: genotype against the gene/genotype references, then subtype against only reference sequences from the assigned genotype.

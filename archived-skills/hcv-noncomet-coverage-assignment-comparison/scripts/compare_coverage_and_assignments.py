@@ -8,15 +8,15 @@ import csv
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 GENES = ("NS3", "NS5A", "NS5B")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage-dir", type=Path, default=REPO_ROOT / "HCVData/HCV-all-seq-subtype")
-    parser.add_argument("--assignments-dir", type=Path, default=REPO_ROOT / "outputs/folder_assignments")
-    parser.add_argument("--output-dir", type=Path, default=REPO_ROOT / "outputs/noncomet-coverage-assignment-comparison")
+    parser.add_argument("--assignments-dir", type=Path, default=REPO_ROOT / "archived-skills/outputs/folder_assignments")
+    parser.add_argument("--output-dir", type=Path, default=REPO_ROOT / "archived-skills/outputs/noncomet-coverage-assignment-comparison")
     return parser.parse_args()
 
 

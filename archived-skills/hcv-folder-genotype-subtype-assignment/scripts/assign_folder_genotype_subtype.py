@@ -24,7 +24,7 @@ def blast(query, db, output, threads):
 def db(path,prefix):
  subprocess.run(['makeblastdb','-in',str(path),'-dbtype','nucl','-out',str(prefix),'-parse_seqids'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 def main():
- p=argparse.ArgumentParser();p.add_argument('--fasta-dir',required=True);p.add_argument('--output-dir',default='outputs/folder_assignments');p.add_argument('--gt-reference-fasta',default='HCVData/HCV_GT_RefSeqs.fasta');p.add_argument('--subtype-json',default='HCVData/HCV_Subtype_Refs_By_Genome_NA.json');p.add_argument('--min-aligned-nt',type=int,default=200);p.add_argument('--threads',type=int,default=1);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--fasta-dir',required=True);p.add_argument('--output-dir',default='archived-skills/outputs/folder_assignments');p.add_argument('--gt-reference-fasta',default='HCVData/HCV_GT_RefSeqs.fasta');p.add_argument('--subtype-json',default='HCVData/HCV_Subtype_Refs_By_Genome_NA.json');p.add_argument('--min-aligned-nt',type=int,default=200);p.add_argument('--threads',type=int,default=1);a=p.parse_args()
  if a.threads < 1: raise SystemExit('--threads must be at least 1')
  out=Path(a.output_dir);out.mkdir(parents=True,exist_ok=True); records=[]
  for f in sorted(Path(a.fasta_dir).rglob('*')):
