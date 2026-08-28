@@ -17,7 +17,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable
 from xml.etree import ElementTree
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile
+from xml.sax.saxutils import escape
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -38,10 +39,13 @@ DEFAULT_GROUP_REFNAMES_OUTPUT = (
 DEFAULT_GROUPKEY_REF_WITH_REFNAME_OUTPUT = (
     OUTPUT_DIR / "09_ref_with_refname_groupkey_deduplication" / "Ref_with_RefName_groupkey_deduplicated.csv"
 )
-DEFAULT_DEDUPLICATED_REFNAME_SUMMARY = (
-    OUTPUT_DIR / "10_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
+DEFAULT_ORIGINAL_SHEETS_GROUPKEY_DEDUPLICATION_DIR = (
+    OUTPUT_DIR / "10_original_sheets_groupkey_deduplication"
 )
-DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "11_duplicate_refname_rows"
+DEFAULT_DEDUPLICATED_REFNAME_SUMMARY = (
+    OUTPUT_DIR / "11_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
+)
+DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "12_duplicate_refname_rows"
 PMID_SHEETS = ("Original", "Original_NS5A", "Original_NS3", "Original_NS5B")
 SPREADSHEET_NS = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
@@ -804,6 +808,121 @@ def write_original_sheets_with_replaced_pmids(
     return updates_by_sheet
 
 
+def excel_column_name(index: int) -> str:
+    """Return the one-based Excel column name for a zero-based index."""
+    name = ""
+    index += 1
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        name = chr(ord("A") + remainder) + name
+    return name
+
+
+def write_csv_tables_xlsx(
+    tables: dict[str, tuple[list[str], list[dict[str, str]]]], output_xlsx: Path
+) -> None:
+    """Write CSV-shaped tables as an Excel workbook using inline-string cells."""
+    output_xlsx.parent.mkdir(parents=True, exist_ok=True)
+    content_types = [
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
+        '<Default Extension="xml" ContentType="application/xml"/>',
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>',
+    ]
+    workbook_sheets = []
+    workbook_relationships = []
+    with ZipFile(output_xlsx, "w", ZIP_DEFLATED) as archive:
+        for index, (sheet_name, (fieldnames, rows)) in enumerate(tables.items(), start=1):
+            content_types.append(
+                f'<Override PartName="/xl/worksheets/sheet{index}.xml" '
+                'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            )
+            workbook_sheets.append(
+                f'<sheet name="{escape(sheet_name)}" sheetId="{index}" r:id="rId{index}"/>'
+            )
+            workbook_relationships.append(
+                f'<Relationship Id="rId{index}" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+                f'Target="worksheets/sheet{index}.xml"/>'
+            )
+            all_rows = [dict(zip(fieldnames, fieldnames)), *rows]
+            xml_rows = []
+            for row_index, row in enumerate(all_rows, start=1):
+                cells = []
+                for column_index, fieldname in enumerate(fieldnames):
+                    value = escape(str(row.get(fieldname, "")))
+                    cell_reference = f"{excel_column_name(column_index)}{row_index}"
+                    cells.append(
+                        f'<c r="{cell_reference}" t="inlineStr"><is><t xml:space="preserve">{value}</t></is></c>'
+                    )
+                xml_rows.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+            worksheet = (
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                f'<sheetData>{"".join(xml_rows)}</sheetData></worksheet>'
+            )
+            archive.writestr(f"xl/worksheets/sheet{index}.xml", worksheet)
+        content_types.append('</Types>')
+        archive.writestr("[Content_Types].xml", "".join(content_types))
+        archive.writestr(
+            "_rels/.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" '
+            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+            'Target="xl/workbook.xml"/></Relationships>',
+        )
+        archive.writestr(
+            "xl/workbook.xml",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            f'<sheets>{"".join(workbook_sheets)}</sheets></workbook>',
+        )
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'{"".join(workbook_relationships)}</Relationships>',
+        )
+
+
+def write_groupkey_deduplicated_original_sheets(
+    groups_csv: Path, input_dir: Path, output_dir: Path
+) -> dict[str, tuple[int, int]]:
+    """Apply group-key deduplication to every step-04 Original-sheet CSV."""
+    group_keys = read_groupkey_by_ref_id(groups_csv)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    tables: dict[str, tuple[list[str], list[dict[str, str]]]] = {}
+    row_counts: dict[str, tuple[int, int]] = {}
+    for sheet_name in PMID_SHEETS:
+        input_csv = input_dir / f"{sheet_name}_PMID_replaced.csv"
+        with input_csv.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            require_columns(input_csv, ("RefID",), reader.fieldnames)
+            fieldnames = reader.fieldnames or []
+            source_rows = list(reader)
+        retained_rows = []
+        for row in source_rows:
+            raw_ref_id = (row["RefID"] or "").strip()
+            if not raw_ref_id:
+                retained_rows.append(row)
+                continue
+            ref_id = int(raw_ref_id)
+            if group_keys.get(ref_id, ref_id) == ref_id:
+                retained_rows.append(row)
+        output_csv = output_dir / f"{sheet_name}_groupkey_deduplicated.csv"
+        with output_csv.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(retained_rows)
+        tables[sheet_name] = (fieldnames, retained_rows)
+        row_counts[sheet_name] = (len(source_rows), len(retained_rows))
+    write_csv_tables_xlsx(tables, output_dir / "Original_sheets_groupkey_deduplicated.xlsx")
+    return row_counts
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workbook", type=Path, default=DEFAULT_WORKBOOK)
@@ -833,11 +952,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--deduplicated-refname-summary-csv", type=Path, default=DEFAULT_DEDUPLICATED_REFNAME_SUMMARY,
-        help="CSV of RefName counts from step 09 (default: outputs/Ref_same/10_ref_with_refname_refname_counts/RefName_duplicate_counts.csv).",
+        help="CSV of RefName counts from step 09 (default: outputs/Ref_same/11_ref_with_refname_refname_counts/RefName_duplicate_counts.csv).",
     )
     parser.add_argument(
         "--duplicate-refname-rows-dir", type=Path, default=DEFAULT_DUPLICATE_REFNAME_ROWS_DIR,
-        help="Directory for per-RefName duplicate-row CSVs (default: outputs/Ref_same/11_duplicate_refname_rows).",
+        help="Directory for per-RefName duplicate-row CSVs (default: outputs/Ref_same/12_duplicate_refname_rows).",
     )
     parser.add_argument(
         "--merged-original-pmid-output-dir", type=Path, default=DEFAULT_MERGED_ORIGINAL_PMID_DIR,
@@ -851,6 +970,11 @@ def parse_args() -> argparse.Namespace:
         "--original-sheets-replaced-pmid-output-dir", type=Path,
         default=DEFAULT_ORIGINAL_SHEETS_REPLACED_PMID_DIR,
         help="Directory for step-02 PMID-replaced copies of all Original sheets (default: outputs/Ref_same/04_original_sheets_pmid_replaced).",
+    )
+    parser.add_argument(
+        "--original-sheets-groupkey-deduplication-output-dir", type=Path,
+        default=DEFAULT_ORIGINAL_SHEETS_GROUPKEY_DEDUPLICATION_DIR,
+        help="Directory for group-key-deduplicated step-04 sheet CSVs and Excel workbook (default: outputs/Ref_same/10_original_sheets_groupkey_deduplication).",
     )
     return parser.parse_args()
 
@@ -888,6 +1012,11 @@ def main() -> None:
         args.group_refnames_output_csv, args.found_pmid_output_csv,
         args.groupkey_ref_with_refname_output_csv
     )
+    original_sheets_row_counts = write_groupkey_deduplicated_original_sheets(
+        args.group_refnames_output_csv,
+        args.original_sheets_replaced_pmid_output_dir,
+        args.original_sheets_groupkey_deduplication_output_dir,
+    )
     deduplicated_refname_groups = write_deduplicated_refname_summary(
         args.groupkey_ref_with_refname_output_csv, args.deduplicated_refname_summary_csv
     )
@@ -902,6 +1031,7 @@ def main() -> None:
     print(f"groups_output_csv={args.groups_output_csv.resolve()}")
     print(f"group_refnames_output_csv={args.group_refnames_output_csv.resolve()}")
     print(f"groupkey_ref_with_refname_output_csv={args.groupkey_ref_with_refname_output_csv.resolve()}")
+    print(f"original_sheets_groupkey_deduplication_output_dir={args.original_sheets_groupkey_deduplication_output_dir.resolve()}")
     print(f"deduplicated_refname_summary_csv={args.deduplicated_refname_summary_csv.resolve()}")
     print(f"duplicate_refname_rows_dir={args.duplicate_refname_rows_dir.resolve()}")
     print(f"merged_original_pmid_output_dir={args.merged_original_pmid_output_dir.resolve()}")
@@ -917,6 +1047,9 @@ def main() -> None:
     print(f"candidate_group_refnames={candidate_group_refnames}")
     print(f"original_rows_before={original_rows_before}")
     print(f"original_rows_after={original_rows_after}")
+    for sheet_name, (before, after) in original_sheets_row_counts.items():
+        print(f"groupkey_dedup_{sheet_name}_rows_before={before}")
+        print(f"groupkey_dedup_{sheet_name}_rows_after={after}")
     print(f"deduplicated_refname_groups={deduplicated_refname_groups}")
     print(f"duplicate_refname_files={duplicate_refname_files}")
     print(f"merged_original_rows={merged_original_rows}")

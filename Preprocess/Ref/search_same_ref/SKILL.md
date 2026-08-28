@@ -39,10 +39,15 @@ step's order and name as its subfolder:
    — copies step 03 and removes every non-key group-member row from step 08.
    All columns and values in retained rows are unchanged. The
    script prints `original_rows_before` and `original_rows_after`.
-10. `10_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
+10. `10_original_sheets_groupkey_deduplication/` — applies the step-09 group-key
+   deduplication to every step-04 sheet CSV. It writes one unchanged-column CSV
+   per sheet plus `Original_sheets_groupkey_deduplicated.xlsx`, containing those
+   four CSV tables as worksheets. The script prints each sheet's row count before
+   and after deduplication.
+11. `11_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
    05's `RefName`, `RefIDCount`, and `RefIDs` summary to the retained step-09
    rows.
-11. `11_duplicate_refname_rows/` — one CSV for every step-10 RefName group with
+12. `12_duplicate_refname_rows/` — one CSV for every step-11 RefName group with
    `RefIDCount >= 2`. Each CSV contains the unchanged matching step-09 rows and
    is stored in `RefIDCount_<count>/` as `<RefName>__RefIDCount_<count>.csv`,
    with unsafe filename characters replaced by underscores.
