@@ -108,7 +108,10 @@ The workflow writes NS3 outputs under `outputs/comet-NS3/`, including:
 - `NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx` (per-subtype mean and median RAS AA differences from genotype consensus)
 - `NS3_GT5_5a_Profile_Coverage.xlsx`, `NS3_GT5_5a_Profile_Position_Coverage.csv`, and `NS3_GT5_5a_Profile_Position_Coverage.png` (accession-level, per-position, and charted subtype 5a coverage across full NS3 positions 1-631; the chart includes ambiguous and stop calls)
 - `NS3_GT7_GT8_Step_Sequence_Audit.csv`, `NS3_GT7_GT8_Step_Sequence_Audit_Accessions.csv`, and `NS3_GT7_GT8_Step_Sequence_Audit_Summary.xlsx` (per-step GT7/GT8 kept counts, exclusions compared with the preceding step, accession-level evidence, and an Excel key-changes summary)
-- `NS3_GT7_GT8_Local_Assignment_Comparison.xlsx` and `.csv` under `34_compare-gt7-gt8-local-assignments/` (GT7/GT8 accessions, workflow assignment, local assignment subtype and subtype-reference accession, and agreement status)
+- `NS3_GT7_GT8_Local_Assignment_Comparison.xlsx` and `.csv` under the `compare-gt7-gt8-local-assignments` step directory (GT7/GT8 accessions, workflow assignment, local assignment subtype and subtype-reference accession, and agreement status)
+- `report/`, containing `README_Subtype_Consensus_Mutations_NS3.docx`,
+  `NS3_Combined_RAS_Profiles_Annotated.xlsx`, `NS3_Combined_RAS_Profiles.xlsx`,
+  `NS3_Subtype_RAS_Profiles.xlsx`, and `NS3_Subtype_CompleteProfiles_Merged.xlsx`
 
 ## Operating Rules
 

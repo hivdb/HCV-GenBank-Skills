@@ -61,6 +61,7 @@ STEP_NAMES = (
     "publish-ictv-report",
     "audit-gt7-gt8-sequences",
     "compare-gt7-gt8-local-assignments",
+    "collect-report",
 )
 STEP_ORDER = {name: number for number, name in enumerate(STEP_NAMES, start=1)}
 
@@ -1278,6 +1279,18 @@ class Pipeline:
                     self.step_dir("compare-gt7-gt8-local-assignments")
                     / "NS3_GT7_GT8_Local_Assignment_Comparison.csv",
                     stdout_path=summary("compare-gt7-gt8-local-assignments"),
+                ),
+            ),
+            Step(
+                "collect-report",
+                "copy final NS3 report artifacts into the report folder",
+                lambda: self.run(
+                    "collect_final_report.py",
+                    "--workflow-output-dir",
+                    self.output_dir,
+                    "--gene",
+                    "NS3",
+                    stdout_path=summary("collect-report"),
                 ),
             ),
         ]
