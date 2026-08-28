@@ -1378,6 +1378,8 @@ class Pipeline:
                     subtype_workbook,
                     "--coverage-csv",
                     self.noncomet_coverage_csv,
+                    "--profile-accessions-csv",
+                    self.profile_accessions_csv,
                     "--output-xlsx",
                     self.step_dir("compare-gt7-gt8-local-assignments")
                     / "NS5B_GT7_GT8_Local_Assignment_Comparison.xlsx",

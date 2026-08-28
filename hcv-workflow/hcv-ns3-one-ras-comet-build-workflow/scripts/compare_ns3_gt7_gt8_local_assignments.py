@@ -178,7 +178,7 @@ def compare_rows(
             "CometSubtypeBootstrapSupport": comet_subtype.get(
                 "CometSubtypeBootstrapSupport", ""
             ),
-            "CoversWorkflowRASRequirement": "YES"
+            "in profile": "YES"
             if accession_key(accession) in profile_accessions
             else "NO",
             "WorkflowGenotype": workflow["ClosestGT"],
@@ -243,7 +243,7 @@ def write_report(
         "IsReferenceSubtypeAccession",
         "CometSubtype",
         "CometSubtypeBootstrapSupport",
-        "CoversWorkflowRASRequirement",
+        "in profile",
         "WorkflowGenotype",
         "WorkflowSubtype",
         "LocalSubtypePident",
