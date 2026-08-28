@@ -10,9 +10,13 @@ import re
 from pathlib import Path
 
 
+SUBTYPE_RE = re.compile(r"^[1-8][a-z][a-z0-9]*$", re.IGNORECASE)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--noncomet-coverage-csv", required=True)
+    parser.add_argument("--comet-subtyping-csv", required=True)
     parser.add_argument(
         "--fasta-dir",
         required=True,
@@ -26,8 +30,32 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def high_confidence_comet_accessions(path: Path) -> set[str]:
+    """Return accessions with a valid HCV COMET subtype at 100 bootstrap."""
+    accessions: set[str] = set()
+    with path.open(encoding="utf-8-sig", newline="") as source:
+        for row in csv.DictReader(source):
+            accession = (row.get("name") or "").strip().split(".", 1)[0]
+            subtype = (row.get("subtype") or "").strip()
+            try:
+                bootstrap = float((row.get("bootstrap support") or "").strip())
+            except ValueError:
+                continue
+            if (
+                accession
+                and (row.get("virus") or "").strip().upper() == "HCV"
+                and SUBTYPE_RE.fullmatch(subtype)
+                and bootstrap == 100.0
+            ):
+                accessions.add(accession)
+    return accessions
+
+
 def main() -> int:
     args = parse_args()
+    high_confidence_comet = high_confidence_comet_accessions(
+        Path(args.comet_subtyping_csv)
+    )
     refid_by_accession: dict[str, tuple[str, str]] = {}
     for fasta_path in sorted(Path(args.fasta_dir).glob("*.fasta")):
         refid, _, refname = fasta_path.stem.partition("_")
@@ -46,6 +74,8 @@ def main() -> int:
             row
             for row in reader
             if (row.get("Accession") or "").strip()
+            and (row.get("Accession") or "").strip().split(".", 1)[0]
+            not in high_confidence_comet
             and (
                 (row.get("ClosestSubtype") or "").strip().lower() == "1d"
                 or (row.get("ClosestGenotype") or "").strip().lower() in {"7", "8"}

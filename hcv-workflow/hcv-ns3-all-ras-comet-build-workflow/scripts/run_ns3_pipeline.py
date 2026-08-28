@@ -744,6 +744,8 @@ class Pipeline:
                     "select_noncomet_priority_assignments.py",
                     "--noncomet-coverage-csv",
                     self.noncomet_coverage_csv,
+                    "--comet-subtyping-csv",
+                    self.comet_csv,
                     "--reference-subtypes-csv",
                     self.reference_subtypes_csv,
                     "--fasta-dir",
@@ -1231,8 +1233,6 @@ class Pipeline:
                     self.step_dir("compare-reference-consensus"),
                     "--ns3-output-dir",
                     self.step_dir("build-subtype-ras-profile"),
-                    "--shared-report-dir",
-                    self.step_dir("publish-ictv-report") / "shared_report",
                 ),
             ),
             Step(
