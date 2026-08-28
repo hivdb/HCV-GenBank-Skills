@@ -18,7 +18,10 @@ step's order and name as its subfolder:
    CSV, plus copies containing all non-empty PMIDs, numeric-only PMIDs, and
    non-numeric PMIDs.
 3. `03_found_pmid/Found_PMID.csv` — copies step 01 and fills blank `PMID`
-   values from step 02 by RefID. The script prints `found_pmid_replacements`.
+   values from step 02 by RefID. `Found_PMID_report.csv` stores the found-PMID
+   count for each Original worksheet: its RefIDs with blank step-01 PMID values
+   that have a non-empty PMID in `Found_PMID.csv`. The script prints those
+   counts and `found_pmid_replacements`.
 4. `04_original_sheets_pmid_replaced/` — loads `Original`, `Original_NS5A`,
    `Original_NS3`, and `Original_NS5B` from the workbook and writes one CSV per
    sheet after replacing its `PMID` by `RefID` from step 02's
@@ -42,8 +45,10 @@ step's order and name as its subfolder:
 10. `10_original_sheets_groupkey_deduplication/` — applies the step-09 group-key
    deduplication to every step-04 sheet CSV. It writes one unchanged-column CSV
    per sheet plus `Original_sheets_groupkey_deduplicated.xlsx`, containing those
-   four CSV tables as worksheets. The script prints each sheet's row count before
-   and after deduplication.
+   four CSV tables as worksheets and a `Summary` worksheet with the before,
+   after, and removed row counts. It also copies step 03's `Found_PMID_report.csv`
+   to a separate `Found_PMID_report` worksheet. The script prints each sheet's row
+   count before and after deduplication.
 11. `11_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
    05's `RefName`, `RefIDCount`, and `RefIDs` summary to the retained step-09
    rows.

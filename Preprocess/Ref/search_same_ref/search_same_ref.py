@@ -766,6 +766,50 @@ def write_found_pmids(step1_csv: Path, merged_pmid_csv: Path, output_csv: Path) 
     return replacements
 
 
+def write_found_pmid_report(
+    workbook_path: Path, original_ref_csv: Path, found_pmid_csv: Path, output_csv: Path
+) -> dict[str, int]:
+    """Count per-sheet RefIDs whose blank step-01 PMID was filled in step 03."""
+    def read_pmids(path: Path) -> dict[int, str]:
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            require_columns(path, ("RefID", "PMID"), reader.fieldnames)
+            return {
+                int((row["RefID"] or "").strip()): (row["PMID"] or "").strip()
+                for row in reader
+                if (row.get("RefID") or "").strip()
+            }
+
+    original_pmids_by_ref_id = read_pmids(original_ref_csv)
+    found_pmids_by_ref_id = read_pmids(found_pmid_csv)
+
+    found_by_sheet: dict[str, int] = {}
+    for sheet_name in PMID_SHEETS:
+        rows = list(read_worksheet_rows(workbook_path, sheet_name))
+        if not rows:
+            raise ValueError(f"{workbook_path} sheet {sheet_name!r} is empty")
+        require_columns(workbook_path, ("RefID",), list(rows[0]))
+        found = 0
+        for row in rows:
+            raw_ref_id = (row["RefID"] or "").strip()
+            if not raw_ref_id:
+                continue
+            ref_id = int(raw_ref_id)
+            if not original_pmids_by_ref_id.get(ref_id, "") and found_pmids_by_ref_id.get(ref_id, ""):
+                found += 1
+        found_by_sheet[sheet_name] = found
+
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    with output_csv.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["Sheet", "FoundPMIDCount"], lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(
+            {"Sheet": sheet_name, "FoundPMIDCount": count}
+            for sheet_name, count in found_by_sheet.items()
+        )
+    return found_by_sheet
+
+
 def write_original_sheets_with_replaced_pmids(
     workbook_path: Path, merged_pmid_csv: Path, output_dir: Path
 ) -> dict[str, int]:
@@ -795,7 +839,8 @@ def write_original_sheets_with_replaced_pmids(
             if raw_ref_id:
                 replacement = pmid_by_ref_id.get(int(raw_ref_id))
                 if replacement is not None:
-                    if (output_row["PMID"] or "").strip() != replacement:
+                    original_pmid = (output_row["PMID"] or "").strip()
+                    if original_pmid != replacement:
                         updates += 1
                     output_row["PMID"] = replacement
             output_rows.append(output_row)
@@ -889,7 +934,7 @@ def write_csv_tables_xlsx(
 
 
 def write_groupkey_deduplicated_original_sheets(
-    groups_csv: Path, input_dir: Path, output_dir: Path
+    groups_csv: Path, input_dir: Path, output_dir: Path, found_pmid_report_csv: Path
 ) -> dict[str, tuple[int, int]]:
     """Apply group-key deduplication to every step-04 Original-sheet CSV."""
     group_keys = read_groupkey_by_ref_id(groups_csv)
@@ -919,6 +964,22 @@ def write_groupkey_deduplicated_original_sheets(
             writer.writerows(retained_rows)
         tables[sheet_name] = (fieldnames, retained_rows)
         row_counts[sheet_name] = (len(source_rows), len(retained_rows))
+    tables["Summary"] = (
+        ["Sheet", "RowsBefore", "RowsAfter", "RowsRemoved"],
+        [
+            {
+                "Sheet": sheet_name,
+                "RowsBefore": str(before),
+                "RowsAfter": str(after),
+                "RowsRemoved": str(before - after),
+            }
+            for sheet_name, (before, after) in row_counts.items()
+        ],
+    )
+    with found_pmid_report_csv.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        require_columns(found_pmid_report_csv, ("Sheet", "FoundPMIDCount"), reader.fieldnames)
+        tables["Found_PMID_report"] = (reader.fieldnames or [], list(reader))
     write_csv_tables_xlsx(tables, output_dir / "Original_sheets_groupkey_deduplicated.xlsx")
     return row_counts
 
@@ -992,6 +1053,12 @@ def main() -> None:
         args.merged_original_pmid_output_dir / "Original_merged_PMID.csv",
         args.found_pmid_output_csv,
     )
+    found_pmid_rows_by_sheet = write_found_pmid_report(
+        args.workbook,
+        args.ref_with_refnames_output_csv,
+        args.found_pmid_output_csv,
+        args.found_pmid_output_csv.parent / "Found_PMID_report.csv",
+    )
     updated_pmid_rows_by_sheet = write_original_sheets_with_replaced_pmids(
         args.workbook,
         args.merged_original_pmid_output_dir / "Original_merged_PMID.csv",
@@ -1016,6 +1083,7 @@ def main() -> None:
         args.group_refnames_output_csv,
         args.original_sheets_replaced_pmid_output_dir,
         args.original_sheets_groupkey_deduplication_output_dir,
+        args.found_pmid_output_csv.parent / "Found_PMID_report.csv",
     )
     deduplicated_refname_groups = write_deduplicated_refname_summary(
         args.groupkey_ref_with_refname_output_csv, args.deduplicated_refname_summary_csv
@@ -1024,37 +1092,73 @@ def main() -> None:
         args.deduplicated_refname_summary_csv, args.groupkey_ref_with_refname_output_csv,
         args.duplicate_refname_rows_dir,
     )
-    print(f"output_csv={args.output_csv.resolve()}")
-    print(f"ref_with_refnames_output_csv={args.ref_with_refnames_output_csv.resolve()}")
-    print(f"found_pmid_output_csv={args.found_pmid_output_csv.resolve()}")
-    print(f"original_sheets_replaced_pmid_output_dir={args.original_sheets_replaced_pmid_output_dir.resolve()}")
-    print(f"groups_output_csv={args.groups_output_csv.resolve()}")
-    print(f"group_refnames_output_csv={args.group_refnames_output_csv.resolve()}")
-    print(f"groupkey_ref_with_refname_output_csv={args.groupkey_ref_with_refname_output_csv.resolve()}")
-    print(f"original_sheets_groupkey_deduplication_output_dir={args.original_sheets_groupkey_deduplication_output_dir.resolve()}")
-    print(f"deduplicated_refname_summary_csv={args.deduplicated_refname_summary_csv.resolve()}")
-    print(f"duplicate_refname_rows_dir={args.duplicate_refname_rows_dir.resolve()}")
-    print(f"merged_original_pmid_output_dir={args.merged_original_pmid_output_dir.resolve()}")
-    print(f"refname_summary_csv={args.refname_summary_csv.resolve()}")
-    print(f"refname_groups={refname_groups}")
-    print(f"ref_with_refnames_rows={ref_with_refnames_rows}")
-    print(f"found_pmid_replacements={found_pmid_replacements}")
-    for sheet_name, updates in updated_pmid_rows_by_sheet.items():
-        print(f"pmid_rows_updated_{sheet_name}={updates}")
-    print(f"refs_total={len(records)}")
-    print(f"candidate_pairs={len(candidates)}")
-    print(f"candidate_groups={candidate_groups}")
-    print(f"candidate_group_refnames={candidate_group_refnames}")
-    print(f"original_rows_before={original_rows_before}")
-    print(f"original_rows_after={original_rows_after}")
-    for sheet_name, (before, after) in original_sheets_row_counts.items():
-        print(f"groupkey_dedup_{sheet_name}_rows_before={before}")
-        print(f"groupkey_dedup_{sheet_name}_rows_after={after}")
-    print(f"deduplicated_refname_groups={deduplicated_refname_groups}")
-    print(f"duplicate_refname_files={duplicate_refname_files}")
+    def print_step(step: int, name: str) -> None:
+        print(f"\n=== Step {step:02d}: {name} ===")
+
+    def display_path(path: Path) -> Path:
+        """Prefer a repository-relative path in console output."""
+        try:
+            return path.resolve().relative_to(REPO_ROOT)
+        except ValueError:
+            return path.resolve()
+
+    print_step(1, "Ref with RefName")
+    print(f"output_csv={display_path(args.ref_with_refnames_output_csv)}")
+    print(f"rows={ref_with_refnames_rows}")
+
+    print_step(2, "Original PMID merge")
+    print(f"output_dir={display_path(args.merged_original_pmid_output_dir)}")
     print(f"merged_original_rows={merged_original_rows}")
     print(f"numeric_pmid_rows={numeric_pmid_rows}")
     print(f"non_numeric_pmid_rows={non_numeric_pmid_rows}")
+
+    print_step(3, "Found PMID")
+    print(f"output_csv={display_path(args.found_pmid_output_csv)}")
+    print(f"report_csv={display_path(args.found_pmid_output_csv.parent / 'Found_PMID_report.csv')}")
+    print(f"found_pmid_replacements={found_pmid_replacements}")
+    for sheet_name, found in found_pmid_rows_by_sheet.items():
+        print(f"found_pmid_rows_{sheet_name}={found}")
+
+    print_step(4, "Original sheets PMID replaced")
+    print(f"output_dir={display_path(args.original_sheets_replaced_pmid_output_dir)}")
+    for sheet_name, updates in updated_pmid_rows_by_sheet.items():
+        print(f"pmid_rows_updated_{sheet_name}={updates}")
+
+    print_step(5, "RefName counts")
+    print(f"output_csv={display_path(args.refname_summary_csv)}")
+    print(f"refname_groups={refname_groups}")
+
+    print_step(6, "Same-reference candidates")
+    print(f"output_csv={display_path(args.output_csv)}")
+    print(f"refs_total={len(records)}")
+    print(f"candidate_pairs={len(candidates)}")
+
+    print_step(7, "Same-reference candidate groups")
+    print(f"output_csv={display_path(args.groups_output_csv)}")
+    print(f"candidate_groups={candidate_groups}")
+
+    print_step(8, "Candidate groups with RefNames")
+    print(f"output_csv={display_path(args.group_refnames_output_csv)}")
+    print(f"candidate_group_refnames={candidate_group_refnames}")
+
+    print_step(9, "Ref-with-RefName group-key deduplication")
+    print(f"output_csv={display_path(args.groupkey_ref_with_refname_output_csv)}")
+    print(f"original_rows_before={original_rows_before}")
+    print(f"original_rows_after={original_rows_after}")
+
+    print_step(10, "Original sheets group-key deduplication")
+    print(f"output_dir={display_path(args.original_sheets_groupkey_deduplication_output_dir)}")
+    for sheet_name, (before, after) in original_sheets_row_counts.items():
+        print(f"groupkey_dedup_{sheet_name}_rows_before={before}")
+        print(f"groupkey_dedup_{sheet_name}_rows_after={after}")
+
+    print_step(11, "Deduplicated RefName counts")
+    print(f"output_csv={display_path(args.deduplicated_refname_summary_csv)}")
+    print(f"deduplicated_refname_groups={deduplicated_refname_groups}")
+
+    print_step(12, "Duplicate RefName rows")
+    print(f"output_dir={display_path(args.duplicate_refname_rows_dir)}")
+    print(f"duplicate_refname_files={duplicate_refname_files}")
 
 
 if __name__ == "__main__":
