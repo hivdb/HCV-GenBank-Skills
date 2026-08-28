@@ -1,4 +1,13 @@
 Gene,SameCount,DifferentCount,CompareCondition
 NS3,47390,672,Comet_vs_PerGene
+NS3,47389,673,Comet_vs_FullGenome
+NS3,47938,124,PerGene_vs_FullGenome
+NS3,47368,694,Comet_vs_PerGene_vs_FullGenome
 NS5A,30813,4213,Comet_vs_PerGene
+NS5A,33947,1079,Comet_vs_FullGenome
+NS5A,31385,3641,PerGene_vs_FullGenome
+NS5A,30717,4309,Comet_vs_PerGene_vs_FullGenome
 NS5B,55347,3177,Comet_vs_PerGene
+NS5B,55361,3163,Comet_vs_FullGenome
+NS5B,58370,154,PerGene_vs_FullGenome
+NS5B,55322,3202,Comet_vs_PerGene_vs_FullGenome
