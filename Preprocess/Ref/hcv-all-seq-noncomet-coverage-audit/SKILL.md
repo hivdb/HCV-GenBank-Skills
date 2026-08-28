@@ -10,7 +10,7 @@ Run the bundled script from the repository root. It performs genotype and genoty
 ```bash
 .venv/bin/python Preprocess/Ref/hcv-all-seq-noncomet-coverage-audit/scripts/audit_all_fasta_coverage.py \
   --input-fasta HCVData/HCV-all-seq-subtype/all.fasta \
-  --output-dir outputs/local_alignment \
+  --output-dir HCVData/nonComet-Full-genome \
   --threads 4
 ```
 

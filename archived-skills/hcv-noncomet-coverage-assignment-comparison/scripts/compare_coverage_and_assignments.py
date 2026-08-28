@@ -15,7 +15,7 @@ GENES = ("NS3", "NS5A", "NS5B")
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--coverage-dir", type=Path, default=REPO_ROOT / "HCVData/HCV-all-seq-subtype"
+        "--coverage-dir", type=Path, default=REPO_ROOT / "HCVData/nonComet-Full-genome"
     )
     parser.add_argument(
         "--assignments-dir",

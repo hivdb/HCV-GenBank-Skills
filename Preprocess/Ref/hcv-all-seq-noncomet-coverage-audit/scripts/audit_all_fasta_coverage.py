@@ -310,7 +310,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-fasta", type=Path, required=True)
     parser.add_argument(
-        "--output-dir", type=Path, default=REPO_ROOT / "outputs" / "local_alignment"
+        "--output-dir",
+        type=Path,
+        default=REPO_ROOT / "HCVData" / "nonComet-Full-genome",
     )
     parser.add_argument("--min-aligned-nt", type=int, default=200)
     parser.add_argument(

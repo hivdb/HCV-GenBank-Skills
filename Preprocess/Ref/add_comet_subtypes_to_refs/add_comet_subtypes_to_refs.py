@@ -41,6 +41,7 @@ ANNOTATION_COLUMNS = (
 OBSOLETE_NS5B_COLUMNS = ("Includes 4 other RAS positions",)
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = REPO_ROOT / "HCVData" / "HCV-all-seq-subtype"
+NONCOMET_COVERAGE_DIR = REPO_ROOT / "HCVData" / "nonComet-Full-genome"
 
 
 def accession_key(value: str | None) -> str:
@@ -130,9 +131,9 @@ def main() -> None:
                 subtypes_by_refid[refid].add(subtype)
 
     coverage_paths = args.coverage_csv or [
-        DATA_DIR / "NS3_AllSeq_NonComet_Coverage.csv",
-        DATA_DIR / "NS5A_AllSeq_NonComet_Coverage.csv",
-        DATA_DIR / "NS5B_AllSeq_NonComet_Coverage.csv",
+        NONCOMET_COVERAGE_DIR / "NS3_AllSeq_NonComet_Coverage.csv",
+        NONCOMET_COVERAGE_DIR / "NS5A_AllSeq_NonComet_Coverage.csv",
+        NONCOMET_COVERAGE_DIR / "NS5B_AllSeq_NonComet_Coverage.csv",
     ]
     priority_added = 0
     coverage_by_refid: dict[str, dict[str, set[str]]] = defaultdict(

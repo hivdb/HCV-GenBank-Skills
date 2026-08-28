@@ -238,12 +238,12 @@ class Pipeline:
             value(
                 "noncomet_coverage_csv",
                 "NONCOMET_COVERAGE_CSV",
-                "HCVData/HCV-all-seq-subtype/NS5B_AllSeq_NonComet_Coverage.csv",
+                "HCVData/nonComet-Full-genome/NS5B_AllSeq_NonComet_Coverage.csv",
             )
         )
         self.reference_subtypes_csv = (
             REPO_ROOT
-            / "HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
+            / "HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
         )
         self.workers = (
             args.workers
@@ -1083,7 +1083,7 @@ class Pipeline:
                         self.step_dir("compare-reference-consensus"),
                         "--subtype-reference-fasta",
                         REPO_ROOT
-                        / "HCVData/Reference_seqs/HCV_Subtype_Refs_NS5B_AA_Pairwise_Aligned.fasta",
+                        / "HCVData/Subtype-Ref/HCV_Subtype_Refs_NS5B_AA_Pairwise_Aligned.fasta",
                         "--subtype-consensus-fasta",
                         self.step_dir("align-subtype-consensus-to-gt1a")
                         / "NS5B_Subtype_Consensus_Aligned_to_GT1_1a.fasta",

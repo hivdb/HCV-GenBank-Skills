@@ -14,7 +14,7 @@ from openpyxl.styles import Font
 
 REFERENCE_SUBTYPES_CSV = (
     Path(__file__).resolve().parents[3]
-    / "HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
+    / "HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
 )
 ALL_COMET_SUBTYPE_CSV = (
     Path(__file__).resolve().parents[3]

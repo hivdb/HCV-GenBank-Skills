@@ -7,7 +7,7 @@ aligning subtype nucleotide genomes to genotype nucleotide references.  That
 NA-alignment approach is not reliable enough for the production subtype
 amino-acid references.
 
-To rebuild `HCVData/Reference_seqs/HCV_Subtype_Refs_NS3_AA.fasta`,
+To rebuild `HCVData/Subtype-Ref/HCV_Subtype_Refs_NS3_AA.fasta`,
 `HCV_Subtype_Refs_NS5A_NTD_AA.fasta`, and
 `HCV_Subtype_Refs_NS5B_AA.fasta`, use
 `Preprocess/RefSeq/rebuild_subtype_reference_aas_from_genbank/rebuild_subtype_reference_aas_from_genbank.py` from the repository

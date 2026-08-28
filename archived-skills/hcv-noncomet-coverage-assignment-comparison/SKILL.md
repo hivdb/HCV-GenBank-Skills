@@ -13,9 +13,9 @@ uv run python archived-skills/hcv-noncomet-coverage-assignment-comparison/script
 
 Default input pairs are:
 
-- `HCVData/HCV-all-seq-subtype/NS3_AllSeq_NonComet_Coverage.csv` and `archived-skills/outputs/folder_assignments/NS3_assignments.csv`
-- `HCVData/HCV-all-seq-subtype/NS5A_AllSeq_NonComet_Coverage.csv` and `archived-skills/outputs/folder_assignments/NS5A_assignments.csv`
-- `HCVData/HCV-all-seq-subtype/NS5B_AllSeq_NonComet_Coverage.csv` and `archived-skills/outputs/folder_assignments/NS5B_assignments.csv`
+- `HCVData/nonComet-Full-genome/NS3_AllSeq_NonComet_Coverage.csv` and `archived-skills/outputs/folder_assignments/NS3_assignments.csv`
+- `HCVData/nonComet-Full-genome/NS5A_AllSeq_NonComet_Coverage.csv` and `archived-skills/outputs/folder_assignments/NS5A_assignments.csv`
+- `HCVData/nonComet-Full-genome/NS5B_AllSeq_NonComet_Coverage.csv` and `archived-skills/outputs/folder_assignments/NS5B_assignments.csv`
 
 Outputs default to `archived-skills/outputs/noncomet-coverage-assignment-comparison/`:
 

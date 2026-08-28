@@ -4,9 +4,9 @@
 
 These files provide non-COMET genotype/subtype calls and gene-position coverage for the complete HCV sequence collection:
 
-- `HCVData/HCV-all-seq-subtype/NS3_AllSeq_NonComet_Coverage.csv`
-- `HCVData/HCV-all-seq-subtype/NS5A_AllSeq_NonComet_Coverage.csv`
-- `HCVData/HCV-all-seq-subtype/NS5B_AllSeq_NonComet_Coverage.csv`
+- `HCVData/nonComet-Full-genome/NS3_AllSeq_NonComet_Coverage.csv`
+- `HCVData/nonComet-Full-genome/NS5A_AllSeq_NonComet_Coverage.csv`
+- `HCVData/nonComet-Full-genome/NS5B_AllSeq_NonComet_Coverage.csv`
 
 They are subsequently used by the NS3, NS5A, and NS5B COMET workflows as priority non-COMET subtype annotations. In particular, the workflows use genotype 7/8 and subtype 1d records from these tables to supplement or override COMET calls.
 
@@ -25,7 +25,7 @@ Run the coverage-audit script from the repository root:
 ```bash
 .venv/bin/python Preprocess/Ref/hcv-all-seq-noncomet-coverage-audit/scripts/audit_all_fasta_coverage.py \
   --input-fasta HCVData/HCV-all-seq-subtype/all.fasta \
-  --output-dir HCVData/HCV-all-seq-subtype \
+  --output-dir HCVData/nonComet-Full-genome \
   --threads 4
 ```
 

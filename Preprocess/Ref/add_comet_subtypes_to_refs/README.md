@@ -2,12 +2,13 @@
 
 Adds COMET subtype and gene-coverage summaries to the reference-selection table.
 
-The script reads the `HCVData/HCV-all-seq-subtype` dataset by default:
+The script reads the `HCVData/HCV-all-seq-subtype` dataset by default, with
+non-COMET coverage files read from `HCVData/nonComet-Full-genome`:
 
 - `Ref.csv`: rows to enrich; must contain `RefID`.
 - `Accessions.csv`: maps accessions to RefIDs.
 - `all_comet_subtype.csv`: supplies COMET subtype calls.
-- `NS3_AllSeq_NonComet_Coverage.csv`, `NS5A_AllSeq_NonComet_Coverage.csv`, and `NS5B_AllSeq_NonComet_Coverage.csv`: supply priority non-COMET subtypes and per-gene coverage. Only rows with `FullyCover=Yes` contribute to the coverage counts.
+- `HCVData/nonComet-Full-genome/NS3_AllSeq_NonComet_Coverage.csv`, `HCVData/nonComet-Full-genome/NS5A_AllSeq_NonComet_Coverage.csv`, and `HCVData/nonComet-Full-genome/NS5B_AllSeq_NonComet_Coverage.csv`: supply priority non-COMET subtypes and per-gene coverage. Only rows with `FullyCover=Yes` contribute to the coverage counts.
 
 It writes `Ref_with_CometSubtypes.csv` in the same dataset folder. The output adds:
 

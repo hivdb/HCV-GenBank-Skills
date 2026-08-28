@@ -108,7 +108,7 @@ Each step writes its files under `outputs/comet-NS5A-one-ras/<order>_<step-name>
 - `HCV_GT_RefSeqs.fasta`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
 - `HCV_GT_Refs_By_Gene_AA.json`
-- `HCVData/HCV-all-seq-subtype/NS5A_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET subtype 1d and genotype 7/8 overrides and additions
+- `HCVData/nonComet-Full-genome/NS5A_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET subtype 1d and genotype 7/8 overrides and additions
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 - optional GenBank directory for source-feature extraction if the commented source-feature steps are re-enabled
 
@@ -116,12 +116,12 @@ The discovery step keeps every row with a `RefID` from the configured `IncludedN
 After discovery, the runner copies matched FASTA files into `03_stage-refid-fastas/included_refid_fastas/`. Step 4 copies them into `04_prepare-comet-assignments/included_refid_fastas/` and removes records missing from COMET or marked unassigned. Steps 6–8 apply metadata filtering to that COMET-filtered copy; downstream workbooks use the filtered copy under `08_filter-refid-fastas/`.
 After every stage following staging, the runner prints the current number of unique GT7 and GT8 subtypes and their accession counts. Before the subtype workbook exists, these counts are calculated from the same COMET-plus-priority assignments it will use.
 The metadata filtering step writes its metadata CSVs in `04_filter-accession-metadata/`; the per-RefID rules and CSVs are in `05_split-refid-metadata/refid_metadata/`.
-The priority-assignment stage uses `HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv` as the highest-priority accession/subtype source, then selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
+The priority-assignment stage uses `HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv` as the highest-priority accession/subtype source, then selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 Complete-profile construction requires a callable standard amino acid at one or more NS5A RAS positions: 24, 26, 28, 29, 30, 31, 32, 38, 58, 62, 92, or 93. Missing, `X`, stop (`*`), or non-standard calls at every one of these positions exclude the accession from the profile and downstream combined RAS reports.
 
 ## Outputs
 
-The final GT7/GT8 comparison step reads `HCVData/HCV-all-seq-subtype/NS5A_AllSeq_NonComet_Coverage.csv` and writes the workflow/non-COMET-coverage subtype comparison workbook and CSV in its own numbered output directory.
+The final GT7/GT8 comparison step reads `HCVData/nonComet-Full-genome/NS5A_AllSeq_NonComet_Coverage.csv` and writes the workflow/non-COMET-coverage subtype comparison workbook and CSV in its own numbered output directory.
 
 The workflow writes NS5A outputs under `outputs/comet-NS5A-one-ras/`, in numbered step folders, including:
 
