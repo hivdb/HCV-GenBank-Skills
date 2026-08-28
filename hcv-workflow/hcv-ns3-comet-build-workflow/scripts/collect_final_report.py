@@ -42,6 +42,13 @@ def main() -> None:
             ("merge-subtype-complete-profiles",),
             f"{gene}_Subtype_CompleteProfiles_Merged.xlsx",
         ),
+        artifact(
+            ("build-paired-distance-matrices",), f"{gene}_Subtype_AA_Distance_RAS.xlsx"
+        ),
+        artifact(
+            ("analyze-genotype-subtype-aa-predictability",),
+            f"{gene}_Genotype_Subtype_AA_Predictability.xlsx",
+        ),
     )
     destination = root / "report"
     destination.mkdir(parents=True, exist_ok=True)

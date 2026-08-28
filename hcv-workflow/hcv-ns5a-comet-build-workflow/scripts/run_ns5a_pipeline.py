@@ -58,6 +58,7 @@ STEP_NAMES = (
     "build-subtype-aa-distance",
     "build-paired-distance-matrices",
     "build-ras-entropy",
+    "analyze-genotype-subtype-aa-predictability",
     "publish-ictv-report",
     "audit-gt7-gt8-sequences",
     "compare-gt7-gt8-local-assignments",
@@ -564,6 +565,10 @@ class Pipeline:
         subtype_profile = (
             self.step_dir("build-complete-profiles")
             / "NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx"
+        )
+        merged_subtype_profile = (
+            self.step_dir("merge-subtype-complete-profiles")
+            / "NS5A_Subtype_CompleteProfiles_Merged.xlsx"
         )
         gt_consensus = (
             self.step_dir("export-consensus-fastas") / "NS5A_GT_Consensus.fasta"
@@ -1201,6 +1206,24 @@ class Pipeline:
                     self.step_dir("build-ras-entropy")
                     / "NS5A_Subtype_RAS_Entropy.xlsx",
                     stdout_path=summary("build-ras-entropy", "last_run_summary.txt"),
+                ),
+            ),
+            Step(
+                "analyze-genotype-subtype-aa-predictability",
+                "measure amino-acid prediction added by genotype and subtype",
+                lambda: self.run(
+                    "analyze_ns5a_genotype_subtype_aa_predictability.py",
+                    "--subtype-profile-workbook",
+                    merged_subtype_profile,
+                    "--min-subtype-sequences",
+                    "1",
+                    "--output-xlsx",
+                    self.step_dir("analyze-genotype-subtype-aa-predictability")
+                    / "NS5A_Genotype_Subtype_AA_Predictability.xlsx",
+                    stdout_path=summary(
+                        "analyze-genotype-subtype-aa-predictability",
+                        "last_run_summary.txt",
+                    ),
                 ),
             ),
             Step(

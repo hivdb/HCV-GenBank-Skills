@@ -29,6 +29,7 @@ build-genotype-aa-consensus-distance,build_ns3_gt_aa_distance_matrix.py
 build-subtype-aa-consensus-distance,build_ns3_subtype_aa_distance_matrices.py
 build-paired-distance-matrices,build_ns3_aa_distance_matrices.py;build_ns3_na_distance_matrices.py
 build-ras-entropy,build_ns3_ras_entropy.py
+analyze-genotype-subtype-aa-predictability,analyze_ns3_genotype_subtype_aa_predictability.py
 publish-ictv-report,add_subtype_consensus_mutation_summaries.py
 audit-gt7-gt8-sequences,build_ns3_gt7_gt8_step_audit.py
 compare-gt7-gt8-local-assignments,compare_ns3_gt7_gt8_local_assignments.py
