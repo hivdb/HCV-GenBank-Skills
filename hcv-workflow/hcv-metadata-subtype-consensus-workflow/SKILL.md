@@ -22,7 +22,7 @@ Common inputs:
 --output-root outputs/temp/metadata_subtype_consensus_workflow
 --subtype-json HCV_Subtype_Refs_By_Genome_NA.json
 --gt-aa-json HCV_GT_Refs_By_Gene_AA.json
---gt-aa-fasta HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta
+--gt-aa-fasta HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta
 --reference-fasta HCV_GT_RefSeqs.fasta
 --genes NS3 NS5A NS5B
 ```
@@ -45,7 +45,7 @@ Required previous setup:
   - `HCV_GT_RefSeqs.fasta`
   - `HCV_Subtype_Refs_By_Genome_NA.json`
   - `HCV_GT_Refs_By_Gene_AA.json`
-  - `HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta`
+  - `HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta`
 
 Required sibling workflow skills:
 

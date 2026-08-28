@@ -962,7 +962,7 @@ class Pipeline:
                         "--gene",
                         "NS5A_NTD",
                         "--reference-fasta",
-                        REPO_ROOT / "HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
+                        REPO_ROOT / "HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
                         "--consensus-dir",
                         self.step_dir("export-consensus-fastas"),
                         "--output-dir",

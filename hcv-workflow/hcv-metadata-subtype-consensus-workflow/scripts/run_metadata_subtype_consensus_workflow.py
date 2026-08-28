@@ -24,7 +24,12 @@ DEFAULT_METADATA_CSV = (
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs/temp/metadata_subtype_consensus_workflow"
 DEFAULT_SUBTYPE_JSON = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
 DEFAULT_GT_AA_JSON = REPO_ROOT / "HCVData" / "HCV_GT_Refs_By_Gene_AA.json"
-DEFAULT_GT_AA_FASTA = REPO_ROOT / "HCVData" / "HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta"
+DEFAULT_GT_AA_FASTA = (
+    REPO_ROOT
+    / "HCVData"
+    / "Genotype-Ref"
+    / "HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta"
+)
 DEFAULT_REFERENCE_FASTA = REPO_ROOT / "HCVData" / "HCV_GT_RefSeqs.fasta"
 GENES = ("NS3", "NS5A", "NS5B")
 GT_REF_GENE_BY_GENE = {"NS3": "NS3", "NS5A": "NS5A_NTD", "NS5B": "NS5B"}

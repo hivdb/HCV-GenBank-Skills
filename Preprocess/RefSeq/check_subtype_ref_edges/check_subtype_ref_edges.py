@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 
-DEFAULT_GT_FASTA = Path("HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta")
+DEFAULT_GT_FASTA = Path("HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta")
 DEFAULT_SUBTYPE_FASTAS = (
     Path("outputs/temp/hcv_gene_subtype_refs/hcv_subtype_gene_refs_ns3_aa.fasta"),
     Path("outputs/temp/hcv_gene_subtype_refs/hcv_subtype_gene_refs_ns5a_ntd_aa.fasta"),

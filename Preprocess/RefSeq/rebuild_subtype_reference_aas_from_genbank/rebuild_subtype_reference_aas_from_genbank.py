@@ -37,13 +37,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--gt-reference-fasta",
         type=Path,
-        default=Path("HCVData/Reference_seqs/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta"),
+        default=Path("HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta"),
         help="Per-gene genotype AA references used to extract genes from polyprotein CDSs.",
     )
     parser.add_argument(
         "--genbank-dir",
         type=Path,
-        default=Path("HCVData/Reference_seqs/genbank_records"),
+        default=Path("HCVData/Subtype-Ref/genbank_records"),
     )
     parser.add_argument("--email", default="", help="Optional NCBI contact email")
     parser.add_argument("--tool", default="hcv-subtype-reference-rebuild")

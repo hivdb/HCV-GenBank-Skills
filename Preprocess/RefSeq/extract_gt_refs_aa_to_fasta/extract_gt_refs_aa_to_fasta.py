@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-fasta",
-        default="HCVData/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
+        default="HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
         help="Path to output FASTA file",
     )
     parser.add_argument(
