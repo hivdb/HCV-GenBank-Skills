@@ -40,10 +40,25 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Refine low-scoring HCV subtype references with tblastn segment chaining."
     )
-    parser.add_argument("--output-dir", required=True, help="Output directory from build_hcv_gene_subtype_refs.py")
-    parser.add_argument("--gt-gene-aa-json", required=True, help="Path to HCV_GT_Refs_By_Gene_AA.json")
-    parser.add_argument("--subtype-genome-na-json", required=True, help="Path to HCV_Subtype_Refs_By_Genome_NA.json")
-    parser.add_argument("--threshold", type=float, default=0.80, help="Only refine records below this score")
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Output directory from build_hcv_gene_subtype_refs.py",
+    )
+    parser.add_argument(
+        "--gt-gene-aa-json", required=True, help="Path to HCV_GT_Refs_By_Gene_AA.json"
+    )
+    parser.add_argument(
+        "--subtype-genome-na-json",
+        required=True,
+        help="Path to HCV_Subtype_Refs_By_Genome_NA.json",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.80,
+        help="Only refine records below this score",
+    )
     return parser.parse_args()
 
 
@@ -52,7 +67,11 @@ def load_json(path: Path) -> Any:
 
 
 def normalize_nt(sequence: str) -> str:
-    return "".join(base for base in sequence.upper().replace("U", "T") if base in {"A", "C", "G", "T", "N"})
+    return "".join(
+        base
+        for base in sequence.upper().replace("U", "T")
+        if base in {"A", "C", "G", "T", "N"}
+    )
 
 
 def parse_gt_from_name(name: str) -> str:
@@ -70,7 +89,9 @@ def build_gt_refs(rows: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
         gene = str(row["abstractGene"])
         if gene not in {"NS3", "NS5A_NTD", "NS5B"}:
             continue
-        refs[(parse_gt_from_name(str(row["name"])), gene)] = str(row["refSequence"]).strip().upper()
+        refs[(parse_gt_from_name(str(row["name"])), gene)] = (
+            str(row["refSequence"]).strip().upper()
+        )
     return refs
 
 
@@ -137,7 +158,11 @@ def run_tblastn(query_aa: str, subject_nt: str, tag: str) -> list[Hsp]:
             stderr=subprocess.DEVNULL,
             text=True,
         )
-        return [parse_hsp(line) for line in out_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [
+            parse_hsp(line)
+            for line in out_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
 
 
 def choose_hsp_chain(hsps: list[Hsp]) -> list[Hsp]:
@@ -208,14 +233,31 @@ def main() -> int:
     output_dir = Path(args.output_dir).expanduser()
     summary = load_json(output_dir / "summary.json")
     gt_refs = build_gt_refs(load_json(Path(args.gt_gene_aa_json).expanduser()))
-    subtype_rows = {str(row["accession"]): row for row in load_json(Path(args.subtype_genome_na_json).expanduser())}
+    subtype_rows = {
+        str(row["accession"]): row
+        for row in load_json(Path(args.subtype_genome_na_json).expanduser())
+    }
 
-    targets = [row for row in summary["records"] if float(row["alignment_score"]) < args.threshold]
+    targets = [
+        row
+        for row in summary["records"]
+        if float(row["alignment_score"]) < args.threshold
+    ]
     results: list[dict[str, Any]] = []
     per_gene_lines = {
         "NS3": ["NS3 tblastn Refinement", "", f"Threshold: < {args.threshold:.2f}", ""],
-        "NS5A_NTD": ["NS5A_NTD tblastn Refinement", "", f"Threshold: < {args.threshold:.2f}", ""],
-        "NS5B": ["NS5B tblastn Refinement", "", f"Threshold: < {args.threshold:.2f}", ""],
+        "NS5A_NTD": [
+            "NS5A_NTD tblastn Refinement",
+            "",
+            f"Threshold: < {args.threshold:.2f}",
+            "",
+        ],
+        "NS5B": [
+            "NS5B tblastn Refinement",
+            "",
+            f"Threshold: < {args.threshold:.2f}",
+            "",
+        ],
     }
 
     for row in targets:
@@ -237,7 +279,8 @@ def main() -> int:
             "author_year": row["author_year"],
             "original_match_proportion": float(row["alignment_score"]),
             **summary_row,
-            "improvement": summary_row["refined_match_proportion"] - float(row["alignment_score"]),
+            "improvement": summary_row["refined_match_proportion"]
+            - float(row["alignment_score"]),
         }
         results.append(result)
 

@@ -21,24 +21,74 @@ from openpyxl import Workbook, load_workbook
 BLAST_OUTFMT = "6 qseqid sseqid length mismatch gaps pident evalue bitscore qstart qend sstart send qframe"
 FASTA_EXTENSIONS = {".fa", ".fasta", ".fna"}
 CODON_TABLE = {
-    "TTT": "F", "TTC": "F", "TTA": "L", "TTG": "L",
-    "TCT": "S", "TCC": "S", "TCA": "S", "TCG": "S",
-    "TAT": "Y", "TAC": "Y", "TAA": "*", "TAG": "*",
-    "TGT": "C", "TGC": "C", "TGA": "*", "TGG": "W",
-    "CTT": "L", "CTC": "L", "CTA": "L", "CTG": "L",
-    "CCT": "P", "CCC": "P", "CCA": "P", "CCG": "P",
-    "CAT": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
-    "CGT": "R", "CGC": "R", "CGA": "R", "CGG": "R",
-    "ATT": "I", "ATC": "I", "ATA": "I", "ATG": "M",
-    "ACT": "T", "ACC": "T", "ACA": "T", "ACG": "T",
-    "AAT": "N", "AAC": "N", "AAA": "K", "AAG": "K",
-    "AGT": "S", "AGC": "S", "AGA": "R", "AGG": "R",
-    "GTT": "V", "GTC": "V", "GTA": "V", "GTG": "V",
-    "GCT": "A", "GCC": "A", "GCA": "A", "GCG": "A",
-    "GAT": "D", "GAC": "D", "GAA": "E", "GAG": "E",
-    "GGT": "G", "GGC": "G", "GGA": "G", "GGG": "G",
+    "TTT": "F",
+    "TTC": "F",
+    "TTA": "L",
+    "TTG": "L",
+    "TCT": "S",
+    "TCC": "S",
+    "TCA": "S",
+    "TCG": "S",
+    "TAT": "Y",
+    "TAC": "Y",
+    "TAA": "*",
+    "TAG": "*",
+    "TGT": "C",
+    "TGC": "C",
+    "TGA": "*",
+    "TGG": "W",
+    "CTT": "L",
+    "CTC": "L",
+    "CTA": "L",
+    "CTG": "L",
+    "CCT": "P",
+    "CCC": "P",
+    "CCA": "P",
+    "CCG": "P",
+    "CAT": "H",
+    "CAC": "H",
+    "CAA": "Q",
+    "CAG": "Q",
+    "CGT": "R",
+    "CGC": "R",
+    "CGA": "R",
+    "CGG": "R",
+    "ATT": "I",
+    "ATC": "I",
+    "ATA": "I",
+    "ATG": "M",
+    "ACT": "T",
+    "ACC": "T",
+    "ACA": "T",
+    "ACG": "T",
+    "AAT": "N",
+    "AAC": "N",
+    "AAA": "K",
+    "AAG": "K",
+    "AGT": "S",
+    "AGC": "S",
+    "AGA": "R",
+    "AGG": "R",
+    "GTT": "V",
+    "GTC": "V",
+    "GTA": "V",
+    "GTG": "V",
+    "GCT": "A",
+    "GCC": "A",
+    "GCA": "A",
+    "GCG": "A",
+    "GAT": "D",
+    "GAC": "D",
+    "GAA": "E",
+    "GAG": "E",
+    "GGT": "G",
+    "GGC": "G",
+    "GGA": "G",
+    "GGG": "G",
 }
-COMPLEMENT = str.maketrans("ACGTRYSWKMBDHVNacgtryswkmbdhvn", "TGCAYRSWMKVHDBNtgcayrswmkvhdbn")
+COMPLEMENT = str.maketrans(
+    "ACGTRYSWKMBDHVNacgtryswkmbdhvn", "TGCAYRSWMKVHDBNtgcayrswmkvhdbn"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,7 +110,10 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3/temp")) / Path(__file__).stem
+    path = (
+        Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3/temp"))
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -71,7 +124,9 @@ def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
 
 
 def make_temp_output_path(filename: str) -> Path:
-    handle = tempfile.NamedTemporaryFile(prefix="tmp_", suffix=f"_{filename}", dir=script_temp_dir(), delete=False)
+    handle = tempfile.NamedTemporaryFile(
+        prefix="tmp_", suffix=f"_{filename}", dir=script_temp_dir(), delete=False
+    )
     handle.close()
     return Path(handle.name)
 
@@ -171,7 +226,9 @@ def load_gt_refs(json_path: Path) -> dict[str, str]:
 def load_subtype_rows(workbook_path: Path) -> tuple[list[str], list[dict[str, Any]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
-    header = [str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))]
+    header = [
+        str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))
+    ]
     index = {name: i for i, name in enumerate(header)}
     required = ["RefID", "RefName", "AccessionID", "ClosestGT"]
     for name in required:
@@ -217,7 +274,16 @@ def build_gt_db(job_dir: Path, gt: str, aa_sequence: str) -> Path:
     write_fasta(ref_fasta, [(f"GT{gt}_NS3", aa_sequence)])
     db_prefix = job_dir / f"gt{gt}_ns3_aa_db"
     subprocess.run(
-        ["makeblastdb", "-in", str(ref_fasta), "-dbtype", "prot", "-out", str(db_prefix), "-parse_seqids"],
+        [
+            "makeblastdb",
+            "-in",
+            str(ref_fasta),
+            "-dbtype",
+            "prot",
+            "-out",
+            str(db_prefix),
+            "-parse_seqids",
+        ],
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -226,7 +292,9 @@ def build_gt_db(job_dir: Path, gt: str, aa_sequence: str) -> Path:
     return db_prefix
 
 
-def run_blastx(query_fasta: Path, db_prefix: Path, out_path: Path) -> list[dict[str, Any]]:
+def run_blastx(
+    query_fasta: Path, db_prefix: Path, out_path: Path
+) -> list[dict[str, Any]]:
     subprocess.run(
         [
             "blastx",
@@ -278,22 +346,30 @@ def run_blastx(query_fasta: Path, db_prefix: Path, out_path: Path) -> list[dict[
     return hits
 
 
-def choose_best_hits(hits: list[dict[str, Any]], min_aa_overlap: int) -> dict[str, dict[str, Any]]:
+def choose_best_hits(
+    hits: list[dict[str, Any]], min_aa_overlap: int
+) -> dict[str, dict[str, Any]]:
     best: dict[str, dict[str, Any]] = {}
     for hit in hits:
         if hit["length"] < min_aa_overlap:
             continue
         current = best.get(hit["qseqid"])
         if current is None or (
-            -hit["bitscore"], -hit["length"], hit["mismatch"] + hit["gaps"]
+            -hit["bitscore"],
+            -hit["length"],
+            hit["mismatch"] + hit["gaps"],
         ) < (
-            -current["bitscore"], -current["length"], current["mismatch"] + current["gaps"]
+            -current["bitscore"],
+            -current["length"],
+            current["mismatch"] + current["gaps"],
         ):
             best[hit["qseqid"]] = hit
     return best
 
 
-def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[int, int, str, str]:
+def extract_aa(
+    sequence: str, hit: dict[str, Any], reference_aa: str
+) -> tuple[int, int, str, str]:
     qstart = min(hit["qstart"], hit["qend"])
     qend = max(hit["qstart"], hit["qend"])
     frame = hit["qframe"]
@@ -307,7 +383,9 @@ def extract_aa(sequence: str, hit: dict[str, Any], reference_aa: str) -> tuple[i
         return 0, 0, "", ""
 
     global_alignment = build_aligner().align(reference_aa, query_aa)[0]
-    aligned_reference_aa, aligned_query_aa = alignment_strings(reference_aa, query_aa, global_alignment.coordinates)
+    aligned_reference_aa, aligned_query_aa = alignment_strings(
+        reference_aa, query_aa, global_alignment.coordinates
+    )
 
     ref_pos = 0
     query_chars: list[str] = []
@@ -331,8 +409,17 @@ def write_workbook(path: Path, header: list[str], rows: list[dict[str, Any]]) ->
     wb = Workbook()
     ws = wb.active
     ws.title = "NS3_Subtype_Distance"
-    base_header = [col for col in header if col not in {"StartAAPosition", "EndAAPosition", "AASequence", "NASequence"}]
-    full_header = base_header + ["StartAAPosition", "EndAAPosition", "AASequence", "NASequence"]
+    base_header = [
+        col
+        for col in header
+        if col not in {"StartAAPosition", "EndAAPosition", "AASequence", "NASequence"}
+    ]
+    full_header = base_header + [
+        "StartAAPosition",
+        "EndAAPosition",
+        "AASequence",
+        "NASequence",
+    ]
     ws.append(full_header)
     for row in rows:
         ws.append([row.get(col, "") for col in full_header])
@@ -341,7 +428,16 @@ def write_workbook(path: Path, header: list[str], rows: list[dict[str, Any]]) ->
 
 def cleanup_job_dir(job_dir: Path) -> None:
     for path in job_dir.iterdir():
-        if path.name.startswith("gt") and path.suffix in {".fasta", ".phr", ".pin", ".pog", ".psq", ".pto", ".ptf", ".pot"}:
+        if path.name.startswith("gt") and path.suffix in {
+            ".fasta",
+            ".phr",
+            ".pin",
+            ".pog",
+            ".psq",
+            ".pto",
+            ".ptf",
+            ".pot",
+        }:
             try:
                 path.unlink()
             except OSError:
@@ -383,7 +479,9 @@ def main() -> int:
                 continue
             fasta_map = fasta_cache.get(row["RefID"])
             if fasta_map is None:
-                fasta_map = {accession_from_header(h): s for h, s in parse_fasta(fasta_path)}
+                fasta_map = {
+                    accession_from_header(h): s for h, s in parse_fasta(fasta_path)
+                }
                 fasta_cache[row["RefID"]] = fasta_map
             seq = fasta_map.get(row["AccessionID"])
             if not seq:
@@ -401,8 +499,15 @@ def main() -> int:
         extracted = 0
         reference_aa = gt_refs[gt]
         for qseqid, hit in best_hits.items():
-            start_aa, end_aa, aa_sequence, na_sequence = extract_aa(seq_by_qseqid[qseqid], hit, reference_aa)
-            results[tuple(qseqid.split("|", 1))] = (start_aa, end_aa, aa_sequence, na_sequence)
+            start_aa, end_aa, aa_sequence, na_sequence = extract_aa(
+                seq_by_qseqid[qseqid], hit, reference_aa
+            )
+            results[tuple(qseqid.split("|", 1))] = (
+                start_aa,
+                end_aa,
+                aa_sequence,
+                na_sequence,
+            )
             extracted += 1
         summary["by_gt"][gt] = {"queries": len(query_entries), "extracted": extracted}
 
@@ -415,7 +520,12 @@ def main() -> int:
             row["AASequence"] = ""
             row["NASequence"] = ""
         else:
-            row["StartAAPosition"], row["EndAAPosition"], row["AASequence"], row["NASequence"] = value
+            (
+                row["StartAAPosition"],
+                row["EndAAPosition"],
+                row["AASequence"],
+                row["NASequence"],
+            ) = value
 
     out_path = (
         Path(args.output_workbook).expanduser()

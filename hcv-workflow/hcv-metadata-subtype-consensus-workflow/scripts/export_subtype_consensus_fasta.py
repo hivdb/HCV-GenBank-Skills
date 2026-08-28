@@ -34,13 +34,21 @@ def script_temp_dir() -> Path:
 
 
 def infer_position_column(header: list[str]) -> str:
-    position_columns = [name for name in header if name.endswith("Position") and name != "NumSeqsIncludingPosition"]
+    position_columns = [
+        name
+        for name in header
+        if name.endswith("Position") and name != "NumSeqsIncludingPosition"
+    ]
     if len(position_columns) != 1:
-        raise RuntimeError(f"Expected exactly one position column, found: {position_columns}")
+        raise RuntimeError(
+            f"Expected exactly one position column, found: {position_columns}"
+        )
     return position_columns[0]
 
 
-def load_fasta_entries(workbook_path: Path, gene: str) -> tuple[list[tuple[str, str]], dict[str, list[int]]]:
+def load_fasta_entries(
+    workbook_path: Path, gene: str
+) -> tuple[list[tuple[str, str]], dict[str, list[int]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     entries: list[tuple[str, str]] = []
     positions_by_subtype: dict[str, list[int]] = {}
@@ -48,13 +56,18 @@ def load_fasta_entries(workbook_path: Path, gene: str) -> tuple[list[tuple[str, 
     for sheet_name in wb.sheetnames:
         gt_label = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         position_column = infer_position_column(header)
         index_by_name = {name: idx for idx, name in enumerate(header)}
         required = ["Subtype", position_column, "AminoAcid", "PctWithAA"]
         missing = [name for name in required if name not in index_by_name]
         if missing:
-            raise RuntimeError(f"Worksheet {sheet_name} in {workbook_path} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"Worksheet {sheet_name} in {workbook_path} is missing columns: {', '.join(missing)}"
+            )
 
         best_by_subtype_position: dict[str, dict[int, tuple[float, str]]] = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -67,14 +80,21 @@ def load_fasta_entries(workbook_path: Path, gene: str) -> tuple[list[tuple[str, 
             per_position = best_by_subtype_position.setdefault(subtype, {})
             current = per_position.get(position)
             candidate = (pct_with_aa, amino_acid)
-            if current is None or candidate[0] > current[0] or (candidate[0] == current[0] and candidate[1] < current[1]):
+            if (
+                current is None
+                or candidate[0] > current[0]
+                or (candidate[0] == current[0] and candidate[1] < current[1])
+            ):
                 per_position[position] = candidate
 
         for subtype in sorted(best_by_subtype_position):
             ordered_positions = sorted(best_by_subtype_position[subtype])
             if not ordered_positions:
                 continue
-            sequence = "".join(best_by_subtype_position[subtype][position][1] for position in ordered_positions)
+            sequence = "".join(
+                best_by_subtype_position[subtype][position][1]
+                for position in ordered_positions
+            )
             header_label = f"{gt_label}_{subtype}"
             entries.append((header_label, sequence))
             positions_by_subtype[header_label] = ordered_positions
@@ -98,7 +118,11 @@ def main() -> int:
     workbook_path = Path(args.subtype_profile_workbook).expanduser()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_fasta = Path(args.output_fasta).expanduser() if args.output_fasta else output_dir / f"{args.gene}_Subtype_Consensus.fasta"
+    output_fasta = (
+        Path(args.output_fasta).expanduser()
+        if args.output_fasta
+        else output_dir / f"{args.gene}_Subtype_Consensus.fasta"
+    )
 
     entries, positions_by_subtype = load_fasta_entries(workbook_path, args.gene)
     write_fasta(output_fasta, entries)

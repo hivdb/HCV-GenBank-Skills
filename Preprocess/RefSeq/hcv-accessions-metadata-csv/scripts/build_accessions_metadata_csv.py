@@ -131,7 +131,8 @@ def refid_from_fasta_path(path: Path) -> str:
 
 def iter_fasta_paths(fasta_dir: Path) -> list[Path]:
     return sorted(
-        path for path in fasta_dir.iterdir()
+        path
+        for path in fasta_dir.iterdir()
         if path.is_file() and path.suffix.lower() in FASTA_EXTENSIONS
     )
 
@@ -152,7 +153,9 @@ def collect_accessions_from_fastas(
                 continue
             total_accession_records += 1
             if accession in accession_by_file:
-                raise RuntimeError(f"Duplicate accession across FASTA files or records: {accession}")
+                raise RuntimeError(
+                    f"Duplicate accession across FASTA files or records: {accession}"
+                )
             accession_by_file[accession] = str(fasta_path.resolve())
             refid_by_accession[accession] = refid
             sequence_by_accession[accession] = str(record.seq).strip().upper()
@@ -164,7 +167,13 @@ def collect_accessions_from_fastas(
         raise RuntimeError(
             f"Unique accession count ({len(accessions)}) does not match total FASTA accession record count ({total_accession_records})"
         )
-    return accessions, accession_by_file, refid_by_accession, sequence_by_accession, total_accession_records
+    return (
+        accessions,
+        accession_by_file,
+        refid_by_accession,
+        sequence_by_accession,
+        total_accession_records,
+    )
 
 
 def iter_raw_genbank_records(path: Path) -> Any:
@@ -199,7 +208,10 @@ def extract_matching_genbank_records(
             if accession not in target_accessions:
                 continue
             out_path = extracted_dir / f"{accession}.gb"
-            out_path.write_text(record_text if record_text.endswith("\n") else f"{record_text}\n", encoding="utf-8")
+            out_path.write_text(
+                record_text if record_text.endswith("\n") else f"{record_text}\n",
+                encoding="utf-8",
+            )
             gb_file_by_accession[accession] = str(seq_path.resolve())
     return gb_file_by_accession
 
@@ -303,7 +315,9 @@ def ordered_fieldnames(rows: list[dict[str, str]]) -> list[str]:
         "NS5B",
         "StructuredComment",
     ]
-    discovered = sorted({key for row in rows for key in row.keys() if key not in preferred})
+    discovered = sorted(
+        {key for row in rows for key in row.keys() if key not in preferred}
+    )
     return preferred + discovered
 
 
@@ -312,7 +326,9 @@ def normalize_sequence_for_blast(sequence: str) -> str:
 
 
 def sequence_is_nucleotide(sequence: str) -> bool:
-    letters = [char for char in normalize_sequence_for_blast(sequence) if char.isalpha()]
+    letters = [
+        char for char in normalize_sequence_for_blast(sequence) if char.isalpha()
+    ]
     if not letters:
         return False
     return all(char in NUCLEOTIDE_CHARS for char in letters)
@@ -371,7 +387,9 @@ def parse_blast_hits(blast_output: str) -> dict[str, set[str]]:
     return hits_by_accession
 
 
-def run_blast_search(query_fasta: Path, db_prefix: Path, program: str) -> dict[str, set[str]]:
+def run_blast_search(
+    query_fasta: Path, db_prefix: Path, program: str
+) -> dict[str, set[str]]:
     if query_fasta.stat().st_size == 0:
         return {}
     completed = subprocess.run(
@@ -401,7 +419,9 @@ def merge_gene_hits(*hit_maps: dict[str, set[str]]) -> dict[str, set[str]]:
     return merged
 
 
-def detect_genes_by_blast(sequence_by_accession: dict[str, str], temp_dir: Path) -> dict[str, set[str]]:
+def detect_genes_by_blast(
+    sequence_by_accession: dict[str, str], temp_dir: Path
+) -> dict[str, set[str]]:
     reference_fasta = repo_root() / "HCVData" / "HCV-Ref-H77-Genotype1.fasta"
     if not reference_fasta.is_file():
         raise RuntimeError(f"HCV reference FASTA not found: {reference_fasta}")
@@ -475,7 +495,10 @@ def main() -> int:
     output_csv = (
         Path(args.output_csv).expanduser()
         if args.output_csv
-        else repo_root() / "outputs" / "build_accessions_metadata_csv" / "Accessions_metadata.csv"
+        else repo_root()
+        / "outputs"
+        / "build_accessions_metadata_csv"
+        / "Accessions_metadata.csv"
     )
     workers = max(1, args.workers)
 
@@ -496,9 +519,13 @@ def main() -> int:
         total_accession_records,
     ) = collect_accessions_from_fastas(fasta_paths)
 
-    extracted_dir = Path(tempfile.mkdtemp(prefix="accessions_metadata_", dir=script_temp_dir()))
+    extracted_dir = Path(
+        tempfile.mkdtemp(prefix="accessions_metadata_", dir=script_temp_dir())
+    )
     try:
-        gene_hits_by_accession = detect_genes_by_blast(sequence_by_accession, extracted_dir)
+        gene_hits_by_accession = detect_genes_by_blast(
+            sequence_by_accession, extracted_dir
+        )
         gb_archive_file_by_accession = extract_matching_genbank_records(
             genbank_dir,
             set(target_accessions),
@@ -516,10 +543,14 @@ def main() -> int:
             raise RuntimeError(
                 f"Output row count ({len(rows)}) does not match total FASTA accession record count ({total_accession_records})"
             )
-        rows, removed_accession_count = annotate_and_filter_rows(rows, gene_hits_by_accession)
+        rows, removed_accession_count = annotate_and_filter_rows(
+            rows, gene_hits_by_accession
+        )
         fieldnames = ordered_fieldnames(rows)
         write_csv(output_csv, rows, fieldnames)
-        print(f"Removing {removed_accession_count} accessions without NS3, NS5A, or NS5B hits")
+        print(
+            f"Removing {removed_accession_count} accessions without NS3, NS5A, or NS5B hits"
+        )
 
         print(
             {

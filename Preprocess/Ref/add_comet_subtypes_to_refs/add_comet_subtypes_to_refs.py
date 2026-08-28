@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Add COMET calls and selected non-COMET priority subtypes to each Ref.csv row."""
+
 from __future__ import annotations
 
 import argparse
@@ -53,7 +54,9 @@ def reference_overlap_interval(value: str | None) -> tuple[int, int] | None:
     return tuple(sorted((int(match.group(1)), int(match.group(2)))))
 
 
-def reorder_columns(worksheet, headers: dict[object, int], columns: tuple[str, ...]) -> None:
+def reorder_columns(
+    worksheet, headers: dict[object, int], columns: tuple[str, ...]
+) -> None:
     """Reorder existing worksheet columns without changing their data or formatting."""
     if not all(column in headers for column in columns):
         return
@@ -61,29 +64,44 @@ def reorder_columns(worksheet, headers: dict[object, int], columns: tuple[str, .
     snapshots = [
         [
             (cell.value, copy(cell._style), cell.comment, cell.hyperlink)
-            for cell in worksheet.iter_cols(min_col=headers[column], max_col=headers[column])
+            for cell in worksheet.iter_cols(
+                min_col=headers[column], max_col=headers[column]
+            )
             for cell in cell
         ]
         for column in columns
     ]
     for target_column, snapshot in zip(target_columns, snapshots):
-        for row_index, (value, style, comment, hyperlink) in enumerate(snapshot, start=1):
+        for row_index, (value, style, comment, hyperlink) in enumerate(
+            snapshot, start=1
+        ):
             cell = worksheet.cell(row=row_index, column=target_column)
-            cell.value, cell._style, cell.comment, cell._hyperlink = value, style, comment, hyperlink
+            cell.value, cell._style, cell.comment, cell._hyperlink = (
+                value,
+                style,
+                comment,
+                hyperlink,
+            )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ref-csv", type=Path, default=DATA_DIR / "Ref.csv")
-    parser.add_argument("--accessions-csv", type=Path, default=DATA_DIR / "Accessions.csv")
-    parser.add_argument("--comet-csv", type=Path, default=DATA_DIR / "all_comet_subtype.csv")
+    parser.add_argument(
+        "--accessions-csv", type=Path, default=DATA_DIR / "Accessions.csv"
+    )
+    parser.add_argument(
+        "--comet-csv", type=Path, default=DATA_DIR / "all_comet_subtype.csv"
+    )
     parser.add_argument(
         "--coverage-csv",
         type=Path,
         action="append",
         help="Coverage CSV to supply priority non-COMET subtypes; repeat as needed.",
     )
-    parser.add_argument("--output-csv", type=Path, default=DATA_DIR / "Ref_with_CometSubtypes.csv")
+    parser.add_argument(
+        "--output-csv", type=Path, default=DATA_DIR / "Ref_with_CometSubtypes.csv"
+    )
     parser.add_argument(
         "--blast-hists-xlsx",
         type=Path,
@@ -117,11 +135,22 @@ def main() -> None:
         DATA_DIR / "NS5B_AllSeq_NonComet_Coverage.csv",
     ]
     priority_added = 0
-    coverage_by_refid: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    coverage_by_refid: dict[str, dict[str, set[str]]] = defaultdict(
+        lambda: defaultdict(set)
+    )
     for coverage_path in coverage_paths:
-        gene = next((value for value in COVERAGE_COLUMNS if coverage_path.name.startswith(f"{value}_")), None)
+        gene = next(
+            (
+                value
+                for value in COVERAGE_COLUMNS
+                if coverage_path.name.startswith(f"{value}_")
+            ),
+            None,
+        )
         if gene is None:
-            raise ValueError(f"Cannot infer gene from coverage filename: {coverage_path}")
+            raise ValueError(
+                f"Cannot infer gene from coverage filename: {coverage_path}"
+            )
         with coverage_path.open(newline="", encoding="utf-8-sig") as handle:
             for row in csv.DictReader(handle):
                 accession = accession_key(row.get("Accession"))
@@ -138,17 +167,28 @@ def main() -> None:
                         continue
                     start, end = interval
                     includes_s282 = start <= 282 <= end
-                    includes_all_ras = all(start <= position <= end for position in NS5B_RAS_POSITIONS)
-                    other_ras_count = sum(start <= position <= end for position in NS5B_OTHER_RAS_POSITIONS)
+                    includes_all_ras = all(
+                        start <= position <= end for position in NS5B_RAS_POSITIONS
+                    )
+                    other_ras_count = sum(
+                        start <= position <= end
+                        for position in NS5B_OTHER_RAS_POSITIONS
+                    )
                     if includes_all_ras:
                         coverage_by_refid[refid][coverage_column].add(accession)
                     if includes_s282:
                         coverage_by_refid[refid][NS5B_S282_COLUMN].add(accession)
                     if includes_s282 and other_ras_count >= 4:
-                        coverage_by_refid[refid][NS5B_S282_PLUS_FOUR_COLUMN].add(accession)
+                        coverage_by_refid[refid][NS5B_S282_PLUS_FOUR_COLUMN].add(
+                            accession
+                        )
                     if includes_s282 and other_ras_count >= 5:
-                        coverage_by_refid[refid][NS5B_S282_PLUS_FIVE_COLUMN].add(accession)
-                elif refid and (row.get("FullyCover") or "").strip().casefold() == "yes":
+                        coverage_by_refid[refid][NS5B_S282_PLUS_FIVE_COLUMN].add(
+                            accession
+                        )
+                elif (
+                    refid and (row.get("FullyCover") or "").strip().casefold() == "yes"
+                ):
                     coverage_by_refid[refid][coverage_column].add(accession)
 
     annotations_by_refid: dict[str, dict[str, str | int]] = {}
@@ -162,7 +202,9 @@ def main() -> None:
             writer.writeheader()
             for row in reader:
                 refid = (row.get("RefID") or "").strip()
-                row["CometSubtypes"] = "; ".join(sorted(subtypes_by_refid.get(refid, set())))
+                row["CometSubtypes"] = "; ".join(
+                    sorted(subtypes_by_refid.get(refid, set()))
+                )
                 for column in ANNOTATION_COLUMNS:
                     row[column] = len(coverage_by_refid[refid][column])
                 writer.writerow(row)
@@ -180,7 +222,8 @@ def main() -> None:
             raise ValueError(f"{worksheet.title} must contain a RefID column")
         if gene == "NS5B":
             for column in sorted(
-                (headers[name] for name in OBSOLETE_NS5B_COLUMNS if name in headers), reverse=True
+                (headers[name] for name in OBSOLETE_NS5B_COLUMNS if name in headers),
+                reverse=True,
             ):
                 worksheet.delete_cols(column)
             headers = {cell.value: cell.column for cell in worksheet[1]}
@@ -199,17 +242,27 @@ def main() -> None:
             reorder_columns(worksheet, headers, NS5B_ANNOTATION_COLUMNS)
             headers = {cell.value: cell.column for cell in worksheet[1]}
         for row_index in range(2, worksheet.max_row + 1):
-            refid = str(worksheet.cell(row=row_index, column=headers["RefID"]).value or "").strip()
+            refid = str(
+                worksheet.cell(row=row_index, column=headers["RefID"]).value or ""
+            ).strip()
             if not refid or refid not in annotations_by_refid:
                 continue
             annotation = annotations_by_refid[refid]
-            worksheet.cell(row=row_index, column=headers["CometSubtypes"], value=annotation["CometSubtypes"])
+            worksheet.cell(
+                row=row_index,
+                column=headers["CometSubtypes"],
+                value=annotation["CometSubtypes"],
+            )
             for column in annotation_columns:
-                worksheet.cell(row=row_index, column=headers[column], value=annotation[column])
+                worksheet.cell(
+                    row=row_index, column=headers[column], value=annotation[column]
+                )
     workbook.save(args.blast_hists_xlsx)
 
     print(f"{args.output_csv} ({priority_added} RefID/subtype priority additions)")
-    print(f"{args.blast_hists_xlsx} (Original_NS3, Original_NS5A, Original_NS5B updated)")
+    print(
+        f"{args.blast_hists_xlsx} (Original_NS3, Original_NS5A, Original_NS5B updated)"
+    )
 
 
 if __name__ == "__main__":

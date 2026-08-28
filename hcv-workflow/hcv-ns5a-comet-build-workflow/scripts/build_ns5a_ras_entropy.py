@@ -17,11 +17,21 @@ POSITION_COLUMN = "NS5APosition"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Calculate NS5A RAS-position Shannon entropy by genotype and subtype.")
-    parser.add_argument("--gt-profile-workbook", default="outputs/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx")
-    parser.add_argument("--subtype-profile-workbook", default="outputs/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx")
+    parser = argparse.ArgumentParser(
+        description="Calculate NS5A RAS-position Shannon entropy by genotype and subtype."
+    )
+    parser.add_argument(
+        "--gt-profile-workbook",
+        default="outputs/NS5A_GT_CompleteProfiles_TabsPerGT.xlsx",
+    )
+    parser.add_argument(
+        "--subtype-profile-workbook",
+        default="outputs/NS5A_Subtype_CompleteProfiles_TabsPerGT.xlsx",
+    )
     parser.add_argument("--gt-output-xlsx", default="outputs/NS5A_GT_RAS_Entropy.xlsx")
-    parser.add_argument("--subtype-output-xlsx", default="outputs/NS5A_Subtype_RAS_Entropy.xlsx")
+    parser.add_argument(
+        "--subtype-output-xlsx", default="outputs/NS5A_Subtype_RAS_Entropy.xlsx"
+    )
     return parser.parse_args()
 
 
@@ -63,16 +73,23 @@ def subtype_sort_key(label: str) -> tuple[int, str]:
 
 def load_gt_counts(workbook_path: Path) -> dict[str, dict[int, dict[str, int]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    counts: dict[str, dict[int, dict[str, int]]] = defaultdict(lambda: defaultdict(dict))
+    counts: dict[str, dict[int, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
     for sheet_name in wb.sheetnames:
         gt = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         index = {name: idx for idx, name in enumerate(header)}
         required = [POSITION_COLUMN, "AminoAcid", "CountWithAA"]
         missing = [name for name in required if name not in index]
         if missing:
-            raise RuntimeError(f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}"
+            )
         for row in ws.iter_rows(min_row=2, values_only=True):
             position = int(row[index[POSITION_COLUMN]])
             if position not in RESISTANCE_POSITIONS:
@@ -80,23 +97,34 @@ def load_gt_counts(workbook_path: Path) -> dict[str, dict[int, dict[str, int]]]:
             aa = str(row[index["AminoAcid"]]).strip().upper()
             if aa in EXCLUDED_AAS:
                 continue
-            counts[gt][position][aa] = counts[gt][position].get(aa, 0) + int(row[index["CountWithAA"]])
+            counts[gt][position][aa] = counts[gt][position].get(aa, 0) + int(
+                row[index["CountWithAA"]]
+            )
     wb.close()
     return counts
 
 
-def load_subtype_counts(workbook_path: Path) -> dict[str, dict[str, dict[int, dict[str, int]]]]:
+def load_subtype_counts(
+    workbook_path: Path,
+) -> dict[str, dict[str, dict[int, dict[str, int]]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    counts: dict[str, dict[str, dict[int, dict[str, int]]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+    counts: dict[str, dict[str, dict[int, dict[str, int]]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(dict))
+    )
     for sheet_name in wb.sheetnames:
         gt = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         index = {name: idx for idx, name in enumerate(header)}
         required = ["Subtype", POSITION_COLUMN, "AminoAcid", "CountWithAA"]
         missing = [name for name in required if name not in index]
         if missing:
-            raise RuntimeError(f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}"
+            )
         for row in ws.iter_rows(min_row=2, values_only=True):
             subtype = str(row[index["Subtype"]]).strip()
             position = int(row[index[POSITION_COLUMN]])
@@ -106,7 +134,9 @@ def load_subtype_counts(workbook_path: Path) -> dict[str, dict[str, dict[int, di
             if aa in EXCLUDED_AAS:
                 continue
             subtype_counts = counts[gt][subtype][position]
-            subtype_counts[aa] = subtype_counts.get(aa, 0) + int(row[index["CountWithAA"]])
+            subtype_counts[aa] = subtype_counts.get(aa, 0) + int(
+                row[index["CountWithAA"]]
+            )
     wb.close()
     return counts
 
@@ -157,7 +187,11 @@ def write_subtype_entropy(output_path: Path, source_workbook: Path) -> None:
                 [
                     subtype,
                     *[
-                        round_sig(shannon_entropy(list(counts[gt][subtype].get(pos, {}).values())))
+                        round_sig(
+                            shannon_entropy(
+                                list(counts[gt][subtype].get(pos, {}).values())
+                            )
+                        )
                         for pos in RESISTANCE_POSITIONS
                     ],
                 ]

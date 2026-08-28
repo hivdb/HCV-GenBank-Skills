@@ -29,11 +29,26 @@ def parse_args() -> argparse.Namespace:
             "to genotype-matched subtype genome references."
         )
     )
-    parser.add_argument("--combined-workbook", required=True, help="Path to NS5A_Alignments_combined.xlsx")
-    parser.add_argument("--fasta-dir", required=True, help="Directory containing study FASTA files")
-    parser.add_argument("--subtype-json", required=True, help="Path to HCV_Subtype_Refs_By_Genome_NA.json")
+    parser.add_argument(
+        "--combined-workbook",
+        required=True,
+        help="Path to NS5A_Alignments_combined.xlsx",
+    )
+    parser.add_argument(
+        "--fasta-dir", required=True, help="Directory containing study FASTA files"
+    )
+    parser.add_argument(
+        "--subtype-json",
+        required=True,
+        help="Path to HCV_Subtype_Refs_By_Genome_NA.json",
+    )
     parser.add_argument("--output-dir", default="outputs", help="Base output directory")
-    parser.add_argument("--min-aligned-nt", type=int, default=200, help="Skip hits shorter than this overlap length")
+    parser.add_argument(
+        "--min-aligned-nt",
+        type=int,
+        default=200,
+        help="Skip hits shorter than this overlap length",
+    )
     parser.add_argument(
         "--genotype-subtype-csv",
         help=(
@@ -50,7 +65,10 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5A_STEP_OUTPUT_DIR", "outputs/comet-NS5A-all-ras/temp")) / Path(__file__).stem
+    path = (
+        Path(os.environ.get("NS5A_STEP_OUTPUT_DIR", "outputs/comet-NS5A-all-ras/temp"))
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -111,7 +129,9 @@ def load_metadata_assignments(path: Path | None) -> dict[str, dict[str, str]]:
         required = {"accession", "genotype", "subtype", "column_name"}
         missing = required.difference(reader.fieldnames or [])
         if missing:
-            raise RuntimeError(f"Columns missing from {path}: {', '.join(sorted(missing))}")
+            raise RuntimeError(
+                f"Columns missing from {path}: {', '.join(sorted(missing))}"
+            )
         assignments: dict[str, dict[str, str]] = {}
         for row in reader:
             accession = (row.get("accession") or "").strip()
@@ -234,9 +254,9 @@ def load_subtype_references(json_path: Path) -> dict[str, list[dict[str, str]]]:
     refs_by_gt: dict[str, list[dict[str, str]]] = defaultdict(list)
     for rec in data:
         genotype_name = str(rec.get("genotypeName", "")).strip()
-        match = re.search(r"Genotype\s*([0-9]+[A-Za-z0-9]*)", genotype_name) or re.search(
-            r"Genotype([0-9]+[A-Za-z0-9]*)", genotype_name
-        )
+        match = re.search(
+            r"Genotype\s*([0-9]+[A-Za-z0-9]*)", genotype_name
+        ) or re.search(r"Genotype([0-9]+[A-Za-z0-9]*)", genotype_name)
         if not match:
             continue
         subtype = match.group(1)
@@ -281,7 +301,9 @@ def write_fasta_entries(path: Path, entries: list[tuple[str, str]]) -> None:
                 handle.write(sequence[start : start + 70] + "\n")
 
 
-def build_subtype_db(job_dir: Path, gt: str, refs: list[dict[str, str]]) -> tuple[Path, dict[str, dict[str, str]]]:
+def build_subtype_db(
+    job_dir: Path, gt: str, refs: list[dict[str, str]]
+) -> tuple[Path, dict[str, dict[str, str]]]:
     fasta_path = job_dir / f"ns5a_subtype_gt{gt}.fasta"
     entries: list[tuple[str, str]] = []
     subject_meta: dict[str, dict[str, str]] = {}
@@ -313,7 +335,9 @@ def build_subtype_db(job_dir: Path, gt: str, refs: list[dict[str, str]]) -> tupl
     return db_prefix, subject_meta
 
 
-def run_blastn(query_path: Path, db_prefix: Path, out_path: Path) -> list[dict[str, Any]]:
+def run_blastn(
+    query_path: Path, db_prefix: Path, out_path: Path
+) -> list[dict[str, Any]]:
     subprocess.run(
         [
             "blastn",
@@ -410,7 +434,9 @@ def choose_best_by_subtype(
     for (qseqid, _subtype), hit in best.items():
         by_query[qseqid].append(hit)
     for qseqid in by_query:
-        by_query[qseqid].sort(key=lambda item: (item["distance"], -item["aligned_nt"], -item["bitscore"]))
+        by_query[qseqid].sort(
+            key=lambda item: (item["distance"], -item["aligned_nt"], -item["bitscore"])
+        )
     return by_query
 
 
@@ -476,7 +502,9 @@ def write_xlsx(path: Path, rows: list[dict[str, Any]]) -> None:
     workbook.save(path)
 
 
-def write_unassigned_report(path: Path, reason_rows: list[tuple[str, dict[str, Any]]]) -> None:
+def write_unassigned_report(
+    path: Path, reason_rows: list[tuple[str, dict[str, Any]]]
+) -> None:
     fieldnames = ["AccessionID", "Reason", "RefID", "RefName", "ClosestGT"]
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -504,7 +532,15 @@ def write_missing_accession_reason_files(
         writer = csv.writer(handle)
         writer.writerow(fieldnames)
         for reason, row in reason_rows:
-            writer.writerow([row.get("AccessionID", ""), reason, row.get("RefID", ""), row.get("RefName", ""), row.get("ClosestGT", "")])
+            writer.writerow(
+                [
+                    row.get("AccessionID", ""),
+                    reason,
+                    row.get("RefID", ""),
+                    row.get("RefName", ""),
+                    row.get("ClosestGT", ""),
+                ]
+            )
     return all_reasons_path
 
 
@@ -564,7 +600,9 @@ def main() -> int:
             for row in rows:
                 skipped_missing_fasta.append(row)
             continue
-        sequence_by_accession = {accession_from_header(h): seq for h, seq in parse_fasta(fasta_path)}
+        sequence_by_accession = {
+            accession_from_header(h): seq for h, seq in parse_fasta(fasta_path)
+        }
         for row in rows:
             accession = row["AccessionID"]
             sequence = sequence_by_accession.get(accession)
@@ -599,7 +637,9 @@ def main() -> int:
             entries_by_qseqid[qseqid] = sequence
             row_lookup[qseqid] = row
 
-    for gt, entries in sorted(query_entries_by_gt.items(), key=lambda item: int(item[0])):
+    for gt, entries in sorted(
+        query_entries_by_gt.items(), key=lambda item: int(item[0])
+    ):
         refs = refs_by_gt.get(gt, [])
         if not refs:
             for qseqid, _sequence in entries:
@@ -620,7 +660,9 @@ def main() -> int:
                 continue
             best = subtype_hits[0]
             second = subtype_hits[1] if len(subtype_hits) > 1 else None
-            start_aa, end_aa, aa_sequence = extract_aa_window(entries_by_qseqid[qseqid], best)
+            start_aa, end_aa, aa_sequence = extract_aa_window(
+                entries_by_qseqid[qseqid], best
+            )
             output_rows.append(
                 {
                     "RefID": row["RefID"],
@@ -675,10 +717,14 @@ def main() -> int:
         "unassigned_subtype_report": str(unassigned_report.resolve()),
         "missing_accession_reason_file": str(missing_accession_reason_file.resolve()),
         "input_row_count": len(base_rows),
-        "metadata_assignment_csv": str(metadata_csv.resolve()) if metadata_csv.is_file() else "",
+        "metadata_assignment_csv": str(metadata_csv.resolve())
+        if metadata_csv.is_file()
+        else "",
         "metadata_assignment_count": len(metadata_assignments),
         "metadata_closest_subtype_count": sum(
-            1 for row in output_rows if row.get("ClosestSubtypeAssignmentSource") == "metadata"
+            1
+            for row in output_rows
+            if row.get("ClosestSubtypeAssignmentSource") == "metadata"
         ),
     }
     # Historical extra output kept for reference only.

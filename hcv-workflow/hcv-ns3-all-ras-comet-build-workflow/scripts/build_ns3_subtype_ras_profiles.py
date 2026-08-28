@@ -17,10 +17,29 @@ from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from build_ns3_combined_ras_profiles import read_profile_workbook, write_combined_workbook
+from build_ns3_combined_ras_profiles import (
+    read_profile_workbook,
+    write_combined_workbook,
+)
 
 
-RESISTANCE_POSITIONS = [36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175]
+RESISTANCE_POSITIONS = [
+    36,
+    41,
+    43,
+    54,
+    55,
+    56,
+    80,
+    122,
+    155,
+    156,
+    158,
+    166,
+    168,
+    170,
+    175,
+]
 EXCLUDED_AAS = {"X", "*"}
 FREQUENCY_THRESHOLD_PERCENT = 1.0
 type VariantCell = list[tuple[str, str]]
@@ -39,13 +58,19 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3-all-ras/temp")) / Path(__file__).stem
+    path = (
+        Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3-all-ras/temp"))
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def sanitize_label(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-") or "job"
+    return (
+        "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-")
+        or "job"
+    )
 
 
 def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
@@ -104,9 +129,13 @@ def load_subtype_profile_rows(
     dict[str, dict[str, dict[int, int]]],
 ]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    profile_rows: dict[str, dict[str, dict[int, list[tuple[str, float]]]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    profile_rows: dict[str, dict[str, dict[int, list[tuple[str, float]]]]] = (
+        defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    )
     subtype_counts: dict[str, dict[str, int]] = defaultdict(dict)
-    position_coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(lambda: defaultdict(dict))
+    position_coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
     for sheet_name in wb.sheetnames:
         gt = sheet_name.replace("GT", "")
         ws = wb[sheet_name]
@@ -143,12 +172,17 @@ def build_grid(
         for pos in RESISTANCE_POSITIONS:
             variants = [
                 (aa, format_freq(pct))
-                for aa, pct in sorted(profile_rows[gt][subtype].get(pos, []), key=lambda item: (-item[1], item[0]))
+                for aa, pct in sorted(
+                    profile_rows[gt][subtype].get(pos, []),
+                    key=lambda item: (-item[1], item[0]),
+                )
                 if aa not in EXCLUDED_AAS and pct >= FREQUENCY_THRESHOLD_PERCENT
             ]
             pos_variants[pos] = variants
 
-        coverage_values = [position_coverage[gt][subtype].get(pos, 0) for pos in RESISTANCE_POSITIONS]
+        coverage_values = [
+            position_coverage[gt][subtype].get(pos, 0) for pos in RESISTANCE_POSITIONS
+        ]
         row: list[GridCell] = [
             f"GT{gt}_{subtype} ({subtype_counts[gt][subtype]}, {format_coverage_range(coverage_values)})",
         ]
@@ -168,33 +202,44 @@ def write_excel(path: Path, grid: list[list[GridCell]]) -> None:
     for row_idx, row in enumerate(grid, start=1):
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx)
-            cell.value = variants_to_rich_text(value) if isinstance(value, list) else value
+            cell.value = (
+                variants_to_rich_text(value) if isinstance(value, list) else value
+            )
         for cell in ws[row_idx]:
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
             if row_idx == 1:
                 cell.fill = header_fill
                 cell.font = bold
 
     from openpyxl.utils import get_column_letter
+
     for col in range(1, len(RESISTANCE_POSITIONS) + 2):
         ws.column_dimensions[get_column_letter(col)].width = 12 if col > 1 else 24
     wb.save(path)
 
 
-def grid_to_profile_rows(grid: list[list[GridCell]]) -> tuple[list[object], list[list[object]]]:
+def grid_to_profile_rows(
+    grid: list[list[GridCell]],
+) -> tuple[list[object], list[list[object]]]:
     positions = list(grid[0])
     positions[0] = None
     rows: list[list[object]] = []
     for row in grid[1:]:
-        rows.append([
-            row[0],
-            *[
-                "".join(f"{amino_acid}{frequency}" for amino_acid, frequency in value)
-                if isinstance(value, list)
-                else value
-                for value in row[1:]
-            ],
-        ])
+        rows.append(
+            [
+                row[0],
+                *[
+                    "".join(
+                        f"{amino_acid}{frequency}" for amino_acid, frequency in value
+                    )
+                    if isinstance(value, list)
+                    else value
+                    for value in row[1:]
+                ],
+            ]
+        )
     return positions, rows
 
 
@@ -205,19 +250,30 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     script_temp_dir()
 
-    profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(subtype_profile_workbook)
+    profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(
+        subtype_profile_workbook
+    )
     grid = build_grid(profile_rows, subtype_counts, position_coverage)
     positions, subtype_rows = grid_to_profile_rows(grid)
-    gt_positions, gt_rows = read_profile_workbook(Path(args.gt_ras_profile_workbook).expanduser())
+    gt_positions, gt_rows = read_profile_workbook(
+        Path(args.gt_ras_profile_workbook).expanduser()
+    )
     if positions != gt_positions:
-        raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
+        raise RuntimeError(
+            "GT and subtype RAS profile workbooks have different position rows"
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / "NS3_Subtype_RAS_Profiles.xlsx"
     explicit_excel_path = output_dir / "NS3_Subtype_RAS_Profiles_Explicit_AA.xlsx"
     write_excel(explicit_excel_path, grid)
     genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
-        excel_path, positions, gt_rows, subtype_rows, FREQUENCY_THRESHOLD_PERCENT, include_all_rows=True
+        excel_path,
+        positions,
+        gt_rows,
+        subtype_rows,
+        FREQUENCY_THRESHOLD_PERCENT,
+        include_all_rows=True,
     )
 
     summary = {

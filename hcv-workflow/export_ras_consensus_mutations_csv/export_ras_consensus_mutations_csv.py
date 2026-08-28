@@ -35,9 +35,15 @@ def script_temp_dir() -> Path:
 
 
 def infer_position_column(header: list[str]) -> str:
-    position_columns = [name for name in header if name.endswith("Position") and name != "NumSeqsIncludingPosition"]
+    position_columns = [
+        name
+        for name in header
+        if name.endswith("Position") and name != "NumSeqsIncludingPosition"
+    ]
     if len(position_columns) != 1:
-        raise RuntimeError(f"Expected exactly one position column, found: {position_columns}")
+        raise RuntimeError(
+            f"Expected exactly one position column, found: {position_columns}"
+        )
     return position_columns[0]
 
 
@@ -62,7 +68,10 @@ def load_gt_rows(workbook_path: Path, gene: str) -> list[dict[str, object]]:
     for sheet_name in wb.sheetnames:
         genotype = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         position_column = infer_position_column(header)
         index_by_name = {name: idx for idx, name in enumerate(header)}
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -76,7 +85,9 @@ def load_gt_rows(workbook_path: Path, gene: str) -> list[dict[str, object]]:
                     "Subtype": "",
                     "Position": position,
                     position_column: position,
-                    "NumSeqsIncludingPosition": int(row[index_by_name["NumSeqsIncludingPosition"]]),
+                    "NumSeqsIncludingPosition": int(
+                        row[index_by_name["NumSeqsIncludingPosition"]]
+                    ),
                     "AminoAcid": str(row[index_by_name["AminoAcid"]]).strip(),
                     "CountWithAA": int(row[index_by_name["CountWithAA"]]),
                     "CountWithAAAlone": int(row[index_by_name["CountWithAAAlone"]]),
@@ -95,7 +106,10 @@ def load_subtype_rows(workbook_path: Path, gene: str) -> list[dict[str, object]]
     for sheet_name in wb.sheetnames:
         genotype = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         position_column = infer_position_column(header)
         index_by_name = {name: idx for idx, name in enumerate(header)}
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -109,7 +123,9 @@ def load_subtype_rows(workbook_path: Path, gene: str) -> list[dict[str, object]]
                     "Subtype": str(row[index_by_name["Subtype"]]).strip(),
                     "Position": position,
                     position_column: position,
-                    "NumSeqsIncludingPosition": int(row[index_by_name["NumSeqsIncludingPosition"]]),
+                    "NumSeqsIncludingPosition": int(
+                        row[index_by_name["NumSeqsIncludingPosition"]]
+                    ),
                     "AminoAcid": str(row[index_by_name["AminoAcid"]]).strip(),
                     "CountWithAA": int(row[index_by_name["CountWithAA"]]),
                     "CountWithAAAlone": int(row[index_by_name["CountWithAAAlone"]]),
@@ -148,7 +164,14 @@ def build_aggregate_rows(rows: list[dict[str, object]]) -> list[dict[str, str | 
         grouped.setdefault(key, []).append(row)
 
     result: list[dict[str, str | int]] = []
-    for key in sorted(grouped, key=lambda item: (genotype_sort_key(item[0]), subtype_sort_key(item[1]), item[2])):
+    for key in sorted(
+        grouped,
+        key=lambda item: (
+            genotype_sort_key(item[0]),
+            subtype_sort_key(item[1]),
+            item[2],
+        ),
+    ):
         group_rows = grouped[key]
         ordered = sorted(
             group_rows,
@@ -181,7 +204,9 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     gt_rows = load_gt_rows(Path(args.gt_profile_workbook).expanduser(), args.gene)
-    subtype_rows = load_subtype_rows(Path(args.subtype_profile_workbook).expanduser(), args.gene)
+    subtype_rows = load_subtype_rows(
+        Path(args.subtype_profile_workbook).expanduser(), args.gene
+    )
     all_rows = sorted(
         gt_rows + subtype_rows,
         key=lambda row: (

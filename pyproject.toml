@@ -14,3 +14,8 @@ dependencies = [
     "requests>=2.33.1",
     "xlsxwriter>=3.2.9",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.5",
+]

@@ -20,10 +20,20 @@ def parse_args() -> argparse.Namespace:
             "RefID-specific row filters and writing a filter summary."
         )
     )
-    parser.add_argument("--input-csv", required=True, help="Path to included_accessions_metadata.csv")
-    parser.add_argument("--output-dir", required=True, help="Directory for per-RefID CSV files")
-    parser.add_argument("--source-fasta-dir", help="Directory containing RefID FASTAs before COMET filtering")
-    parser.add_argument("--comet-fasta-dir", help="Directory containing RefID FASTAs after COMET filtering")
+    parser.add_argument(
+        "--input-csv", required=True, help="Path to included_accessions_metadata.csv"
+    )
+    parser.add_argument(
+        "--output-dir", required=True, help="Directory for per-RefID CSV files"
+    )
+    parser.add_argument(
+        "--source-fasta-dir",
+        help="Directory containing RefID FASTAs before COMET filtering",
+    )
+    parser.add_argument(
+        "--comet-fasta-dir",
+        help="Directory containing RefID FASTAs after COMET filtering",
+    )
     parser.add_argument(
         "--accession-list-dir",
         default=ACCESSION_LIST_DIR,
@@ -52,7 +62,9 @@ def load_accessions(path: Path) -> set[str]:
         fieldnames = reader.fieldnames or []
         accession_column = "Accession" if "Accession" in fieldnames else "IsolateID"
         if accession_column not in fieldnames:
-            raise RuntimeError(f"Column 'Accession' or 'IsolateID' was not found in {path}")
+            raise RuntimeError(
+                f"Column 'Accession' or 'IsolateID' was not found in {path}"
+            )
         return {
             accession
             for row in reader
@@ -67,7 +79,9 @@ def fasta_accession_count(fasta_dir: Path | None, refid: str) -> int | None:
     if not fasta_paths:
         return None
     if len(fasta_paths) != 1:
-        raise RuntimeError(f"Expected one RefID {refid} FASTA under {fasta_dir}, found {len(fasta_paths)}")
+        raise RuntimeError(
+            f"Expected one RefID {refid} FASTA under {fasta_dir}, found {len(fasta_paths)}"
+        )
     with fasta_paths[0].open(encoding="utf-8") as handle:
         return sum(1 for line in handle if line.startswith(">"))
 
@@ -159,7 +173,23 @@ def row_is_kept(refid: str, row: dict[str, str]) -> bool:
 
 
 def filtered_refids() -> set[str]:
-    return {"30", "142", "192", "346", "600", "661", "884", "943", "1356", "2008", "2110", "2116", "2150", "2168", "2178"}
+    return {
+        "30",
+        "142",
+        "192",
+        "346",
+        "600",
+        "661",
+        "884",
+        "943",
+        "1356",
+        "2008",
+        "2110",
+        "2116",
+        "2150",
+        "2168",
+        "2178",
+    }
 
 
 def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -174,8 +204,12 @@ def main() -> int:
     input_csv = Path(args.input_csv).expanduser()
     output_dir = Path(args.output_dir).expanduser()
     accession_list_dir = Path(args.accession_list_dir).expanduser()
-    source_fasta_dir = Path(args.source_fasta_dir).expanduser() if args.source_fasta_dir else None
-    comet_fasta_dir = Path(args.comet_fasta_dir).expanduser() if args.comet_fasta_dir else None
+    source_fasta_dir = (
+        Path(args.source_fasta_dir).expanduser() if args.source_fasta_dir else None
+    )
+    comet_fasta_dir = (
+        Path(args.comet_fasta_dir).expanduser() if args.comet_fasta_dir else None
+    )
 
     if not input_csv.is_file():
         raise RuntimeError(f"Input CSV was not found: {input_csv}")
@@ -201,26 +235,43 @@ def main() -> int:
 
     summary_rows: list[dict[str, str | int | None]] = []
     output_accessions: set[str] = set()
-    for refid in sorted(filtered_refids(), key=lambda value: (int(value) if value.isdigit() else 10**12, value)):
+    for refid in sorted(
+        filtered_refids(),
+        key=lambda value: (int(value) if value.isdigit() else 10**12, value),
+    ):
         ref_rows = rows_by_refid[refid]
         source_fasta_count = fasta_accession_count(source_fasta_dir, refid)
         comet_fasta_count = fasta_accession_count(comet_fasta_dir, refid)
-        total_rows = source_fasta_count if source_fasta_count is not None else len(ref_rows)
-        comet_excluded_count = source_fasta_count - comet_fasta_count if source_fasta_count is not None and comet_fasta_count is not None else None
+        total_rows = (
+            source_fasta_count if source_fasta_count is not None else len(ref_rows)
+        )
+        comet_excluded_count = (
+            source_fasta_count - comet_fasta_count
+            if source_fasta_count is not None and comet_fasta_count is not None
+            else None
+        )
         listed_accession_count: int | None = None
         listed_present_in_input_count: int | None = None
         listed_absent_from_input_count: int | None = None
         if refid in accession_filters:
             listed_accessions = accession_filters[refid]
-            input_refid_accessions = {(row.get("Accession") or "").strip() for row in ref_rows if (row.get("Accession") or "").strip()}
+            input_refid_accessions = {
+                (row.get("Accession") or "").strip()
+                for row in ref_rows
+                if (row.get("Accession") or "").strip()
+            }
             kept_rows = [
                 row
                 for row in ref_rows
                 if (row.get("Accession") or "").strip() in listed_accessions
             ]
             listed_accession_count = len(listed_accessions)
-            listed_present_in_input_count = len(listed_accessions & input_refid_accessions)
-            listed_absent_from_input_count = len(listed_accessions - input_refid_accessions)
+            listed_present_in_input_count = len(
+                listed_accessions & input_refid_accessions
+            )
+            listed_absent_from_input_count = len(
+                listed_accessions - input_refid_accessions
+            )
         else:
             kept_rows = [row for row in ref_rows if row_is_kept(refid, row)]
         output_accessions.update(
@@ -263,8 +314,12 @@ def main() -> int:
         print(f"  RefID filter: {row['Filter']}")
         if row["ListedAccessions"] is not None:
             print(f"  Listed accessions: {row['ListedAccessions']}")
-            print(f"  Listed accessions present after COMET: {row['ListedPresentInInput']}")
-            print(f"  Listed accessions absent after COMET: {row['ListedAbsentFromInput']}")
+            print(
+                f"  Listed accessions present after COMET: {row['ListedPresentInInput']}"
+            )
+            print(
+                f"  Listed accessions absent after COMET: {row['ListedAbsentFromInput']}"
+            )
         print(f"  After RefID filter: {row['KeptRows']}")
         print(f"  Removed by RefID filter: {row['RemovedRows']}")
     return 0

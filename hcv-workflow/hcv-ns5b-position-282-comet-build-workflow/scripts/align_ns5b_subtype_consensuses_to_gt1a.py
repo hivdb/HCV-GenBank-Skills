@@ -47,7 +47,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     records = read_fasta(args.input_fasta)
-    reference_records = [record for record in records if record[0] == args.reference_header]
+    reference_records = [
+        record for record in records if record[0] == args.reference_header
+    ]
     if len(reference_records) != 1:
         raise RuntimeError(
             f"Expected exactly one reference record named {args.reference_header!r}, found {len(reference_records)}"
@@ -63,7 +65,14 @@ def main() -> int:
         write_fasta(reference_path, reference_records)
         write_fasta(additions_path, other_records)
         result = subprocess.run(
-            [args.mafft_bin, "--quiet", "--add", str(additions_path), "--keeplength", str(reference_path)],
+            [
+                args.mafft_bin,
+                "--quiet",
+                "--add",
+                str(additions_path),
+                "--keeplength",
+                str(reference_path),
+            ],
             check=True,
             text=True,
             capture_output=True,
@@ -74,10 +83,14 @@ def main() -> int:
     aligned_records = read_fasta(args.output_fasta)
     lengths = {len(sequence) for _, sequence in aligned_records}
     if len(aligned_records) != len(records) or len(lengths) != 1:
-        raise RuntimeError("MAFFT output does not contain one equally sized alignment record per input consensus")
+        raise RuntimeError(
+            "MAFFT output does not contain one equally sized alignment record per input consensus"
+        )
     aligned_reference = aligned_records[0] if aligned_records else ("", "")
     if aligned_reference[0] != args.reference_header or "-" in aligned_reference[1]:
-        raise RuntimeError("MAFFT did not preserve the requested gap-free reference sequence as the first record")
+        raise RuntimeError(
+            "MAFFT did not preserve the requested gap-free reference sequence as the first record"
+        )
 
     print(f"output_fasta={args.output_fasta}")
     print(f"reference_header={args.reference_header}")

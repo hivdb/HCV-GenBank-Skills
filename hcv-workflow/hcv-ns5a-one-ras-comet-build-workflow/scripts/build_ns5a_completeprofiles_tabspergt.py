@@ -21,10 +21,19 @@ CALLABLE_AAS = frozenset(AA_ORDER) - {"*"}
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build GT and subtype NS5A amino-acid profile workbooks.")
-    parser.add_argument("--input-workbook", required=True, help="Path to NS5A AA extraction workbook.")
-    parser.add_argument("--output-dir", default="outputs", help="Base output directory.")
-    parser.add_argument("--profile-accessions-csv", help="CSV listing accessions included in profile construction.")
+    parser = argparse.ArgumentParser(
+        description="Build GT and subtype NS5A amino-acid profile workbooks."
+    )
+    parser.add_argument(
+        "--input-workbook", required=True, help="Path to NS5A AA extraction workbook."
+    )
+    parser.add_argument(
+        "--output-dir", default="outputs", help="Base output directory."
+    )
+    parser.add_argument(
+        "--profile-accessions-csv",
+        help="CSV listing accessions included in profile construction.",
+    )
     parser.add_argument(
         "--report-only",
         action="store_true",
@@ -34,13 +43,19 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5A_STEP_OUTPUT_DIR", "outputs/comet-NS5A-one-ras/temp")) / Path(__file__).stem
+    path = (
+        Path(os.environ.get("NS5A_STEP_OUTPUT_DIR", "outputs/comet-NS5A-one-ras/temp"))
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def sanitize_label(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-") or "job"
+    return (
+        "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-")
+        or "job"
+    )
 
 
 def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
@@ -55,15 +70,28 @@ def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
 def has_callable_ras_position(start: int, aa_sequence: str) -> bool:
     """Return whether any NS5A RAS position has a callable standard amino-acid call."""
     sequence = aa_sequence.upper()
-    return any(0 <= position - start < len(sequence) and sequence[position - start] in CALLABLE_AAS for position in NS5A_RAS_POSITIONS)
+    return any(
+        0 <= position - start < len(sequence)
+        and sequence[position - start] in CALLABLE_AAS
+        for position in NS5A_RAS_POSITIONS
+    )
 
 
 def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
-    header = [str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))]
+    header = [
+        str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))
+    ]
     index = {name: i for i, name in enumerate(header)}
-    required = ["AccessionID", "ClosestGT", "ClosestSubtype", "StartAAPosition", "EndAAPosition", "AASequence"]
+    required = [
+        "AccessionID",
+        "ClosestGT",
+        "ClosestSubtype",
+        "StartAAPosition",
+        "EndAAPosition",
+        "AASequence",
+    ]
     for name in required:
         if name not in index:
             raise RuntimeError(f"Column '{name}' not found in {workbook_path}")
@@ -76,7 +104,10 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
         accession = str(values[index["AccessionID"]]).strip()
         # A QC workbook is the profile-input gate.  Maintain compatibility
         # with older source workbooks that do not include QC columns.
-        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+        if (
+            "AlignmentQCStatus" in index
+            and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS"
+        ):
             if accession:
                 qc_failed_accessions.add(accession)
             continue
@@ -91,7 +122,9 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
             unassigned_genotype_accessions.add(accession)
         if subtype.casefold().startswith("unassign"):
             unassigned_subtype_accessions.add(accession)
-        if genotype.casefold().startswith("unassign") or subtype.casefold().startswith("unassign"):
+        if genotype.casefold().startswith("unassign") or subtype.casefold().startswith(
+            "unassign"
+        ):
             continue
         sequence = str(aa_sequence).strip()
         if not has_callable_ras_position(int(start), sequence):
@@ -109,15 +142,23 @@ def load_rows(workbook_path: Path) -> tuple[list[dict[str, Any]], dict[str, int]
         )
     wb.close()
     return rows, {
-        "ignored_unassigned_genotype_accession_count": len(unassigned_genotype_accessions),
-        "ignored_unassigned_subtype_accession_count": len(unassigned_subtype_accessions),
-        "ignored_unassigned_accession_count": len(unassigned_genotype_accessions | unassigned_subtype_accessions),
+        "ignored_unassigned_genotype_accession_count": len(
+            unassigned_genotype_accessions
+        ),
+        "ignored_unassigned_subtype_accession_count": len(
+            unassigned_subtype_accessions
+        ),
+        "ignored_unassigned_accession_count": len(
+            unassigned_genotype_accessions | unassigned_subtype_accessions
+        ),
         "ignored_alignment_qc_accession_count": len(qc_failed_accessions),
         "ignored_no_callable_ras_accession_count": len(no_callable_ras_accessions),
     }
 
 
-def build_position_counts(rows: list[dict[str, Any]]) -> tuple[dict[int, int], dict[int, Counter[str]]]:
+def build_position_counts(
+    rows: list[dict[str, Any]],
+) -> tuple[dict[int, int], dict[int, Counter[str]]]:
     included_counts: dict[int, int] = defaultdict(int)
     aa_counts: dict[int, Counter[str]] = defaultdict(Counter)
     for row in rows:
@@ -162,7 +203,9 @@ def write_profile_accessions(path: Path, rows: list[dict[str, Any]]) -> None:
             writer.writerow([accession, genotype, subtype])
 
 
-def write_gt_workbook(path: Path, rows_by_gt: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
+def write_gt_workbook(
+    path: Path, rows_by_gt: dict[str, list[dict[str, Any]]]
+) -> dict[str, int]:
     wb = Workbook()
     wb.remove(wb.active)
     summary: dict[str, int] = {}
@@ -186,12 +229,24 @@ def write_gt_workbook(path: Path, rows_by_gt: dict[str, list[dict[str, Any]]]) -
                 count = aa_counts[pos].get(aa, 0)
                 if count == 0:
                     continue
-                ws.append([pos, denom, aa, count, count, 100.0 * count / denom, 100.0 * count / denom])
+                ws.append(
+                    [
+                        pos,
+                        denom,
+                        aa,
+                        count,
+                        count,
+                        100.0 * count / denom,
+                        100.0 * count / denom,
+                    ]
+                )
     wb.save(path)
     return summary
 
 
-def write_subtype_workbook(path: Path, rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]]) -> dict[str, dict[str, int]]:
+def write_subtype_workbook(
+    path: Path, rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]]
+) -> dict[str, dict[str, int]]:
     wb = Workbook()
     wb.remove(wb.active)
     summary: dict[str, dict[str, int]] = {}
@@ -232,11 +287,20 @@ def main() -> int:
     script_temp_dir()
 
     rows, ignored_counts = load_rows(input_workbook)
-    genotype_distribution = Counter(str(row["ClosestGT"]).removeprefix("GT") for row in rows)
+    genotype_distribution = Counter(
+        str(row["ClosestGT"]).removeprefix("GT") for row in rows
+    )
     counts = {
         **accession_counts(rows),
         **ignored_counts,
-        "included_genotype_distribution": dict(sorted(genotype_distribution.items(), key=lambda item: (0, int(item[0])) if item[0].isdigit() else (1, item[0]))),
+        "included_genotype_distribution": dict(
+            sorted(
+                genotype_distribution.items(),
+                key=lambda item: (
+                    (0, int(item[0])) if item[0].isdigit() else (1, item[0])
+                ),
+            )
+        ),
     }
     if args.report_only:
         print(json.dumps(counts))
@@ -245,7 +309,9 @@ def main() -> int:
         write_profile_accessions(Path(args.profile_accessions_csv), rows)
 
     rows_by_gt: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
+    rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for row in rows:
         gt = row["ClosestGT"]
         subtype = row["ClosestSubtype"]

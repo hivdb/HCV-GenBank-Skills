@@ -21,10 +21,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--assignment-dir", type=Path, default=REPO_ROOT / "HCVData" / "Comet Subtyping")
+    parser.add_argument(
+        "--assignment-dir", type=Path, default=REPO_ROOT / "HCVData" / "Comet Subtyping"
+    )
     parser.add_argument("--profile-dir", type=Path, default=REPO_ROOT / "outputs/comet")
-    parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parent)
-    parser.add_argument("--gene", choices=GENES, action="append", help="Gene to summarize; repeat as needed.")
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path(__file__).resolve().parent
+    )
+    parser.add_argument(
+        "--gene",
+        choices=GENES,
+        action="append",
+        help="Gene to summarize; repeat as needed.",
+    )
     return parser.parse_args()
 
 
@@ -37,13 +46,21 @@ def subtype_counts(path: Path, accession_column: str) -> Counter[str]:
         reader = csv.DictReader(input_file)
         required = {accession_column, "subtype"}
         if not reader.fieldnames or not required.issubset(reader.fieldnames):
-            raise ValueError(f"{path} must contain columns: {', '.join(sorted(required))}")
+            raise ValueError(
+                f"{path} must contain columns: {', '.join(sorted(required))}"
+            )
         return Counter(normalized_subtype(row.get("subtype")) for row in reader)
 
 
-def summarize_gene(gene: str, assignment_dir: Path, profile_dir: Path, output_dir: Path) -> Path:
+def summarize_gene(
+    gene: str, assignment_dir: Path, profile_dir: Path, output_dir: Path
+) -> Path:
     assignment_path = assignment_dir / f"{gene}.csv"
-    profile_filename = f"{gene}_Profile_Accessions_QC_Pass.csv" if gene == "NS5A" else f"{gene}_Profile_Accessions.csv"
+    profile_filename = (
+        f"{gene}_Profile_Accessions_QC_Pass.csv"
+        if gene == "NS5A"
+        else f"{gene}_Profile_Accessions.csv"
+    )
     profile_path = profile_dir / profile_filename
     if not assignment_path.exists():
         raise FileNotFoundError(f"Comet assignment file not found: {assignment_path}")
@@ -75,7 +92,9 @@ def summarize_gene(gene: str, assignment_dir: Path, profile_dir: Path, output_di
 def main() -> None:
     args = parse_args()
     for gene in args.gene or GENES:
-        output_path = summarize_gene(gene, args.assignment_dir, args.profile_dir, args.output_dir)
+        output_path = summarize_gene(
+            gene, args.assignment_dir, args.profile_dir, args.output_dir
+        )
         print(f"Wrote {output_path}")
 
 

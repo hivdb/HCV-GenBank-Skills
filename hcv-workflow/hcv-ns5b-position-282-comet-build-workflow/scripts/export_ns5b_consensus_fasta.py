@@ -25,32 +25,52 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282/temp")) / Path(__file__).stem
+    path = (
+        Path(
+            os.environ.get(
+                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282/temp"
+            )
+        )
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def infer_position_column(header: list[str]) -> str:
-    position_columns = [name for name in header if name.endswith("Position") and name != "NumSeqsIncludingPosition"]
+    position_columns = [
+        name
+        for name in header
+        if name.endswith("Position") and name != "NumSeqsIncludingPosition"
+    ]
     if len(position_columns) != 1:
-        raise RuntimeError(f"Expected exactly one position column, found: {position_columns}")
+        raise RuntimeError(
+            f"Expected exactly one position column, found: {position_columns}"
+        )
     return position_columns[0]
 
 
-def load_gt_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], dict[str, list[int]]]:
+def load_gt_entries(
+    workbook_path: Path,
+) -> tuple[list[tuple[str, str]], dict[str, list[int]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     entries: list[tuple[str, str]] = []
     positions_by_gt: dict[str, list[int]] = {}
     for sheet_name in wb.sheetnames:
         gt_label = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         position_column = infer_position_column(header)
         index_by_name = {name: idx for idx, name in enumerate(header)}
         required = [position_column, "AminoAcid", "PctWithAA"]
         missing = [name for name in required if name not in index_by_name]
         if missing:
-            raise RuntimeError(f"Worksheet {sheet_name} in {workbook_path} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"Worksheet {sheet_name} in {workbook_path} is missing columns: {', '.join(missing)}"
+            )
 
         best_by_position: dict[int, tuple[float, str]] = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -61,13 +81,22 @@ def load_gt_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], dict[st
             pct_with_aa = float(row[index_by_name["PctWithAA"]])
             current = best_by_position.get(position)
             candidate = (pct_with_aa, amino_acid)
-            if current is None or candidate[0] > current[0] or (candidate[0] == current[0] and candidate[1] < current[1]):
+            if (
+                current is None
+                or candidate[0] > current[0]
+                or (candidate[0] == current[0] and candidate[1] < current[1])
+            ):
                 best_by_position[position] = candidate
 
         if not best_by_position:
-            raise RuntimeError(f"Worksheet {sheet_name} in {workbook_path} has no position rows")
+            raise RuntimeError(
+                f"Worksheet {sheet_name} in {workbook_path} has no position rows"
+            )
         # Preserve fixed NS5B coordinates; missing calls must not shift later AAs.
-        sequence = "".join(best_by_position.get(position, (0.0, "X"))[1] for position in range(1, REFERENCE_AA_LENGTH + 1))
+        sequence = "".join(
+            best_by_position.get(position, (0.0, "X"))[1]
+            for position in range(1, REFERENCE_AA_LENGTH + 1)
+        )
         entries.append((gt_label, sequence))
         positions_by_gt[gt_label] = sorted(best_by_position)
     wb.close()
@@ -76,20 +105,27 @@ def load_gt_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], dict[st
     return entries, positions_by_gt
 
 
-def load_subtype_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], dict[str, list[int]]]:
+def load_subtype_entries(
+    workbook_path: Path,
+) -> tuple[list[tuple[str, str]], dict[str, list[int]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     entries: list[tuple[str, str]] = []
     positions_by_subtype: dict[str, list[int]] = {}
     for sheet_name in wb.sheetnames:
         gt_label = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         position_column = infer_position_column(header)
         index_by_name = {name: idx for idx, name in enumerate(header)}
         required = ["Subtype", position_column, "AminoAcid", "PctWithAA"]
         missing = [name for name in required if name not in index_by_name]
         if missing:
-            raise RuntimeError(f"Worksheet {sheet_name} in {workbook_path} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"Worksheet {sheet_name} in {workbook_path} is missing columns: {', '.join(missing)}"
+            )
 
         best_by_subtype_position: dict[str, dict[int, tuple[float, str]]] = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -102,7 +138,11 @@ def load_subtype_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], di
             per_position = best_by_subtype_position.setdefault(subtype, {})
             current = per_position.get(position)
             candidate = (pct_with_aa, amino_acid)
-            if current is None or candidate[0] > current[0] or (candidate[0] == current[0] and candidate[1] < current[1]):
+            if (
+                current is None
+                or candidate[0] > current[0]
+                or (candidate[0] == current[0] and candidate[1] < current[1])
+            ):
                 per_position[position] = candidate
 
         for subtype in sorted(best_by_subtype_position):
@@ -110,7 +150,10 @@ def load_subtype_entries(workbook_path: Path) -> tuple[list[tuple[str, str]], di
             if not positions:
                 continue
             # Preserve fixed NS5B coordinates; X denotes an unavailable position.
-            sequence = "".join(positions.get(position, (0.0, "X"))[1] for position in range(1, REFERENCE_AA_LENGTH + 1))
+            sequence = "".join(
+                positions.get(position, (0.0, "X"))[1]
+                for position in range(1, REFERENCE_AA_LENGTH + 1)
+            )
             header_label = f"{gt_label}_{subtype}"
             entries.append((header_label, sequence))
             positions_by_subtype[header_label] = sorted(positions)
@@ -136,7 +179,11 @@ def main() -> int:
 
     gt_workbook = Path(args.gt_profile_workbook).expanduser()
     subtype_workbook = Path(args.subtype_profile_workbook).expanduser()
-    gt_fasta = Path(args.gt_output_fasta).expanduser() if args.gt_output_fasta else output_dir / "NS5B_GT_Consensus.fasta"
+    gt_fasta = (
+        Path(args.gt_output_fasta).expanduser()
+        if args.gt_output_fasta
+        else output_dir / "NS5B_GT_Consensus.fasta"
+    )
     subtype_fasta = (
         Path(args.subtype_output_fasta).expanduser()
         if args.subtype_output_fasta

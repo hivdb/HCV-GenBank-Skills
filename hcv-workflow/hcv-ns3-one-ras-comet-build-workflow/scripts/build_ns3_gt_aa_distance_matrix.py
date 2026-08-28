@@ -21,15 +21,23 @@ def parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument("--input-fasta", default="outputs/NS3_GT_Consensus.fasta")
-    parser.add_argument("--aligned-fasta", default="outputs/NS3_GT_Consensus_aligned.fasta")
-    parser.add_argument("--output-xlsx", default="outputs/NS3_GT_AA_Distance_Pos36_175.xlsx")
+    parser.add_argument(
+        "--aligned-fasta", default="outputs/NS3_GT_Consensus_aligned.fasta"
+    )
+    parser.add_argument(
+        "--output-xlsx", default="outputs/NS3_GT_AA_Distance_Pos36_175.xlsx"
+    )
     parser.add_argument(
         "--details-xlsx",
         default="outputs/comet-NS3-one-ras/temp/ns3_gt_aa_distance_matrix/NS3_GT_AA_Distance_Pos36_175_details.xlsx",
         help="Workbook for supporting sheets that are not kept in the main output",
     )
-    parser.add_argument("--start", type=int, default=36, help="1-based aligned start position")
-    parser.add_argument("--end", type=int, default=175, help="1-based aligned end position, inclusive")
+    parser.add_argument(
+        "--start", type=int, default=36, help="1-based aligned start position"
+    )
+    parser.add_argument(
+        "--end", type=int, default=175, help="1-based aligned end position, inclusive"
+    )
     parser.add_argument("--mafft-bin", default="mafft")
     return parser.parse_args()
 
@@ -141,7 +149,9 @@ def write_workbook(
 
     for name_a in names:
         for name_b in names:
-            distance, difference_count, compared = pairwise_distance(seqs[name_a], seqs[name_b])
+            distance, difference_count, compared = pairwise_distance(
+                seqs[name_a], seqs[name_b]
+            )
             distances[(name_a, name_b)] = distance
             differences[(name_a, name_b)] = difference_count
             compared_positions[(name_a, name_b)] = compared
@@ -158,7 +168,14 @@ def write_workbook(
     }
 
     wb = create_workbook()
-    add_matrix_sheet(wb, "distance_matrix", names[:-1], display_distances, "0.0%", column_names=names[1:])
+    add_matrix_sheet(
+        wb,
+        "distance_matrix",
+        names[:-1],
+        display_distances,
+        "0.0%",
+        column_names=names[1:],
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)
 
@@ -201,16 +218,22 @@ def main() -> int:
     if args.start < 1 or args.end < args.start:
         raise SystemExit("--start/--end must define a valid 1-based inclusive range")
     if input_fasta.suffix.lower() not in FASTA_EXTENSIONS:
-        raise SystemExit(f"Input FASTA extension should be one of {sorted(FASTA_EXTENSIONS)}")
+        raise SystemExit(
+            f"Input FASTA extension should be one of {sorted(FASTA_EXTENSIONS)}"
+        )
 
     run_mafft(input_fasta, aligned_fasta, args.mafft_bin)
     aligned_records = read_fasta(aligned_fasta)
     lengths = {len(sequence) for _, sequence in aligned_records}
     if len(lengths) != 1:
-        raise RuntimeError(f"MAFFT output has inconsistent aligned lengths: {sorted(lengths)}")
+        raise RuntimeError(
+            f"MAFFT output has inconsistent aligned lengths: {sorted(lengths)}"
+        )
     aligned_length = next(iter(lengths))
     if args.end > aligned_length:
-        raise SystemExit(f"Requested end position {args.end} exceeds aligned length {aligned_length}")
+        raise SystemExit(
+            f"Requested end position {args.end} exceeds aligned length {aligned_length}"
+        )
 
     window_records = [
         (name, sequence[args.start - 1 : args.end])

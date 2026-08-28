@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Export Original_NS5B rows whose Status begins with 'include'."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,7 +12,9 @@ from openpyxl import Workbook, load_workbook
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = REPO_ROOT / "HCVData" / "HCV_BlastHists_202604_data.xlsx"
-DEFAULT_OUTPUT = REPO_ROOT / "HCVData" / "Ref-selection" / "IncludedNS5BRefs_StatusInclude.xlsx"
+DEFAULT_OUTPUT = (
+    REPO_ROOT / "HCVData" / "Ref-selection" / "IncludedNS5BRefs_StatusInclude.xlsx"
+)
 
 
 def main() -> None:
@@ -36,7 +39,9 @@ def main() -> None:
             if not status.casefold().startswith("include"):
                 continue
         for cell in row:
-            copied = output_sheet.cell(row=destination_row, column=cell.column, value=cell.value)
+            copied = output_sheet.cell(
+                row=destination_row, column=cell.column, value=cell.value
+            )
             if cell.has_style:
                 copied._style = copy(cell._style)
             if cell.number_format:

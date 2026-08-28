@@ -65,7 +65,9 @@ def main() -> None:
         key=lambda value: (-counts[value], int(value) if value.isdigit() else value),
     )
     for gt in ordered_genotypes:
-        summary_ws.append([gt, counts[gt], counts[gt] / total_rows if total_rows else 0])
+        summary_ws.append(
+            [gt, counts[gt], counts[gt] / total_rows if total_rows else 0]
+        )
     summary_ws.append(["Total", total_rows, 1 if total_rows else 0])
     for cell in summary_ws["C"][1:]:
         cell.number_format = "0.0%"
@@ -74,10 +76,12 @@ def main() -> None:
 
     print(f"updated_workbook={workbook_path}")
     print(f"summary_sheet={args.summary_sheet}")
-    print(", ".join(
-        f"GT{gt} ({format_percent(counts[gt] / total_rows)}, {counts[gt]})"
-        for gt in ordered_genotypes
-    ))
+    print(
+        ", ".join(
+            f"GT{gt} ({format_percent(counts[gt] / total_rows)}, {counts[gt]})"
+            for gt in ordered_genotypes
+        )
+    )
     print(f"Total={total_rows}")
 
 

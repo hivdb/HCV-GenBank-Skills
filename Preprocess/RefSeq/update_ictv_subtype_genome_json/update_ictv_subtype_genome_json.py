@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Update the Comet subtype-genome JSON to the ICTV January 2026 subtype set."""
+
 from __future__ import annotations
 
 import argparse
@@ -23,9 +24,10 @@ def main() -> int:
     args = parser.parse_args()
     rows = json.loads(args.json.read_text(encoding="utf-8"))
     for row in rows:
-        row["genotypeName"] = {"Genotype4w3": "Genotype4w", "Genotype6xa5": "Genotype6xa"}.get(
-            row.get("genotypeName"), row.get("genotypeName")
-        )
+        row["genotypeName"] = {
+            "Genotype4w3": "Genotype4w",
+            "Genotype6xa5": "Genotype6xa",
+        }.get(row.get("genotypeName"), row.get("genotypeName"))
     existing = {str(row.get("accession")) for row in rows}
     for subtype, (accession, author_year) in ADDITIONS.items():
         if accession in existing:

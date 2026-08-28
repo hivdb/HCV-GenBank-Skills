@@ -36,8 +36,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--excel-file", required=True, help="Path to the spreadsheet")
     parser.add_argument("--sheet", required=True, help="Worksheet name to read")
-    parser.add_argument("--fasta-dir", required=True, help="Directory containing study FASTA files")
-    parser.add_argument("--reference-fasta", required=True, help="Path to HCV_GT_RefSeqs.fasta")
+    parser.add_argument(
+        "--fasta-dir", required=True, help="Directory containing study FASTA files"
+    )
+    parser.add_argument(
+        "--reference-fasta", required=True, help="Path to HCV_GT_RefSeqs.fasta"
+    )
     parser.add_argument("--output-dir", default="outputs", help="Base output directory")
     parser.add_argument("--refid-column", default="RefID")
     parser.add_argument("--refname-column", default="RefName")
@@ -48,7 +52,12 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="Optional column that must be numeric and greater than 0; repeat for multiple columns",
     )
-    parser.add_argument("--min-aligned-nt", type=int, default=200, help="Skip hits shorter than this overlap length")
+    parser.add_argument(
+        "--min-aligned-nt",
+        type=int,
+        default=200,
+        help="Skip hits shorter than this overlap length",
+    )
     parser.add_argument(
         "--genotype-subtype-csv",
         help=(
@@ -65,7 +74,14 @@ def sanitize_label(value: str) -> str:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282-four-ras/temp")) / Path(__file__).stem
+    path = (
+        Path(
+            os.environ.get(
+                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282-four-ras/temp"
+            )
+        )
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -129,7 +145,9 @@ def load_metadata_assignments(path: Path | None) -> dict[str, dict[str, str]]:
         required = {"accession", "genotype", "subtype", "column_name"}
         missing = required.difference(reader.fieldnames or [])
         if missing:
-            raise RuntimeError(f"Columns missing from {path}: {', '.join(sorted(missing))}")
+            raise RuntimeError(
+                f"Columns missing from {path}: {', '.join(sorted(missing))}"
+            )
         assignments: dict[str, dict[str, str]] = {}
         for row in reader:
             accession = (row.get("accession") or "").strip()
@@ -156,7 +174,9 @@ def load_reference_ns5b(reference_fasta: Path) -> dict[str, tuple[str, str]]:
             refs[gt] = (header, sequence)
     missing = [gt for gt in REFERENCE_GTS if gt not in refs]
     if missing:
-        raise RuntimeError(f"Missing {TARGET_GENE} references for GTs: {', '.join(missing)}")
+        raise RuntimeError(
+            f"Missing {TARGET_GENE} references for GTs: {', '.join(missing)}"
+        )
     return refs
 
 
@@ -180,7 +200,9 @@ def load_filtered_studies(
     required = [refid_column, refname_column, numpatients_column, *positive_columns]
     for name in required:
         if name not in header_index:
-            raise RuntimeError(f"Column '{name}' was not found in worksheet '{sheet_name}'")
+            raise RuntimeError(
+                f"Column '{name}' was not found in worksheet '{sheet_name}'"
+            )
 
     studies: list[dict[str, Any]] = []
     for row in rows[1:]:
@@ -220,14 +242,20 @@ def looks_like_fasta(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() in FASTA_EXTENSIONS
 
 
-def find_study_fasta_files(fasta_dir: Path, studies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def find_study_fasta_files(
+    fasta_dir: Path, studies: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     files = sorted(path for path in fasta_dir.rglob("*") if looks_like_fasta(path))
     result: list[dict[str, Any]] = []
     for study in studies:
-        matches = [path for path in files if filename_matches_refid(path.name, study["RefID"])]
+        matches = [
+            path for path in files if filename_matches_refid(path.name, study["RefID"])
+        ]
         if matches:
             if len(matches) != 1:
-                raise RuntimeError(f"Expected exactly one FASTA file for RefID {study['RefID']}, found {len(matches)}")
+                raise RuntimeError(
+                    f"Expected exactly one FASTA file for RefID {study['RefID']}, found {len(matches)}"
+                )
             result.append({**study, "fasta_path": str(matches[0])})
     return result
 
@@ -240,7 +268,9 @@ def write_fasta_entries(path: Path, entries: list[tuple[str, str]]) -> None:
                 handle.write(sequence[start : start + 70] + "\n")
 
 
-def build_reference_db(job_dir: Path, refs: dict[str, tuple[str, str]]) -> tuple[Path, dict[str, str]]:
+def build_reference_db(
+    job_dir: Path, refs: dict[str, tuple[str, str]]
+) -> tuple[Path, dict[str, str]]:
     ref_fasta = job_dir / "ns5b_gt_refs.fasta"
     entries: list[tuple[str, str]] = []
     subject_id_to_gt: dict[str, str] = {}
@@ -396,11 +426,15 @@ def build_rows_for_study(
             "GenBankAccession": accession,
             "BestGT": best_gt,
             "BestGTAssignmentSource": assignment_source,
-            "BestGTMetadataColumn": metadata.get("column_name", "") if metadata_gt else "",
+            "BestGTMetadataColumn": metadata.get("column_name", "")
+            if metadata_gt
+            else "",
             "BestGTDistance": best_hit["distance"] if best_hit else "",
             "AlignedNT": best_hit["length"] if best_hit else "",
             "ContainsResistancePosition": "yes" if covered_positions else "no",
-            "ResistancePositionsCovered": ",".join(str(pos) for pos in covered_positions),
+            "ResistancePositionsCovered": ",".join(
+                str(pos) for pos in covered_positions
+            ),
         }
         for gt in REFERENCE_GTS:
             hit = gt_hits[gt]
@@ -506,7 +540,13 @@ def main() -> int:
     # Historical output flow kept for reference only.
     # study_summaries: list[dict[str, Any]] = []
     for study in matched:
-        rows = build_rows_for_study(study, db_prefix, subject_id_to_gt, args.min_aligned_nt, metadata_assignments)
+        rows = build_rows_for_study(
+            study,
+            db_prefix,
+            subject_id_to_gt,
+            args.min_aligned_nt,
+            metadata_assignments,
+        )
         # Historical per-study workbook flow kept for reference only.
         # safe_stem = sanitize_label(Path(study["fasta_path"]).stem)
         # xlsx_path = progress_dir / f"{safe_stem}.xlsx"
@@ -537,9 +577,13 @@ def main() -> int:
         "output_dir": str(base_output_dir.resolve()),
         "study_count": len(matched),
         "master_row_count": len(master_rows),
-        "metadata_assignment_csv": str(metadata_csv.resolve()) if metadata_csv.is_file() else "",
+        "metadata_assignment_csv": str(metadata_csv.resolve())
+        if metadata_csv.is_file()
+        else "",
         "metadata_assignment_count": len(metadata_assignments),
-        "metadata_best_gt_count": sum(1 for row in master_rows if row.get("BestGTAssignmentSource") == "metadata"),
+        "metadata_best_gt_count": sum(
+            1 for row in master_rows if row.get("BestGTAssignmentSource") == "metadata"
+        ),
         "combined_xlsx": str(output_path.resolve()),
         # Historical payload fields kept for reference only.
         # "master_csv": str((job_dir / "ns5b_gt_distance_master.csv").resolve()),

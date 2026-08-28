@@ -21,7 +21,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def fasta_accessions(path: Path) -> list[str]:
-    return [line[1:].strip().split(maxsplit=1)[0] for line in path.read_text(encoding="utf-8").splitlines() if line.startswith(">")]
+    return [
+        line[1:].strip().split(maxsplit=1)[0]
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.startswith(">")
+    ]
 
 
 def load_comet(path: Path) -> dict[str, str]:
@@ -44,14 +48,21 @@ def load_priority_genotypes(path: Path) -> dict[str, tuple[str, str, str, str]]:
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
             if accession:
-                assignments[accession.split(".", 1)[0]] = (str(row.get("RefID") or "").strip(), str(row.get("RefName") or "").strip(), accession, genotype)
+                assignments[accession.split(".", 1)[0]] = (
+                    str(row.get("RefID") or "").strip(),
+                    str(row.get("RefName") or "").strip(),
+                    accession,
+                    genotype,
+                )
     return assignments
 
 
 def main() -> int:
     args = parse_args()
     assignments = load_comet(Path(args.comet_genotype_csv))
-    noncomet_priority_genotypes = load_priority_genotypes(Path(args.priority_assignments_csv))
+    noncomet_priority_genotypes = load_priority_genotypes(
+        Path(args.priority_assignments_csv)
+    )
     rows: list[tuple[str, str, str, str, str]] = []
     seen_accessions: set[str] = set()
     override_count = 0
@@ -60,18 +71,39 @@ def main() -> int:
         for accession in fasta_accessions(fasta_path):
             accession_key = accession.split(".", 1)[0]
             priority_assignment = noncomet_priority_genotypes.get(accession_key)
-            genotype = priority_assignment[3] if priority_assignment else assignments.get(accession) or assignments.get(accession_key)
+            genotype = (
+                priority_assignment[3]
+                if priority_assignment
+                else assignments.get(accession) or assignments.get(accession_key)
+            )
             if genotype:
-                source = "Non-Comet priority genotype override" if priority_assignment else "Comet"
+                source = (
+                    "Non-Comet priority genotype override"
+                    if priority_assignment
+                    else "Comet"
+                )
                 rows.append((refid, refname, accession, genotype, source))
                 seen_accessions.add(accession_key)
                 if priority_assignment:
                     override_count += 1
 
     addition_count = 0
-    for accession_key, (refid, refname, accession, genotype) in noncomet_priority_genotypes.items():
+    for accession_key, (
+        refid,
+        refname,
+        accession,
+        genotype,
+    ) in noncomet_priority_genotypes.items():
         if accession_key not in seen_accessions:
-            rows.append((refid, refname, accession, genotype, "Non-Comet priority genotype addition"))
+            rows.append(
+                (
+                    refid,
+                    refname,
+                    accession,
+                    genotype,
+                    "Non-Comet priority genotype addition",
+                )
+            )
             addition_count += 1
 
     output_dir = Path(args.output_dir)
@@ -80,11 +112,22 @@ def main() -> int:
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "NS3_GT_AllStudies"
-    sheet.append(["RefID", "RefName", "GenBankAccession", "BestGT", "BestGTAssignmentSource"])
+    sheet.append(
+        ["RefID", "RefName", "GenBankAccession", "BestGT", "BestGTAssignmentSource"]
+    )
     for row in rows:
         sheet.append(row)
     workbook.save(output_path)
-    print(json.dumps({"combined_xlsx": str(output_path.resolve()), "master_row_count": len(rows), "noncomet_priority_genotype_override_count": override_count, "noncomet_priority_genotype_addition_count": addition_count}))
+    print(
+        json.dumps(
+            {
+                "combined_xlsx": str(output_path.resolve()),
+                "master_row_count": len(rows),
+                "noncomet_priority_genotype_override_count": override_count,
+                "noncomet_priority_genotype_addition_count": addition_count,
+            }
+        )
+    )
     return 0
 
 

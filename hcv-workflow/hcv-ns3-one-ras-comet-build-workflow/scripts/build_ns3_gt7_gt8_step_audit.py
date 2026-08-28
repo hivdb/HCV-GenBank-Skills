@@ -48,7 +48,10 @@ def workbook_rows(path: Path) -> list[dict[str, object]]:
     book = load_workbook(path, read_only=True, data_only=True)
     sheet = book[book.sheetnames[0]]
     header = [str(value or "") for value in next(sheet.iter_rows(values_only=True), ())]
-    rows = [dict(zip(header, values)) for values in sheet.iter_rows(min_row=2, values_only=True)]
+    rows = [
+        dict(zip(header, values))
+        for values in sheet.iter_rows(min_row=2, values_only=True)
+    ]
     book.close()
     return rows
 
@@ -70,7 +73,9 @@ def complete_profile_exclusion_reasons(
     if summary_path.is_file():
         try:
             text = summary_path.read_text(encoding="utf-8")
-            rule = str(json.loads(text[text.find("{"):]).get("profile_input_rule") or "").strip()
+            rule = str(
+                json.loads(text[text.find("{") :]).get("profile_input_rule") or ""
+            ).strip()
         except (json.JSONDecodeError, OSError):
             pass
     reason = (
@@ -81,15 +86,20 @@ def complete_profile_exclusion_reasons(
     return {accession: reason for accession in candidate_accessions}
 
 
-def rows_as_gt_accessions(rows: list[dict[str, object]], accession_column: str, genotype_column: str) -> dict[str, str]:
+def rows_as_gt_accessions(
+    rows: list[dict[str, object]], accession_column: str, genotype_column: str
+) -> dict[str, str]:
     return {
         accession_key(row.get(accession_column)): genotype(row.get(genotype_column))
         for row in rows
-        if accession_key(row.get(accession_column)) and genotype(row.get(genotype_column)) in {"7", "8"}
+        if accession_key(row.get(accession_column))
+        and genotype(row.get(genotype_column)) in {"7", "8"}
     }
 
 
-def assignment_map(path: Path, accession_column: str, genotype_column: str) -> dict[str, str]:
+def assignment_map(
+    path: Path, accession_column: str, genotype_column: str
+) -> dict[str, str]:
     """Return final assignment per accession, matching the workflow builders' overwrite behavior."""
     assignments: dict[str, str] = {}
     for row in csv_rows(path):
@@ -114,9 +124,14 @@ def fasta_accessions(directory: Path) -> set[str]:
     return accessions
 
 
-def filtered_assignments(directory: Path, comet: dict[str, str], priority: dict[str, str]) -> dict[str, str]:
+def filtered_assignments(
+    directory: Path, comet: dict[str, str], priority: dict[str, str]
+) -> dict[str, str]:
     retained = fasta_accessions(directory)
-    result = {accession: priority.get(accession, comet.get(accession, "")) for accession in retained}
+    result = {
+        accession: priority.get(accession, comet.get(accession, ""))
+        for accession in retained
+    }
     # Priority rows deliberately supplement COMET calls, including accessions absent from COMET.
     result.update(priority)
     return gt7_gt8_assignments(result)
@@ -134,11 +149,15 @@ def qc_passes_and_reasons(path: Path) -> tuple[dict[str, str], dict[str, str]]:
         if status == "PASS":
             passes[accession] = gt
         else:
-            reasons[accession] = str(row.get("AlignmentQCReasons") or status or "not_qc_passed").strip()
+            reasons[accession] = str(
+                row.get("AlignmentQCReasons") or status or "not_qc_passed"
+            ).strip()
     return passes, reasons
 
 
-def write_sheet(book: Workbook, title: str, fields: list[str], rows: list[dict[str, object]]) -> None:
+def write_sheet(
+    book: Workbook, title: str, fields: list[str], rows: list[dict[str, object]]
+) -> None:
     sheet = book.create_sheet(title)
     sheet.append(fields)
     for row in rows:
@@ -147,26 +166,58 @@ def write_sheet(book: Workbook, title: str, fields: list[str], rows: list[dict[s
         cell.font = Font(bold=True)
     sheet.freeze_panes = "A2"
     for column in range(1, len(fields) + 1):
-        width = max(len(str(sheet.cell(row, column).value or "")) for row in range(1, sheet.max_row + 1))
+        width = max(
+            len(str(sheet.cell(row, column).value or ""))
+            for row in range(1, sheet.max_row + 1)
+        )
         sheet.column_dimensions[get_column_letter(column)].width = min(width + 2, 60)
 
 
 def summary_paragraphs(gene: str, summary: list[dict[str, object]]) -> list[str]:
-    initial = {str(row["genotype"]): int(row["kept_count"]) for row in summary if row["step"] == "prepare-comet-assignments"}
-    final = {str(row["genotype"]): int(row["kept_count"]) for row in summary if row["step"] == "audit-gt7-gt8-sequences"}
+    initial = {
+        str(row["genotype"]): int(row["kept_count"])
+        for row in summary
+        if row["step"] == "prepare-comet-assignments"
+    }
+    final = {
+        str(row["genotype"]): int(row["kept_count"])
+        for row in summary
+        if row["step"] == "audit-gt7-gt8-sequences"
+    }
     paragraphs: list[str] = []
     for gt in ("7", "8"):
         rows = [row for row in summary if str(row["genotype"]) == gt]
-        additions = sum(max(0, int(row["kept_count"]) - int(rows[index - 1]["kept_count"])) for index, row in enumerate(rows) if index)
-        excluded = [row for row in rows if int(row["excluded_since_previous_count"]) > 0]
-        exclusion_count = sum(int(row["excluded_since_previous_count"]) for row in excluded)
-        reasons = "; ".join(str(row["exclusion_reason"]) for row in excluded if row["exclusion_reason"])
+        additions = sum(
+            max(0, int(row["kept_count"]) - int(rows[index - 1]["kept_count"]))
+            for index, row in enumerate(rows)
+            if index
+        )
+        excluded = [
+            row for row in rows if int(row["excluded_since_previous_count"]) > 0
+        ]
+        exclusion_count = sum(
+            int(row["excluded_since_previous_count"]) for row in excluded
+        )
+        reasons = "; ".join(
+            str(row["exclusion_reason"]) for row in excluded if row["exclusion_reason"]
+        )
         text = f"{gene} GT{gt}: selection added {additions} sequence(s), and the final complete-profile set retained {final.get(gt, 0)} sequence(s)."
-        paragraphs.append(f"{text} {exclusion_count} sequence(s) were excluded: {reasons}." if exclusion_count else text)
+        paragraphs.append(
+            f"{text} {exclusion_count} sequence(s) were excluded: {reasons}."
+            if exclusion_count
+            else text
+        )
     return paragraphs
 
 
-def write_summary_workbook(path: Path, summary: list[dict[str, object]], details: list[dict[str, object]], summary_fields: list[str], accession_fields: list[str], paragraphs: list[str]) -> None:
+def write_summary_workbook(
+    path: Path,
+    summary: list[dict[str, object]],
+    details: list[dict[str, object]],
+    summary_fields: list[str],
+    accession_fields: list[str],
+    paragraphs: list[str],
+) -> None:
     book = Workbook()
     book.remove(book.active)
     key_changes: list[dict[str, object]] = []
@@ -175,39 +226,114 @@ def write_summary_workbook(path: Path, summary: list[dict[str, object]], details
         genotype_value = str(row["genotype"])
         current = int(row["kept_count"])
         prior = previous_counts.get(genotype_value)
-        if prior is not None and (current != prior or int(row["excluded_since_previous_count"]) > 0):
-            key_changes.append({
-                "step": row["step"], "genotype": genotype_value, "previous_kept_count": prior,
-                "kept_count": current, "net_change": current - prior,
-                "excluded_since_previous_count": row["excluded_since_previous_count"],
-                "exclusion_reason": row["exclusion_reason"],
-            })
+        if prior is not None and (
+            current != prior or int(row["excluded_since_previous_count"]) > 0
+        ):
+            key_changes.append(
+                {
+                    "step": row["step"],
+                    "genotype": genotype_value,
+                    "previous_kept_count": prior,
+                    "kept_count": current,
+                    "net_change": current - prior,
+                    "excluded_since_previous_count": row[
+                        "excluded_since_previous_count"
+                    ],
+                    "exclusion_reason": row["exclusion_reason"],
+                }
+            )
         previous_counts[genotype_value] = current
-    write_sheet(book, "Summary", ["Summary"], [{"Summary": paragraph} for paragraph in paragraphs])
-    write_sheet(book, "Key Changes", ["step", "genotype", "previous_kept_count", "kept_count", "net_change", "excluded_since_previous_count", "exclusion_reason"], key_changes)
+    write_sheet(
+        book,
+        "Summary",
+        ["Summary"],
+        [{"Summary": paragraph} for paragraph in paragraphs],
+    )
+    write_sheet(
+        book,
+        "Key Changes",
+        [
+            "step",
+            "genotype",
+            "previous_kept_count",
+            "kept_count",
+            "net_change",
+            "excluded_since_previous_count",
+            "exclusion_reason",
+        ],
+        key_changes,
+    )
     write_sheet(book, "Step Audit", summary_fields, summary)
     write_sheet(book, "Accession Audit", accession_fields, details)
     path.parent.mkdir(parents=True, exist_ok=True)
     book.save(path)
 
 
-def write_summary_markdown(path: Path, gene: str, summary: list[dict[str, object]], details: list[dict[str, object]], paragraphs: list[str]) -> None:
+def write_summary_markdown(
+    path: Path,
+    gene: str,
+    summary: list[dict[str, object]],
+    details: list[dict[str, object]],
+    paragraphs: list[str],
+) -> None:
     previous_counts: dict[str, int] = {}
     key_changes: list[dict[str, object]] = []
     for row in summary:
         gt = str(row["genotype"])
         current = int(row["kept_count"])
         prior = previous_counts.get(gt)
-        if prior is not None and (current != prior or int(row["excluded_since_previous_count"]) > 0):
-            key_changes.append({**row, "previous_kept_count": prior, "net_change": current - prior})
+        if prior is not None and (
+            current != prior or int(row["excluded_since_previous_count"]) > 0
+        ):
+            key_changes.append(
+                {**row, "previous_kept_count": prior, "net_change": current - prior}
+            )
         previous_counts[gt] = current
-    lines = [f"# {gene} GT7/GT8 sequence-retention summary", "", "## Summary", "", *paragraphs, "", "## Key changes", "", "| Step | Genotype | Previous kept | Kept | Net change | Excluded | Reason |", "| --- | --- | ---: | ---: | ---: | ---: | --- |"]
-    lines.extend(f"| {row['step']} | GT{row['genotype']} | {row['previous_kept_count']} | {row['kept_count']} | {row['net_change']:+d} | {row['excluded_since_previous_count']} | {row['exclusion_reason'] or ''} |" for row in key_changes)
+    lines = [
+        f"# {gene} GT7/GT8 sequence-retention summary",
+        "",
+        "## Summary",
+        "",
+        *paragraphs,
+        "",
+        "## Key changes",
+        "",
+        "| Step | Genotype | Previous kept | Kept | Net change | Excluded | Reason |",
+        "| --- | --- | ---: | ---: | ---: | ---: | --- |",
+    ]
+    lines.extend(
+        f"| {row['step']} | GT{row['genotype']} | {row['previous_kept_count']} | {row['kept_count']} | {row['net_change']:+d} | {row['excluded_since_previous_count']} | {row['exclusion_reason'] or ''} |"
+        for row in key_changes
+    )
     excluded = [row for row in details if row["status"] == "excluded"]
-    lines.extend(["", "## Excluded accessions", "", "| Step | Genotype | Accession | Reason |", "| --- | --- | --- | --- |"])
-    lines.extend(f"| {row['step']} | GT{row['genotype']} | {row['accession']} | {row['exclusion_reason']} |" for row in excluded)
-    final = {row["genotype"]: row["kept_count"] for row in summary if row["step"] == "audit-gt7-gt8-sequences"}
-    lines.extend(["", "## Final retained sequences", "", f"- GT7: {final.get('7', 0)}", f"- GT8: {final.get('8', 0)}", ""])
+    lines.extend(
+        [
+            "",
+            "## Excluded accessions",
+            "",
+            "| Step | Genotype | Accession | Reason |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    lines.extend(
+        f"| {row['step']} | GT{row['genotype']} | {row['accession']} | {row['exclusion_reason']} |"
+        for row in excluded
+    )
+    final = {
+        row["genotype"]: row["kept_count"]
+        for row in summary
+        if row["step"] == "audit-gt7-gt8-sequences"
+    }
+    lines.extend(
+        [
+            "",
+            "## Final retained sequences",
+            "",
+            f"- GT7: {final.get('7', 0)}",
+            f"- GT8: {final.get('8', 0)}",
+            "",
+        ]
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -219,8 +345,18 @@ def main() -> int:
     steps = workflow_steps(root)
     step_dirs = {name: root / f"{number:02d}_{name}" for number, name in steps}
     step = lambda name: step_dirs.get(name, root / "__missing_step__")
-    comet_all = assignment_map(step("prepare-comet-assignments") / f"comet_{gene.lower()}_subtype_assignments.csv", "accession", "genotype")
-    priority_all = assignment_map(step("select-noncomet-priority-assignments") / f"{gene}_NonComet_Priority_Assignments.csv", "Accession", "ClosestGenotype")
+    comet_all = assignment_map(
+        step("prepare-comet-assignments")
+        / f"comet_{gene.lower()}_subtype_assignments.csv",
+        "accession",
+        "genotype",
+    )
+    priority_all = assignment_map(
+        step("select-noncomet-priority-assignments")
+        / f"{gene}_NonComet_Priority_Assignments.csv",
+        "Accession",
+        "ClosestGenotype",
+    )
     comet = gt7_gt8_assignments(comet_all)
     prefilter_all = {**comet_all, **priority_all}
     prefilter = gt7_gt8_assignments(prefilter_all)
@@ -229,23 +365,62 @@ def main() -> int:
         for accession in comet
         if accession in prefilter_all and prefilter_all[accession] not in {"7", "8"}
     }
-    filtered = filtered_assignments(step("filter-refid-fastas") / "included_refid_fastas", comet_all, priority_all)
-    genotype_rows = rows_as_gt_accessions(workbook_rows(step("build-genotype-workbook") / f"{gene}_GT_AllStudies.xlsx"), "GenBankAccession", "BestGT")
-    subtype_rows = rows_as_gt_accessions(workbook_rows(step("build-subtype-workbook") / f"{gene}_Subtype_AllStudies_WSeqs.xlsx"), "AccessionID", "ClosestGT")
-    extracted_rows = rows_as_gt_accessions(workbook_rows(step("extract-profile-aa") / f"{gene}_Profile_Input_Source.xlsx"), "AccessionID", "ClosestGT")
-    qc_rows, qc_reasons = qc_passes_and_reasons(step("validate-profile-alignment") / f"{gene}_Profile_Input_Alignment_QC.xlsx")
-    profile_rows = rows_as_gt_accessions(csv_rows(step("build-complete-profiles") / f"{gene}_Profile_Accessions_QC_Pass.csv"), "accession", "genotype")
+    filtered = filtered_assignments(
+        step("filter-refid-fastas") / "included_refid_fastas", comet_all, priority_all
+    )
+    genotype_rows = rows_as_gt_accessions(
+        workbook_rows(step("build-genotype-workbook") / f"{gene}_GT_AllStudies.xlsx"),
+        "GenBankAccession",
+        "BestGT",
+    )
+    subtype_rows = rows_as_gt_accessions(
+        workbook_rows(
+            step("build-subtype-workbook") / f"{gene}_Subtype_AllStudies_WSeqs.xlsx"
+        ),
+        "AccessionID",
+        "ClosestGT",
+    )
+    extracted_rows = rows_as_gt_accessions(
+        workbook_rows(step("extract-profile-aa") / f"{gene}_Profile_Input_Source.xlsx"),
+        "AccessionID",
+        "ClosestGT",
+    )
+    qc_rows, qc_reasons = qc_passes_and_reasons(
+        step("validate-profile-alignment") / f"{gene}_Profile_Input_Alignment_QC.xlsx"
+    )
+    profile_rows = rows_as_gt_accessions(
+        csv_rows(
+            step("build-complete-profiles") / f"{gene}_Profile_Accessions_QC_Pass.csv"
+        ),
+        "accession",
+        "genotype",
+    )
 
     snapshots: dict[str, tuple[dict[str, str] | None, dict[str, str]]] = {
         "prepare-comet-assignments": (comet, {}),
         "select-noncomet-priority-assignments": (prefilter, priority_reassignments),
         "filter-accession-metadata": (prefilter, {}),
         "split-refid-metadata": (prefilter, {}),
-        "filter-refid-fastas": (filtered, {accession: "excluded_by_RefID_metadata_filter_or_missing_from_filtered_FASTA" for accession in prefilter}),
+        "filter-refid-fastas": (
+            filtered,
+            {
+                accession: "excluded_by_RefID_metadata_filter_or_missing_from_filtered_FASTA"
+                for accession in prefilter
+            },
+        ),
         "build-genotype-workbook": (genotype_rows, {}),
         "add-genotype-counts": (genotype_rows, {}),
-        "build-subtype-workbook": (subtype_rows, {accession: "missing_subtype_assignment" for accession in genotype_rows}),
-        "extract-profile-aa": (extracted_rows, {accession: "not_available_in_profile_AA_extraction" for accession in subtype_rows}),
+        "build-subtype-workbook": (
+            subtype_rows,
+            {accession: "missing_subtype_assignment" for accession in genotype_rows},
+        ),
+        "extract-profile-aa": (
+            extracted_rows,
+            {
+                accession: "not_available_in_profile_AA_extraction"
+                for accession in subtype_rows
+            },
+        ),
         "validate-profile-alignment": (qc_rows, qc_reasons),
         "build-complete-profiles": (
             profile_rows,
@@ -256,8 +431,25 @@ def main() -> int:
         ),
     }
 
-    summary_fields = ["step_number", "step", "genotype", "previous_step", "kept_count", "excluded_since_previous_count", "exclusion_reason", "comparison_note"]
-    accession_fields = ["step_number", "step", "genotype", "accession", "status", "previous_step", "exclusion_reason"]
+    summary_fields = [
+        "step_number",
+        "step",
+        "genotype",
+        "previous_step",
+        "kept_count",
+        "excluded_since_previous_count",
+        "exclusion_reason",
+        "comparison_note",
+    ]
+    accession_fields = [
+        "step_number",
+        "step",
+        "genotype",
+        "accession",
+        "status",
+        "previous_step",
+        "exclusion_reason",
+    ]
     summary: list[dict[str, object]] = []
     details: list[dict[str, object]] = []
     previous: dict[str, str] | None = None
@@ -267,14 +459,27 @@ def main() -> int:
         snapshot, reasons = snapshots.get(name, (last_snapshot, {}))
         if snapshot is None:
             for gt in ("7", "8"):
-                summary.append({"step_number": number, "step": name, "genotype": gt, "previous_step": "", "kept_count": 0, "excluded_since_previous_count": 0, "exclusion_reason": "", "comparison_note": "Genotype assignment is not available before COMET assignments."})
+                summary.append(
+                    {
+                        "step_number": number,
+                        "step": name,
+                        "genotype": gt,
+                        "previous_step": "",
+                        "kept_count": 0,
+                        "excluded_since_previous_count": 0,
+                        "exclusion_reason": "",
+                        "comparison_note": "Genotype assignment is not available before COMET assignments.",
+                    }
+                )
             continue
         if name in snapshots:
             last_snapshot = snapshot
         old = previous or {}
         excluded = set(old) - set(snapshot) if previous is not None else set()
         for gt in ("7", "8"):
-            kept = sorted(accession for accession, value in snapshot.items() if value == gt)
+            kept = sorted(
+                accession for accession, value in snapshot.items() if value == gt
+            )
             lost = sorted(accession for accession in excluded if old[accession] == gt)
             reason_counts: dict[str, int] = {}
             for accession in lost:
@@ -283,22 +488,73 @@ def main() -> int:
                     f"Excluded because it was not retained by the {name} step",
                 )
                 reason_counts[reason] = reason_counts.get(reason, 0) + 1
-                details.append({"step_number": number, "step": name, "genotype": gt, "accession": accession, "status": "excluded", "previous_step": previous_step, "exclusion_reason": reason})
+                details.append(
+                    {
+                        "step_number": number,
+                        "step": name,
+                        "genotype": gt,
+                        "accession": accession,
+                        "status": "excluded",
+                        "previous_step": previous_step,
+                        "exclusion_reason": reason,
+                    }
+                )
             for accession in kept:
-                details.append({"step_number": number, "step": name, "genotype": gt, "accession": accession, "status": "kept", "previous_step": previous_step, "exclusion_reason": ""})
-            reason_text = "; ".join(f"{reason} ({count})" for reason, count in sorted(reason_counts.items()))
-            note = "Initial GT7/GT8 assignment snapshot." if previous is None else ("No sequence-level change from the previous step." if not lost else "Excluded at this step, compared with the previous step.")
-            summary.append({"step_number": number, "step": name, "genotype": gt, "previous_step": previous_step, "kept_count": len(kept), "excluded_since_previous_count": len(lost), "exclusion_reason": reason_text, "comparison_note": note})
+                details.append(
+                    {
+                        "step_number": number,
+                        "step": name,
+                        "genotype": gt,
+                        "accession": accession,
+                        "status": "kept",
+                        "previous_step": previous_step,
+                        "exclusion_reason": "",
+                    }
+                )
+            reason_text = "; ".join(
+                f"{reason} ({count})" for reason, count in sorted(reason_counts.items())
+            )
+            note = (
+                "Initial GT7/GT8 assignment snapshot."
+                if previous is None
+                else (
+                    "No sequence-level change from the previous step."
+                    if not lost
+                    else "Excluded at this step, compared with the previous step."
+                )
+            )
+            summary.append(
+                {
+                    "step_number": number,
+                    "step": name,
+                    "genotype": gt,
+                    "previous_step": previous_step,
+                    "kept_count": len(kept),
+                    "excluded_since_previous_count": len(lost),
+                    "exclusion_reason": reason_text,
+                    "comparison_note": note,
+                }
+            )
         previous, previous_step = snapshot, name
 
-    for path, fields, rows in ((args.output_csv, summary_fields, summary), (args.accessions_csv, accession_fields, details)):
+    for path, fields, rows in (
+        (args.output_csv, summary_fields, summary),
+        (args.accessions_csv, accession_fields, details),
+    ):
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=fields)
             writer.writeheader()
             writer.writerows(rows)
     paragraphs = summary_paragraphs(gene, summary)
-    write_summary_workbook(args.summary_xlsx, summary, details, summary_fields, accession_fields, paragraphs)
+    write_summary_workbook(
+        args.summary_xlsx,
+        summary,
+        details,
+        summary_fields,
+        accession_fields,
+        paragraphs,
+    )
     write_summary_markdown(args.summary_markdown, gene, summary, details, paragraphs)
     print(f"gt7_gt8_step_audit_csv={args.output_csv.resolve()}")
     print(f"gt7_gt8_step_audit_accessions_csv={args.accessions_csv.resolve()}")

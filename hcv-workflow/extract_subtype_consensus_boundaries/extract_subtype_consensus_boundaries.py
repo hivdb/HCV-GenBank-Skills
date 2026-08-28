@@ -97,7 +97,9 @@ def main() -> None:
 
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["Gene", "Subtype", "beginAA", "endAA"])
+        writer = csv.DictWriter(
+            handle, fieldnames=["Gene", "Subtype", "beginAA", "endAA"]
+        )
         writer.writeheader()
         writer.writerows(rows)
 

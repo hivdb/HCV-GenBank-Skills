@@ -12,6 +12,7 @@ from pathlib import Path
 from statistics import median
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from openpyxl import Workbook, load_workbook
@@ -21,7 +22,9 @@ from openpyxl.utils import get_column_letter
 
 VALID_AAS = set("ACDEFGHIKLMNPQRSTVWY")
 POSITION_HEADER_RE = re.compile(r"^P(\d+)$")
-SUBTYPE_LABEL_RE = re.compile(r"^GT(?P<genotype>\d+)_(?P<subtype>\S+)\s+\((?P<count>\d+),")
+SUBTYPE_LABEL_RE = re.compile(
+    r"^GT(?P<genotype>\d+)_(?P<subtype>\S+)\s+\((?P<count>\d+),"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,16 +33,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile-input-workbook", required=True)
     parser.add_argument("--profile-accessions-csv", required=True)
     parser.add_argument("--genotype-consensus-fasta", required=True)
-    parser.add_argument("--gene", default="NS3", help="Gene token in HCV<GT><GENE> reference names.")
+    parser.add_argument(
+        "--gene", default="NS3", help="Gene token in HCV<GT><GENE> reference names."
+    )
     parser.add_argument(
         "--output-xlsx",
         default="outputs/NS3_Subtype_RAS_Consensus_Difference_Summary.xlsx",
     )
-    parser.add_argument("--output-png", help="Optional PNG path for the subtype trend charts.")
+    parser.add_argument(
+        "--output-png", help="Optional PNG path for the subtype trend charts."
+    )
     return parser.parse_args()
 
 
-def load_combined_subtypes(path: Path) -> tuple[dict[tuple[str, str], int], tuple[int, ...]]:
+def load_combined_subtypes(
+    path: Path,
+) -> tuple[dict[tuple[str, str], int], tuple[int, ...]]:
     workbook = load_workbook(path, read_only=True, data_only=True)
     worksheet = workbook.active
     header = [str(value or "") for value in next(worksheet.iter_rows(values_only=True))]
@@ -52,14 +61,16 @@ def load_combined_subtypes(path: Path) -> tuple[dict[tuple[str, str], int], tupl
         raise RuntimeError(f"No RAS position columns (P<number>) found in {path}")
 
     subtypes: dict[tuple[str, str], int] = {}
-    for (label, *_) in worksheet.iter_rows(min_row=2, values_only=True):
+    for label, *_ in worksheet.iter_rows(min_row=2, values_only=True):
         match = SUBTYPE_LABEL_RE.match(str(label or ""))
         if match:
             key = (match.group("genotype"), match.group("subtype").lower())
             subtypes[key] = int(match.group("count"))
     workbook.close()
     if not subtypes:
-        raise RuntimeError(f"No subtype rows found in combined profile workbook: {path}")
+        raise RuntimeError(
+            f"No subtype rows found in combined profile workbook: {path}"
+        )
     return subtypes, positions
 
 
@@ -110,10 +121,18 @@ def load_sequence_differences(
     worksheet = workbook.active
     header = [str(value or "") for value in next(worksheet.iter_rows(values_only=True))]
     index = {name: position for position, name in enumerate(header)}
-    required = {"AccessionID", "ClosestGT", "ClosestSubtype", "StartAAPosition", "AASequence"}
+    required = {
+        "AccessionID",
+        "ClosestGT",
+        "ClosestSubtype",
+        "StartAAPosition",
+        "AASequence",
+    }
     missing = required - index.keys()
     if missing:
-        raise RuntimeError(f"Missing columns in {workbook_path}: {', '.join(sorted(missing))}")
+        raise RuntimeError(
+            f"Missing columns in {workbook_path}: {', '.join(sorted(missing))}"
+        )
 
     differences: dict[tuple[str, str], list[int]] = defaultdict(list)
     range_differences: dict[tuple[str, str], list[int]] = defaultdict(list)
@@ -138,8 +157,14 @@ def load_sequence_differences(
         if consensus is None:
             exclusions["missing_genotype_consensus"] += 1
             continue
-        calls = {int(start) + offset: amino_acid for offset, amino_acid in enumerate(sequence)}
-        if any(position > len(consensus) or consensus[position - 1] not in VALID_AAS for position in positions):
+        calls = {
+            int(start) + offset: amino_acid
+            for offset, amino_acid in enumerate(sequence)
+        }
+        if any(
+            position > len(consensus) or consensus[position - 1] not in VALID_AAS
+            for position in positions
+        ):
             exclusions["missing_or_ambiguous_consensus_AA_at_RAS_position"] += 1
             continue
         # X, stop, and other non-amino-acid calls are ignored at their own
@@ -151,7 +176,10 @@ def load_sequence_differences(
             exclusions["no_standard_AA_at_RAS_positions"] += 1
             continue
         differences[key].append(
-            sum(calls[position] != consensus[position - 1] for position in comparable_positions)
+            sum(
+                calls[position] != consensus[position - 1]
+                for position in comparable_positions
+            )
         )
         position_range = range(min(positions), max(positions) + 1)
         if all(
@@ -161,7 +189,10 @@ def load_sequence_differences(
             for position in position_range
         ):
             range_differences[key].append(
-                sum(calls[position] != consensus[position - 1] for position in position_range)
+                sum(
+                    calls[position] != consensus[position - 1]
+                    for position in position_range
+                )
             )
         else:
             exclusions["missing_or_ambiguous_AA_in_RAS_position_range"] += 1
@@ -182,10 +213,15 @@ def write_workbook(
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = "Subtype_RAS_Differences"
-    worksheet.append([
-        "Genotype", "Subtype", "ProfileSequencesFound", "SequencesCompared",
-        "MeanAADifferencesPerSequence",
-    ])
+    worksheet.append(
+        [
+            "Genotype",
+            "Subtype",
+            "ProfileSequencesFound",
+            "SequencesCompared",
+            "MeanAADifferencesPerSequence",
+        ]
+    )
     for cell in worksheet[1]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
@@ -198,10 +234,15 @@ def write_workbook(
         # can include additional sequences that do not contribute to the RAS
         # profile, so it must not define ProfileSequencesFound.
         found = included_subtypes[key]
-        worksheet.append([
-            f"GT{key[0]}", key[1], found, len(scores),
-            sum(scores) / len(scores) if scores else None,
-        ])
+        worksheet.append(
+            [
+                f"GT{key[0]}",
+                key[1],
+                found,
+                len(scores),
+                sum(scores) / len(scores) if scores else None,
+            ]
+        )
     for row in worksheet.iter_rows(min_row=2, min_col=5, max_col=5):
         for cell in row:
             cell.number_format = "0.0"
@@ -222,19 +263,53 @@ def write_trend_png(
 ) -> None:
     keys = sorted(included_subtypes, key=lambda item: (int(item[0]), item[1]))
     labels = [f"GT{genotype}_{subtype}" for genotype, subtype in keys]
-    ras_means = [sum(differences[key]) / len(differences[key]) if differences[key] else float("nan") for key in keys]
-    ras_medians = [median(differences[key]) if differences[key] else float("nan") for key in keys]
-    range_means = [sum(range_differences[key]) / len(range_differences[key]) if range_differences[key] else float("nan") for key in keys]
-    range_medians = [median(range_differences[key]) if range_differences[key] else float("nan") for key in keys]
+    ras_means = [
+        sum(differences[key]) / len(differences[key])
+        if differences[key]
+        else float("nan")
+        for key in keys
+    ]
+    ras_medians = [
+        median(differences[key]) if differences[key] else float("nan") for key in keys
+    ]
+    range_means = [
+        sum(range_differences[key]) / len(range_differences[key])
+        if range_differences[key]
+        else float("nan")
+        for key in keys
+    ]
+    range_medians = [
+        median(range_differences[key]) if range_differences[key] else float("nan")
+        for key in keys
+    ]
 
-    figure, axes = plt.subplots(2, 1, figsize=(max(14, len(keys) * 0.48), 10), sharex=True, constrained_layout=True)
+    figure, axes = plt.subplots(
+        2,
+        1,
+        figsize=(max(14, len(keys) * 0.48), 10),
+        sharex=True,
+        constrained_layout=True,
+    )
     x_values = range(len(keys))
     for axis, title, mean_values, median_values in (
         (axes[0], f"{gene} RAS positions", ras_means, ras_medians),
-        (axes[1], f"{gene} AA positions {min(positions)}-{max(positions)}", range_means, range_medians),
+        (
+            axes[1],
+            f"{gene} AA positions {min(positions)}-{max(positions)}",
+            range_means,
+            range_medians,
+        ),
     ):
-        axis.plot(x_values, mean_values, marker="o", linewidth=1.5, label="Mean difference")
-        axis.plot(x_values, median_values, marker="s", linewidth=1.5, label="Median difference")
+        axis.plot(
+            x_values, mean_values, marker="o", linewidth=1.5, label="Mean difference"
+        )
+        axis.plot(
+            x_values,
+            median_values,
+            marker="s",
+            linewidth=1.5,
+            label="Median difference",
+        )
         axis.set_title(title)
         axis.set_ylabel("AA differences per sequence")
         axis.grid(axis="y", alpha=0.3)
@@ -252,25 +327,57 @@ def main() -> int:
     accessions_path = Path(args.profile_accessions_csv).expanduser()
     consensus_path = Path(args.genotype_consensus_fasta).expanduser()
     output_path = Path(args.output_xlsx).expanduser()
-    png_path = Path(args.output_png).expanduser() if args.output_png else output_path.with_suffix(".png")
+    png_path = (
+        Path(args.output_png).expanduser()
+        if args.output_png
+        else output_path.with_suffix(".png")
+    )
     for path in (combined_path, input_path, accessions_path, consensus_path):
         if not path.is_file():
             raise RuntimeError(f"Required input file not found: {path}")
     included_subtypes, positions = load_combined_subtypes(combined_path)
-    differences, range_differences, exclusions, found_records = load_sequence_differences(
-        input_path, load_profile_accessions(accessions_path), included_subtypes,
-        load_consensus_by_genotype(consensus_path), positions,
+    differences, range_differences, exclusions, found_records = (
+        load_sequence_differences(
+            input_path,
+            load_profile_accessions(accessions_path),
+            included_subtypes,
+            load_consensus_by_genotype(consensus_path),
+            positions,
+        )
     )
-    write_workbook(output_path, args.gene, included_subtypes, positions, differences, range_differences, exclusions, found_records)
-    write_trend_png(png_path, args.gene, included_subtypes, positions, differences, range_differences)
-    print(json.dumps({
-        "output_xlsx": str(output_path.resolve()),
-        "output_png": str(png_path.resolve()),
-        "subtype_count": len(included_subtypes),
-        "sequences_compared": sum(len(values) for values in differences.values()),
-        "sequences_excluded": sum(exclusions.values()),
-        "ras_positions": list(positions),
-    }, indent=2))
+    write_workbook(
+        output_path,
+        args.gene,
+        included_subtypes,
+        positions,
+        differences,
+        range_differences,
+        exclusions,
+        found_records,
+    )
+    write_trend_png(
+        png_path,
+        args.gene,
+        included_subtypes,
+        positions,
+        differences,
+        range_differences,
+    )
+    print(
+        json.dumps(
+            {
+                "output_xlsx": str(output_path.resolve()),
+                "output_png": str(png_path.resolve()),
+                "subtype_count": len(included_subtypes),
+                "sequences_compared": sum(
+                    len(values) for values in differences.values()
+                ),
+                "sequences_excluded": sum(exclusions.values()),
+                "ras_positions": list(positions),
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

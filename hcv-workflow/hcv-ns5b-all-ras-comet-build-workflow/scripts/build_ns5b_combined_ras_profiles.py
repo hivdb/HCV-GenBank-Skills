@@ -29,7 +29,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--gt-ras-profile-workbook", required=True)
     parser.add_argument("--subtype-ras-profile-workbook", required=True)
-    parser.add_argument("--output-xlsx", default="outputs/NS5B_Combined_RAS_Profiles.xlsx")
+    parser.add_argument(
+        "--output-xlsx", default="outputs/NS5B_Combined_RAS_Profiles.xlsx"
+    )
     parser.add_argument("--subtype-frequency-threshold", type=float, default=1.0)
     return parser.parse_args()
 
@@ -60,7 +62,9 @@ def total_sequences(label: object) -> int | None:
 
 
 def filtered_variants(
-    value: object, threshold: float | None = None, excluded_amino_acids: set[str] | None = None
+    value: object,
+    threshold: float | None = None,
+    excluded_amino_acids: set[str] | None = None,
 ) -> list[tuple[str, str]]:
     return [
         (amino_acid, frequency)
@@ -77,13 +81,18 @@ def most_frequent_variant(value: object) -> tuple[str, str] | None:
     return max(variants, key=lambda variant: float(variant[1]))
 
 
-def mean_diff(value_rows: list[object], gt_variants: list[tuple[str, str] | None], threshold: float) -> float:
+def mean_diff(
+    value_rows: list[object],
+    gt_variants: list[tuple[str, str] | None],
+    threshold: float,
+) -> float:
     """Sum displayed non-consensus amino-acid percentages and express as a decimal."""
     displayed_percent = sum(
         float(frequency)
         for value, gt_variant in zip(value_rows, gt_variants)
         for amino_acid, frequency in VARIANT_RE.findall(str(value or ""))
-        if float(frequency) >= threshold and (gt_variant is None or amino_acid != gt_variant[0])
+        if float(frequency) >= threshold
+        and (gt_variant is None or amino_acid != gt_variant[0])
     )
     return displayed_percent / 100.0
 
@@ -105,27 +114,59 @@ def write_combined_workbook(
     subtypes_by_gt: dict[str, list[list[object]]] = defaultdict(list)
     for row in subtype_rows:
         genotype = genotype_from_label(row[0])
-        if genotype is not None and "_" in str(row[0]) and (include_all_rows or has_minimum_total_sequences(row[0])):
+        if (
+            genotype is not None
+            and "_" in str(row[0])
+            and (include_all_rows or has_minimum_total_sequences(row[0]))
+        ):
             subtypes_by_gt[genotype].append(row)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     workbook = xlsxwriter.Workbook(output_path)
     worksheet = workbook.add_worksheet("Combined_RAS_Profile")
-    cell_format = workbook.add_format({"align": "center", "valign": "vcenter", "text_wrap": True})
-    header_format = workbook.add_format({"bold": True, "bg_color": "#F2F2F2", "align": "center", "valign": "vcenter", "text_wrap": True})
-    gt_format = workbook.add_format({"bold": True, "bg_color": "#D9EAF7", "align": "center", "valign": "vcenter", "text_wrap": True})
-    mean_diff_format = workbook.add_format({"align": "center", "valign": "vcenter", "text_wrap": True, "num_format": "0.0"})
+    cell_format = workbook.add_format(
+        {"align": "center", "valign": "vcenter", "text_wrap": True}
+    )
+    header_format = workbook.add_format(
+        {
+            "bold": True,
+            "bg_color": "#F2F2F2",
+            "align": "center",
+            "valign": "vcenter",
+            "text_wrap": True,
+        }
+    )
+    gt_format = workbook.add_format(
+        {
+            "bold": True,
+            "bg_color": "#D9EAF7",
+            "align": "center",
+            "valign": "vcenter",
+            "text_wrap": True,
+        }
+    )
+    mean_diff_format = workbook.add_format(
+        {"align": "center", "valign": "vcenter", "text_wrap": True, "num_format": "0.0"}
+    )
     superscript_format = workbook.add_format({"font_script": 1})
     red_text_format = workbook.add_format({"font_color": "#FF0000"})
-    red_superscript_format = workbook.add_format({"font_color": "#FF0000", "font_script": 1})
+    red_superscript_format = workbook.add_format(
+        {"font_color": "#FF0000", "font_script": 1}
+    )
     headers = [*positions, "MeanDiff"]
     worksheet.set_column(0, 0, 24)
     worksheet.set_column(1, len(headers) - 1, 12)
     for column, value in enumerate(headers):
-        worksheet.write_blank(0, column, None, header_format) if value is None else worksheet.write(0, column, value, header_format)
+        worksheet.write_blank(
+            0, column, None, header_format
+        ) if value is None else worksheet.write(0, column, value, header_format)
 
     def write_variant_cell(
-        row: int, column: int, variants: list[tuple[str, str]], cell_style, genotype_consensus_aas: set[str] | None = None
+        row: int,
+        column: int,
+        variants: list[tuple[str, str]],
+        cell_style,
+        genotype_consensus_aas: set[str] | None = None,
     ) -> None:
         if not variants:
             worksheet.write_blank(row, column, None, cell_style)
@@ -134,13 +175,20 @@ def write_combined_workbook(
         for index, (amino_acid, frequency) in enumerate(variants):
             if index and index % 2 == 0:
                 amino_acid = f"\n{amino_acid}"
-            if genotype_consensus_aas is not None and amino_acid.lstrip("\n") not in genotype_consensus_aas:
-                rich_parts.extend((red_text_format, amino_acid, red_superscript_format, frequency))
+            if (
+                genotype_consensus_aas is not None
+                and amino_acid.lstrip("\n") not in genotype_consensus_aas
+            ):
+                rich_parts.extend(
+                    (red_text_format, amino_acid, red_superscript_format, frequency)
+                )
             else:
                 rich_parts.extend((amino_acid, superscript_format, frequency))
         result = worksheet.write_rich_string(row, column, *rich_parts, cell_style)
         if result:
-            raise RuntimeError(f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}")
+            raise RuntimeError(
+                f"Unable to write rich text at row {row + 1}, column {column + 1}: {result}"
+            )
 
     output_rows = 0
     high_mean_diff_subtypes: list[dict[str, object]] = []
@@ -150,7 +198,9 @@ def write_combined_workbook(
         worksheet.write(worksheet_row, 0, gt_row[0], gt_format)
         for column, value in enumerate(gt_row[1:], start=1):
             variant = most_frequent_variant(value)
-            write_variant_cell(worksheet_row, column, [variant] if variant else [], gt_format)
+            write_variant_cell(
+                worksheet_row, column, [variant] if variant else [], gt_format
+            )
         worksheet.write_blank(worksheet_row, len(headers) - 1, None, gt_format)
         output_rows += 1
         worksheet_row += 1
@@ -161,19 +211,38 @@ def write_combined_workbook(
                 variant[0]
                 for gt_number, row in gt_by_number.items()
                 if gt_number in {"1", "2", "3", "4", "5", "6"}
-                if (variant := most_frequent_variant(row[position_index + 1])) is not None
+                if (variant := most_frequent_variant(row[position_index + 1]))
+                is not None
             }
             for position_index in range(len(gt_amino_acids))
         ]
         for subtype_row in subtypes_by_gt.get(genotype, []):
             subtype_values = subtype_row[1:]
             worksheet.write(worksheet_row, 0, subtype_row[0], cell_format)
-            for column, (value, gt_variant) in enumerate(zip(subtype_values, gt_amino_acids), start=1):
-                write_variant_cell(worksheet_row, column, filtered_variants(value, threshold, {gt_variant[0]} if gt_variant is not None else None), cell_format, all_gt_consensus_aas[column - 1])
-            subtype_mean_diff = round(mean_diff(subtype_values, gt_amino_acids, threshold), 1)
-            worksheet.write_number(worksheet_row, len(headers) - 1, subtype_mean_diff, mean_diff_format)
+            for column, (value, gt_variant) in enumerate(
+                zip(subtype_values, gt_amino_acids), start=1
+            ):
+                write_variant_cell(
+                    worksheet_row,
+                    column,
+                    filtered_variants(
+                        value,
+                        threshold,
+                        {gt_variant[0]} if gt_variant is not None else None,
+                    ),
+                    cell_format,
+                    all_gt_consensus_aas[column - 1],
+                )
+            subtype_mean_diff = round(
+                mean_diff(subtype_values, gt_amino_acids, threshold), 1
+            )
+            worksheet.write_number(
+                worksheet_row, len(headers) - 1, subtype_mean_diff, mean_diff_format
+            )
             if subtype_mean_diff >= 2.5:
-                high_mean_diff_subtypes.append({"subtype": str(subtype_row[0]), "mean_diff": subtype_mean_diff})
+                high_mean_diff_subtypes.append(
+                    {"subtype": str(subtype_row[0]), "mean_diff": subtype_mean_diff}
+                )
             output_rows += 1
             worksheet_row += 1
         worksheet_row += 1
@@ -196,7 +265,9 @@ def main() -> int:
         subtype_positions = subtype_positions[:-1]
         subtype_rows = [row[:-1] for row in subtype_rows]
     if positions != subtype_positions:
-        raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
+        raise RuntimeError(
+            "GT and subtype RAS profile workbooks have different position rows"
+        )
     genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
         output_path, positions, gt_rows, subtype_rows, args.subtype_frequency_threshold
     )
@@ -213,13 +284,20 @@ def main() -> int:
         for row in combined_rows
         if "_" in str(row[0] or "") and isinstance(row[mean_diff_column], (int, float))
     ]
-    mean_subtype_mean_diff = sum(subtype_mean_diffs) / len(subtype_mean_diffs) if subtype_mean_diffs else 0.0
-    high_mean_diff_text = ", ".join(
-        str(item["subtype"]).split("_", 1)[-1].split(maxsplit=1)[0]
-        for item in high_mean_diff_subtypes
-    ) or "none"
+    mean_subtype_mean_diff = (
+        sum(subtype_mean_diffs) / len(subtype_mean_diffs) if subtype_mean_diffs else 0.0
+    )
+    high_mean_diff_text = (
+        ", ".join(
+            str(item["subtype"]).split("_", 1)[-1].split(maxsplit=1)[0]
+            for item in high_mean_diff_subtypes
+        )
+        or "none"
+    )
     print(f"Subtypes with MeanDiff >= 2.5: {high_mean_diff_text}", file=sys.stderr)
-    print(f"Mean MeanDiff across subtypes: {mean_subtype_mean_diff:.1f}", file=sys.stderr)
+    print(
+        f"Mean MeanDiff across subtypes: {mean_subtype_mean_diff:.1f}", file=sys.stderr
+    )
     print(
         json.dumps(
             {

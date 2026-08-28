@@ -33,7 +33,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--input-workbook", required=True)
     parser.add_argument("--gt-aa-json", required=True)
-    parser.add_argument("--reference-gene", default="NS3", help="Reference gene label, e.g. NS3, NS5A_NTD, or NS5B.")
+    parser.add_argument(
+        "--reference-gene",
+        default="NS3",
+        help="Reference gene label, e.g. NS3, NS5A_NTD, or NS5B.",
+    )
     parser.add_argument("--ras-positions", default=",".join(map(str, RAS_POSITIONS)))
     parser.add_argument("--output-workbook", required=True)
     parser.add_argument("--flagged-accessions-csv", required=True)
@@ -52,14 +56,36 @@ def load_gt_refs(path: Path, gene: str) -> dict[str, str]:
 
 
 def qc_row(
-    row: dict[str, Any], refs: dict[str, str], high_divergence_percent: float, min_divergence_coverage: int, ras_positions: list[int]
+    row: dict[str, Any],
+    refs: dict[str, str],
+    high_divergence_percent: float,
+    min_divergence_coverage: int,
+    ras_positions: list[int],
 ) -> dict[str, str | int | float]:
     sequence = str(row.get("AASequence", "") or "").strip().upper()
     start_value = row.get("StartAAPosition")
     if not sequence:
-        return {"AlignmentQCStatus": "NO_AA_SEQUENCE", "AlignmentQCReasons": "no_aa_sequence", "AlignmentQCAlignmentColumnsMissing": "", "AlignmentQCRASPositionsRequiringReview": "", "AlignmentQCCoordinateSpan": "", "AlignmentQCComparedAA": "", "AlignmentQCMutationCount": "", "AlignmentQCMutationPercent": ""}
+        return {
+            "AlignmentQCStatus": "NO_AA_SEQUENCE",
+            "AlignmentQCReasons": "no_aa_sequence",
+            "AlignmentQCAlignmentColumnsMissing": "",
+            "AlignmentQCRASPositionsRequiringReview": "",
+            "AlignmentQCCoordinateSpan": "",
+            "AlignmentQCComparedAA": "",
+            "AlignmentQCMutationCount": "",
+            "AlignmentQCMutationPercent": "",
+        }
     if start_value in (None, "") or row.get("EndAAPosition") in (None, ""):
-        return {"AlignmentQCStatus": "MISSING_AA_COORDINATES", "AlignmentQCReasons": "missing_start_or_end_aa_position", "AlignmentQCAlignmentColumnsMissing": "", "AlignmentQCRASPositionsRequiringReview": "", "AlignmentQCCoordinateSpan": "", "AlignmentQCComparedAA": "", "AlignmentQCMutationCount": "", "AlignmentQCMutationPercent": ""}
+        return {
+            "AlignmentQCStatus": "MISSING_AA_COORDINATES",
+            "AlignmentQCReasons": "missing_start_or_end_aa_position",
+            "AlignmentQCAlignmentColumnsMissing": "",
+            "AlignmentQCRASPositionsRequiringReview": "",
+            "AlignmentQCCoordinateSpan": "",
+            "AlignmentQCComparedAA": "",
+            "AlignmentQCMutationCount": "",
+            "AlignmentQCMutationPercent": "",
+        }
 
     start = int(start_value)
     end = int(row["EndAAPosition"])
@@ -72,19 +98,33 @@ def qc_row(
     if not reasons and reference:
         for offset, aa in enumerate(sequence):
             position = start + offset
-            if position <= len(reference) and aa in VALID_AAS and reference[position - 1] in VALID_AAS:
+            if (
+                position <= len(reference)
+                and aa in VALID_AAS
+                and reference[position - 1] in VALID_AAS
+            ):
                 compared += 1
                 mutations += aa != reference[position - 1]
     mutation_percent = 100.0 * mutations / compared if compared else 0.0
     status = "FLAGGED" if reasons else "PASS"
-    if status == "PASS" and compared >= min_divergence_coverage and mutation_percent >= high_divergence_percent:
+    if (
+        status == "PASS"
+        and compared >= min_divergence_coverage
+        and mutation_percent >= high_divergence_percent
+    ):
         status = "HIGH_DIVERGENCE"
         reasons.append(f"mutation_percent_gte_{high_divergence_percent:g}")
     return {
         "AlignmentQCStatus": status,
         "AlignmentQCReasons": ";".join(reasons),
-        "AlignmentQCAlignmentColumnsMissing": missing_columns if missing_columns else "",
-        "AlignmentQCRASPositionsRequiringReview": ";".join(f"P{position}" for position in needs_review) if reasons else "",
+        "AlignmentQCAlignmentColumnsMissing": missing_columns
+        if missing_columns
+        else "",
+        "AlignmentQCRASPositionsRequiringReview": ";".join(
+            f"P{position}" for position in needs_review
+        )
+        if reasons
+        else "",
         "AlignmentQCCoordinateSpan": f"{start}-{end} ({coordinate_span} columns; {len(sequence)} AA)",
         "AlignmentQCComparedAA": compared,
         "AlignmentQCMutationCount": mutations,
@@ -96,17 +136,42 @@ def main() -> int:
     args = parse_args()
     input_path = Path(args.input_workbook)
     refs = load_gt_refs(Path(args.gt_aa_json), args.reference_gene)
-    ras_positions = [int(value) for value in args.ras_positions.split(",") if value.strip()]
+    ras_positions = [
+        int(value) for value in args.ras_positions.split(",") if value.strip()
+    ]
     wb = load_workbook(input_path, read_only=True, data_only=True)
     source = wb[wb.sheetnames[0]]
-    header = [str(value) if value is not None else "" for value in next(source.iter_rows(values_only=True))]
-    rows = [dict(zip(header, values)) for values in source.iter_rows(min_row=2, values_only=True)]
+    header = [
+        str(value) if value is not None else ""
+        for value in next(source.iter_rows(values_only=True))
+    ]
+    rows = [
+        dict(zip(header, values))
+        for values in source.iter_rows(min_row=2, values_only=True)
+    ]
     wb.close()
 
-    qc_columns = ["AlignmentQCStatus", "AlignmentQCReasons", "AlignmentQCAlignmentColumnsMissing", "AlignmentQCRASPositionsRequiringReview", "AlignmentQCCoordinateSpan", "AlignmentQCComparedAA", "AlignmentQCMutationCount", "AlignmentQCMutationPercent"]
+    qc_columns = [
+        "AlignmentQCStatus",
+        "AlignmentQCReasons",
+        "AlignmentQCAlignmentColumnsMissing",
+        "AlignmentQCRASPositionsRequiringReview",
+        "AlignmentQCCoordinateSpan",
+        "AlignmentQCComparedAA",
+        "AlignmentQCMutationCount",
+        "AlignmentQCMutationPercent",
+    ]
     flagged: list[dict[str, Any]] = []
     for row in rows:
-        row.update(qc_row(row, refs, args.high_divergence_percent, args.min_divergence_coverage, ras_positions))
+        row.update(
+            qc_row(
+                row,
+                refs,
+                args.high_divergence_percent,
+                args.min_divergence_coverage,
+                ras_positions,
+            )
+        )
         if row["AlignmentQCStatus"] != "PASS":
             flagged.append(row)
 
@@ -122,7 +187,13 @@ def main() -> int:
                 cell.fill = FLAG_FILL
 
     flagged_sheet = output.create_sheet("Flagged_Accessions")
-    flagged_header = ["RefID", "RefName", "AccessionID", "ClosestGT", "ClosestSubtype"] + qc_columns
+    flagged_header = [
+        "RefID",
+        "RefName",
+        "AccessionID",
+        "ClosestGT",
+        "ClosestSubtype",
+    ] + qc_columns
     flagged_sheet.append(flagged_header)
     for row in flagged:
         flagged_sheet.append([row.get(column, "") for column in flagged_header])
@@ -133,9 +204,16 @@ def main() -> int:
     summary_sheet.append(["Metric", "Value"])
     summary_sheet.append(["Input rows", len(rows)])
     summary_sheet.append(["Non-pass rows", len(flagged)])
-    for status, count in sorted(Counter(str(row["AlignmentQCStatus"]) for row in rows).items()):
+    for status, count in sorted(
+        Counter(str(row["AlignmentQCStatus"]) for row in rows).items()
+    ):
         summary_sheet.append([f"{status} rows", count])
-    for (gt, subtype), count in sorted(Counter((str(row.get("ClosestGT", "")), str(row.get("ClosestSubtype", ""))) for row in flagged).items()):
+    for (gt, subtype), count in sorted(
+        Counter(
+            (str(row.get("ClosestGT", "")), str(row.get("ClosestSubtype", "")))
+            for row in flagged
+        ).items()
+    ):
         summary_sheet.append([f"Flagged GT{gt}_{subtype}", count])
     for cell in summary_sheet[1]:
         cell.font = Font(bold=True)
@@ -148,9 +226,28 @@ def main() -> int:
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=flagged_header)
         writer.writeheader()
-        writer.writerows({column: row.get(column, "") for column in flagged_header} for row in flagged)
+        writer.writerows(
+            {column: row.get(column, "") for column in flagged_header}
+            for row in flagged
+        )
 
-    print(json.dumps({"input_rows": len(rows), "status_counts": dict(sorted(Counter(str(row["AlignmentQCStatus"]) for row in rows).items())), "output_workbook": str(output_path.resolve()), "flagged_accessions_csv": str(csv_path.resolve()), "high_divergence_percent": args.high_divergence_percent, "min_divergence_coverage": args.min_divergence_coverage}, indent=2))
+    print(
+        json.dumps(
+            {
+                "input_rows": len(rows),
+                "status_counts": dict(
+                    sorted(
+                        Counter(str(row["AlignmentQCStatus"]) for row in rows).items()
+                    )
+                ),
+                "output_workbook": str(output_path.resolve()),
+                "flagged_accessions_csv": str(csv_path.resolve()),
+                "high_divergence_percent": args.high_divergence_percent,
+                "min_divergence_coverage": args.min_divergence_coverage,
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

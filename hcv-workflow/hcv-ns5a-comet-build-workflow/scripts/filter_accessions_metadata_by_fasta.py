@@ -9,9 +9,18 @@ from pathlib import Path
 
 
 FASTA_EXTENSIONS = {".fa", ".faa", ".fasta", ".fna", ".fas", ".ffn", ".frn", ".seq"}
-GENOTYPE_SUBTYPE_COLUMNS = ["source_note", "source_organism", "source_strain", "source_serotype"]
-GENOTYPE_TOKEN_RE = re.compile(r"\bgenotype\s*[:=]?\s*([1-8](?:[A-Za-z][A-Za-z0-9]*)?)\b", re.IGNORECASE)
-SUBTYPE_TOKEN_RE = re.compile(r"\bsubtype\s*[:=]?\s*([1-8]?[A-Za-z][A-Za-z0-9]*)\b", re.IGNORECASE)
+GENOTYPE_SUBTYPE_COLUMNS = [
+    "source_note",
+    "source_organism",
+    "source_strain",
+    "source_serotype",
+]
+GENOTYPE_TOKEN_RE = re.compile(
+    r"\bgenotype\s*[:=]?\s*([1-8](?:[A-Za-z][A-Za-z0-9]*)?)\b", re.IGNORECASE
+)
+SUBTYPE_TOKEN_RE = re.compile(
+    r"\bsubtype\s*[:=]?\s*([1-8]?[A-Za-z][A-Za-z0-9]*)\b", re.IGNORECASE
+)
 HCV_SUBTYPE_RE = re.compile(r"\bHCV[-\s]*([1-8][A-Za-z][A-Za-z0-9]*)\b", re.IGNORECASE)
 BARE_GT_SUBTYPE_RE = re.compile(r"^\s*([1-8][A-Za-z][A-Za-z0-9]*)\s*$", re.IGNORECASE)
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -32,14 +41,22 @@ def parse_args() -> argparse.Namespace:
             "to those accessions, and report FASTA accessions missing from the metadata CSV."
         )
     )
-    parser.add_argument("--fasta-dir", required=True, help="Directory containing included RefID FASTA files")
-    parser.add_argument("--metadata-csv", required=True, help="Path to Accessions_metadata.csv")
+    parser.add_argument(
+        "--fasta-dir",
+        required=True,
+        help="Directory containing included RefID FASTA files",
+    )
+    parser.add_argument(
+        "--metadata-csv", required=True, help="Path to Accessions_metadata.csv"
+    )
     parser.add_argument(
         "--output-dir",
         required=True,
         help="Directory for filtered metadata CSV and missing-accession reports",
     )
-    parser.add_argument("--accession-column", default="Accession", help="Metadata CSV accession column")
+    parser.add_argument(
+        "--accession-column", default="Accession", help="Metadata CSV accession column"
+    )
     return parser.parse_args()
 
 
@@ -56,7 +73,9 @@ def collect_fasta_accessions(fasta_dir: Path) -> tuple[list[str], dict[str, list
     files_by_accession: dict[str, list[str]] = {}
     seen: set[str] = set()
 
-    for fasta_path in sorted(path for path in fasta_dir.iterdir() if looks_like_fasta(path)):
+    for fasta_path in sorted(
+        path for path in fasta_dir.iterdir() if looks_like_fasta(path)
+    ):
         with fasta_path.open(encoding="utf-8") as handle:
             for raw_line in handle:
                 line = raw_line.strip()
@@ -80,7 +99,9 @@ def read_metadata_rows(
         reader = csv.DictReader(handle)
         fieldnames = reader.fieldnames or []
         if accession_column not in fieldnames:
-            raise RuntimeError(f"Column '{accession_column}' was not found in {metadata_csv}")
+            raise RuntimeError(
+                f"Column '{accession_column}' was not found in {metadata_csv}"
+            )
         rows = list(reader)
 
     rows_by_accession: dict[str, list[dict[str, str]]] = {}
@@ -190,7 +211,9 @@ def main() -> int:
 
     fasta_accessions, _files_by_accession = collect_fasta_accessions(fasta_dir)
     fasta_accession_set = set(fasta_accessions)
-    fieldnames, metadata_rows, rows_by_accession = read_metadata_rows(metadata_csv, args.accession_column)
+    fieldnames, metadata_rows, rows_by_accession = read_metadata_rows(
+        metadata_csv, args.accession_column
+    )
 
     filtered_rows: list[dict[str, str]] = []
     for row in metadata_rows:
@@ -204,15 +227,25 @@ def main() -> int:
     }
 
     metadata_accessions = set(rows_by_accession)
-    missing_accessions = [accession for accession in fasta_accessions if accession not in metadata_accessions]
+    missing_accessions = [
+        accession
+        for accession in fasta_accessions
+        if accession not in metadata_accessions
+    ]
 
     filtered_csv = output_dir / "included_accessions_metadata.csv"
     genotype_subtype_csv = output_dir / "included_accessions_genotype_subtype.csv"
     missing_txt = output_dir / "missing_accessions_from_metadata.txt"
 
     write_csv(filtered_csv, fieldnames, filtered_rows)
-    genotype_subtype_rows = build_genotype_subtype_rows(filtered_rows, args.accession_column)
-    write_csv(genotype_subtype_csv, ["accession", "genotype", "subtype", "column_name"], genotype_subtype_rows)
+    genotype_subtype_rows = build_genotype_subtype_rows(
+        filtered_rows, args.accession_column
+    )
+    write_csv(
+        genotype_subtype_csv,
+        ["accession", "genotype", "subtype", "column_name"],
+        genotype_subtype_rows,
+    )
     write_lines(missing_txt, missing_accessions)
 
     print(f"input_accession_count={len(fasta_accessions)}")

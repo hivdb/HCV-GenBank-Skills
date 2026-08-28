@@ -32,8 +32,14 @@ def parse_args() -> argparse.Namespace:
             "source-feature qualifiers plus raw structured-comment text to a CSV."
         )
     )
-    parser.add_argument("--matched-fasta-report", default=str(DEFAULT_MATCHED_FASTA_REPORT))
-    parser.add_argument("--genbank-dir", required=True, help="Directory containing local GenBank flatfiles (*.seq)")
+    parser.add_argument(
+        "--matched-fasta-report", default=str(DEFAULT_MATCHED_FASTA_REPORT)
+    )
+    parser.add_argument(
+        "--genbank-dir",
+        required=True,
+        help="Directory containing local GenBank flatfiles (*.seq)",
+    )
     parser.add_argument("--output-csv", default="", help="Output CSV path")
     parser.add_argument(
         "--workers",
@@ -70,10 +76,16 @@ def refid_from_fasta_path(path: Path) -> str:
 
 
 def read_matched_fasta_paths(report_path: Path) -> list[Path]:
-    return [Path(line.strip()).expanduser() for line in report_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        Path(line.strip()).expanduser()
+        for line in report_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
-def collect_accessions_from_fastas(fasta_paths: list[Path]) -> tuple[set[str], dict[str, set[str]], dict[str, set[str]]]:
+def collect_accessions_from_fastas(
+    fasta_paths: list[Path],
+) -> tuple[set[str], dict[str, set[str]], dict[str, set[str]]]:
     accessions: set[str] = set()
     fasta_files_by_accession: dict[str, set[str]] = defaultdict(set)
     refids_by_accession: dict[str, set[str]] = defaultdict(set)
@@ -113,7 +125,9 @@ def accession_from_raw_record(record_text: str) -> str:
     return match.group(1).strip() if match else ""
 
 
-def extract_matching_genbank_records(genbank_dir: Path, target_accessions: set[str], extracted_dir: Path) -> dict[str, str]:
+def extract_matching_genbank_records(
+    genbank_dir: Path, target_accessions: set[str], extracted_dir: Path
+) -> dict[str, str]:
     gb_file_by_accession: dict[str, str] = {}
     for seq_path in sorted(genbank_dir.glob("*.seq")):
         for record_text in iter_raw_genbank_records(seq_path):
@@ -121,7 +135,10 @@ def extract_matching_genbank_records(genbank_dir: Path, target_accessions: set[s
             if accession not in target_accessions:
                 continue
             out_path = extracted_dir / f"{accession}.gb"
-            out_path.write_text(record_text if record_text.endswith("\n") else f"{record_text}\n", encoding="utf-8")
+            out_path.write_text(
+                record_text if record_text.endswith("\n") else f"{record_text}\n",
+                encoding="utf-8",
+            )
             gb_file_by_accession[accession] = str(seq_path.resolve())
     return gb_file_by_accession
 
@@ -216,8 +233,17 @@ def build_rows(
 
 
 def ordered_fieldnames(rows: list[dict[str, str]]) -> list[str]:
-    preferred = ["RefID", "Accession", "definition", "source_feature_present", "StructuredComment", "status"]
-    discovered = sorted({key for row in rows for key in row.keys() if key not in preferred})
+    preferred = [
+        "RefID",
+        "Accession",
+        "definition",
+        "source_feature_present",
+        "StructuredComment",
+        "status",
+    ]
+    discovered = sorted(
+        {key for row in rows for key in row.keys() if key not in preferred}
+    )
     return preferred + discovered
 
 
@@ -232,23 +258,45 @@ def main() -> int:
     args = parse_args()
     matched_fasta_report = Path(args.matched_fasta_report).expanduser()
     genbank_dir = Path(args.genbank_dir).expanduser()
-    output_csv = Path(args.output_csv).expanduser() if args.output_csv else script_temp_dir() / "NS5A_SourceFeatures.csv"
+    output_csv = (
+        Path(args.output_csv).expanduser()
+        if args.output_csv
+        else script_temp_dir() / "NS5A_SourceFeatures.csv"
+    )
     workers = max(1, args.workers)
     if not matched_fasta_report.is_file():
-        raise RuntimeError(f"Matched FASTA report was not found: {matched_fasta_report}")
+        raise RuntimeError(
+            f"Matched FASTA report was not found: {matched_fasta_report}"
+        )
     if not genbank_dir.is_dir():
         raise RuntimeError(f"GenBank directory was not found: {genbank_dir}")
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     if output_csv.exists():
-        print({"output_csv": str(output_csv.resolve()), "status": "skipped_existing_output"})
+        print(
+            {
+                "output_csv": str(output_csv.resolve()),
+                "status": "skipped_existing_output",
+            }
+        )
         return 0
     fasta_paths = read_matched_fasta_paths(matched_fasta_report)
-    target_accessions, fasta_files_by_accession, refids_by_accession = collect_accessions_from_fastas(fasta_paths)
-    extracted_dir = Path(tempfile.mkdtemp(prefix="ns5a_sourcefeatures_", dir=script_temp_dir()))
+    target_accessions, fasta_files_by_accession, refids_by_accession = (
+        collect_accessions_from_fastas(fasta_paths)
+    )
+    extracted_dir = Path(
+        tempfile.mkdtemp(prefix="ns5a_sourcefeatures_", dir=script_temp_dir())
+    )
     try:
-        gb_archive_file_by_accession = extract_matching_genbank_records(genbank_dir, target_accessions, extracted_dir)
+        gb_archive_file_by_accession = extract_matching_genbank_records(
+            genbank_dir, target_accessions, extracted_dir
+        )
         rows, missing_accessions = build_rows(
-            extracted_dir, target_accessions, fasta_files_by_accession, refids_by_accession, gb_archive_file_by_accession, workers
+            extracted_dir,
+            target_accessions,
+            fasta_files_by_accession,
+            refids_by_accession,
+            gb_archive_file_by_accession,
+            workers,
         )
         rows.sort(key=lambda row: (row["RefID"], row["Accession"]))
         fieldnames = ordered_fieldnames(rows)

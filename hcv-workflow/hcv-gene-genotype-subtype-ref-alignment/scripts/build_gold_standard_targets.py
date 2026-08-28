@@ -18,9 +18,19 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build final gold-standard HCV target AA FASTAs from original and tblastn-refined candidates."
     )
-    parser.add_argument("--output-dir", required=True, help="Output directory from build_hcv_gene_subtype_refs.py")
-    parser.add_argument("--gt-gene-aa-json", required=True, help="Path to HCV_GT_Refs_By_Gene_AA.json")
-    parser.add_argument("--subtype-genome-na-json", required=True, help="Path to HCV_Subtype_Refs_By_Genome_NA.json")
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Output directory from build_hcv_gene_subtype_refs.py",
+    )
+    parser.add_argument(
+        "--gt-gene-aa-json", required=True, help="Path to HCV_GT_Refs_By_Gene_AA.json"
+    )
+    parser.add_argument(
+        "--subtype-genome-na-json",
+        required=True,
+        help="Path to HCV_Subtype_Refs_By_Genome_NA.json",
+    )
     parser.add_argument("--original-accept-threshold", type=float, default=0.80)
     parser.add_argument("--refined-accept-threshold", type=float, default=0.80)
     parser.add_argument("--rescued-accept-threshold", type=float, default=0.70)
@@ -33,7 +43,11 @@ def load_json(path: Path) -> Any:
 
 
 def normalize_nt(sequence: str) -> str:
-    return "".join(base for base in sequence.upper().replace("U", "T") if base in {"A", "C", "G", "T", "N"})
+    return "".join(
+        base
+        for base in sequence.upper().replace("U", "T")
+        if base in {"A", "C", "G", "T", "N"}
+    )
 
 
 def parse_gt_from_name(name: str) -> str:
@@ -49,7 +63,9 @@ def build_gt_refs(rows: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
         gene = str(row["abstractGene"])
         if gene not in {"NS3", "NS5A_NTD", "NS5B"}:
             continue
-        refs[(parse_gt_from_name(str(row["name"])), gene)] = str(row["refSequence"]).strip().upper()
+        refs[(parse_gt_from_name(str(row["name"])), gene)] = (
+            str(row["refSequence"]).strip().upper()
+        )
     return refs
 
 
@@ -86,7 +102,7 @@ def write_fasta(path: Path, entries: list[tuple[str, str]]) -> None:
         for header, sequence in entries:
             handle.write(f">{header}\n")
             for start in range(0, len(sequence), 70):
-                handle.write(sequence[start:start + 70] + "\n")
+                handle.write(sequence[start : start + 70] + "\n")
 
 
 def run_tblastn(query_aa: str, subject_nt: str, tag: str) -> list[dict[str, Any]]:
@@ -99,9 +115,23 @@ def run_tblastn(query_aa: str, subject_nt: str, tag: str) -> list[dict[str, Any]
         write_fasta(subject_path, [(tag, subject_nt)])
         subprocess.run(
             [
-                "tblastn", "-query", str(query_path), "-subject", str(subject_path),
-                "-seg", "no", "-comp_based_stats", "F", "-max_hsps", "50", "-evalue", "1e-3",
-                "-outfmt", OUTFMT, "-out", str(out_path),
+                "tblastn",
+                "-query",
+                str(query_path),
+                "-subject",
+                str(subject_path),
+                "-seg",
+                "no",
+                "-comp_based_stats",
+                "F",
+                "-max_hsps",
+                "50",
+                "-evalue",
+                "1e-3",
+                "-outfmt",
+                OUTFMT,
+                "-out",
+                str(out_path),
             ],
             check=True,
             stdout=subprocess.DEVNULL,
@@ -113,11 +143,21 @@ def run_tblastn(query_aa: str, subject_nt: str, tag: str) -> list[dict[str, Any]
             if not line.strip():
                 continue
             p = line.split("\t")
-            hits.append({
-                "qlen": int(p[2]), "qstart": int(p[3]), "qend": int(p[4]),
-                "sstart": int(p[5]), "send": int(p[6]), "length": int(p[7]),
-                "nident": int(p[8]), "bitscore": float(p[13]), "qseq": p[14], "sseq": p[15], "frames": p[16],
-            })
+            hits.append(
+                {
+                    "qlen": int(p[2]),
+                    "qstart": int(p[3]),
+                    "qend": int(p[4]),
+                    "sstart": int(p[5]),
+                    "send": int(p[6]),
+                    "length": int(p[7]),
+                    "nident": int(p[8]),
+                    "bitscore": float(p[13]),
+                    "qseq": p[14],
+                    "sseq": p[15],
+                    "frames": p[16],
+                }
+            )
         return hits
 
 
@@ -152,7 +192,9 @@ def choose_hsp_chain(hsps: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(reversed(chain))
 
 
-def reconstruct_target(query_aa: str, chain: list[dict[str, Any]]) -> tuple[str, float, float, str]:
+def reconstruct_target(
+    query_aa: str, chain: list[dict[str, Any]]
+) -> tuple[str, float, float, str]:
     qlen = len(query_aa)
     target = ["X"] * qlen
     match_count = 0
@@ -170,8 +212,14 @@ def reconstruct_target(query_aa: str, chain: list[dict[str, Any]]) -> tuple[str,
                         match_count += 1
                 qpos += 1
     target_seq = "".join(target)
-    return target_seq, match_count / qlen if qlen else 0.0, len(covered) / qlen if qlen else 0.0, "; ".join(
-        f"q{h['qstart']}-{h['qend']}:s{h['sstart']}-{h['send']}:{h['frames']}:nid{h['nident']}" for h in chain
+    return (
+        target_seq,
+        match_count / qlen if qlen else 0.0,
+        len(covered) / qlen if qlen else 0.0,
+        "; ".join(
+            f"q{h['qstart']}-{h['qend']}:s{h['sstart']}-{h['send']}:{h['frames']}:nid{h['nident']}"
+            for h in chain
+        ),
     )
 
 
@@ -180,11 +228,16 @@ def main() -> int:
     outdir = Path(args.output_dir).expanduser()
     summary = load_json(outdir / "summary.json")
     gt_refs = build_gt_refs(load_json(Path(args.gt_gene_aa_json).expanduser()))
-    subtype_rows = {str(r["accession"]): r for r in load_json(Path(args.subtype_genome_na_json).expanduser())}
+    subtype_rows = {
+        str(r["accession"]): r
+        for r in load_json(Path(args.subtype_genome_na_json).expanduser())
+    }
 
     original_aa = {}
     for name in ["ns3", "ns5a_ntd", "ns5b"]:
-        for header, seq in read_fasta(outdir / f"hcv_subtype_gene_refs_{name}_aa.fasta").items():
+        for header, seq in read_fasta(
+            outdir / f"hcv_subtype_gene_refs_{name}_aa.fasta"
+        ).items():
             meta = parse_header(header)
             original_aa[(meta["gene"], meta["accession"])] = (header, seq)
 
@@ -204,15 +257,24 @@ def main() -> int:
         final_score = original_score
         coverage = 1.0
         chain_ranges = ""
-        status = "accepted_original" if original_score >= args.original_accept_threshold else "manual_review"
+        status = (
+            "accepted_original"
+            if original_score >= args.original_accept_threshold
+            else "manual_review"
+        )
 
         if original_score < args.original_accept_threshold:
             query_aa = gt_refs[(genotype, gene)]
             subject_nt = normalize_nt(str(subtype_rows[accession]["sequence"]))
-            chain = choose_hsp_chain(run_tblastn(query_aa, subject_nt, f"{gene}_{accession}"))
-            refined_seq, refined_score, coverage, chain_ranges = reconstruct_target(query_aa, chain)
+            chain = choose_hsp_chain(
+                run_tblastn(query_aa, subject_nt, f"{gene}_{accession}")
+            )
+            refined_seq, refined_score, coverage, chain_ranges = reconstruct_target(
+                query_aa, chain
+            )
             if refined_score >= args.refined_accept_threshold or (
-                refined_score >= args.rescued_accept_threshold and refined_score - original_score >= args.min_improvement
+                refined_score >= args.rescued_accept_threshold
+                and refined_score - original_score >= args.min_improvement
             ):
                 method = "tblastn_refined"
                 final_seq = refined_seq
@@ -238,7 +300,12 @@ def main() -> int:
         decisions.append(record)
 
         if status.startswith("accepted"):
-            accepted_by_gene[gene].append((header + f"|selection={method}|final_match={final_score:.3f}", final_seq))
+            accepted_by_gene[gene].append(
+                (
+                    header + f"|selection={method}|final_match={final_score:.3f}",
+                    final_seq,
+                )
+            )
         else:
             review.append(record)
 
@@ -247,35 +314,58 @@ def main() -> int:
         write_fasta(outdir / f"gold_standard_{slug}_aa.fasta", accepted_by_gene[gene])
 
     fieldnames = [
-        "gene", "genotype", "subtype", "genotype_name", "accession", "author_year",
-        "status", "method", "original_match_proportion", "final_match_proportion",
-        "query_coverage_proportion", "chain_ranges",
+        "gene",
+        "genotype",
+        "subtype",
+        "genotype_name",
+        "accession",
+        "author_year",
+        "status",
+        "method",
+        "original_match_proportion",
+        "final_match_proportion",
+        "query_coverage_proportion",
+        "chain_ranges",
     ]
-    with (outdir / "gold_standard_selection_table.csv").open("w", encoding="utf-8", newline="") as handle:
+    with (outdir / "gold_standard_selection_table.csv").open(
+        "w", encoding="utf-8", newline=""
+    ) as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for row in decisions:
             writer.writerow(row)
 
-    with (outdir / "gold_standard_manual_review.csv").open("w", encoding="utf-8", newline="") as handle:
+    with (outdir / "gold_standard_manual_review.csv").open(
+        "w", encoding="utf-8", newline=""
+    ) as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for row in review:
             writer.writerow(row)
 
     payload = {
-        "accepted_original": sum(1 for r in decisions if r["status"] == "accepted_original"),
-        "accepted_tblastn_refined": sum(1 for r in decisions if r["status"] == "accepted_tblastn_refined"),
+        "accepted_original": sum(
+            1 for r in decisions if r["status"] == "accepted_original"
+        ),
+        "accepted_tblastn_refined": sum(
+            1 for r in decisions if r["status"] == "accepted_tblastn_refined"
+        ),
         "manual_review": len(review),
-        "selection_table": str((outdir / "gold_standard_selection_table.csv").resolve()),
-        "manual_review_table": str((outdir / "gold_standard_manual_review.csv").resolve()),
+        "selection_table": str(
+            (outdir / "gold_standard_selection_table.csv").resolve()
+        ),
+        "manual_review_table": str(
+            (outdir / "gold_standard_manual_review.csv").resolve()
+        ),
         "gold_standard_fastas": {
             "NS3": str((outdir / "gold_standard_ns3_aa.fasta").resolve()),
             "NS5A_NTD": str((outdir / "gold_standard_ns5a_ntd_aa.fasta").resolve()),
             "NS5B": str((outdir / "gold_standard_ns5b_aa.fasta").resolve()),
         },
     }
-    (outdir / "gold_standard_summary.json").write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    (outdir / "gold_standard_summary.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+    )
     print(json.dumps(payload, indent=2, ensure_ascii=True))
     return 0
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Export Original_NS5B rows whose Status begins with include or exactly Short."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,7 +12,12 @@ from openpyxl import Workbook, load_workbook
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = REPO_ROOT / "HCVData" / "HCV_BlastHists_202604_data.xlsx"
-DEFAULT_OUTPUT = REPO_ROOT / "HCVData" / "Ref-selection" / "IncludedNS5BRefs_StatusIncludeOrShort.xlsx"
+DEFAULT_OUTPUT = (
+    REPO_ROOT
+    / "HCVData"
+    / "Ref-selection"
+    / "IncludedNS5BRefs_StatusIncludeOrShort.xlsx"
+)
 
 
 def keep_status(value: object) -> bool:
@@ -39,7 +45,9 @@ def main() -> None:
             continue
         destination_row = output_sheet.max_row + 1 if row[0].row != 1 else 1
         for cell in row:
-            copied = output_sheet.cell(row=destination_row, column=cell.column, value=cell.value)
+            copied = output_sheet.cell(
+                row=destination_row, column=cell.column, value=cell.value
+            )
             if cell.has_style:
                 copied._style = copy(cell._style)
             copied.number_format = cell.number_format

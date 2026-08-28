@@ -18,7 +18,10 @@ from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from build_ns5a_combined_ras_profiles import read_profile_workbook, write_combined_workbook
+from build_ns5a_combined_ras_profiles import (
+    read_profile_workbook,
+    write_combined_workbook,
+)
 
 
 DEFAULT_RESISTANCE_POSITIONS = [24, 26, 28, 29, 30, 31, 32, 38, 58, 62, 92, 93]
@@ -47,7 +50,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5A_STEP_OUTPUT_DIR", "outputs/comet-NS5A-all-ras/temp")) / Path(__file__).stem
+    path = (
+        Path(os.environ.get("NS5A_STEP_OUTPUT_DIR", "outputs/comet-NS5A-all-ras/temp"))
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -65,7 +71,10 @@ def parse_positions(raw: str) -> list[int]:
 
 
 def sanitize_label(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-") or "job"
+    return (
+        "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-")
+        or "job"
+    )
 
 
 def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
@@ -123,9 +132,13 @@ def load_subtype_profile_rows(
     dict[str, dict[str, dict[int, int]]],
 ]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    profile_rows: dict[str, dict[str, dict[int, list[tuple[str, float]]]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    profile_rows: dict[str, dict[str, dict[int, list[tuple[str, float]]]]] = (
+        defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    )
     subtype_counts: dict[str, dict[str, int]] = defaultdict(dict)
-    position_coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(lambda: defaultdict(dict))
+    position_coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
     wanted = set(positions)
     for sheet_name in wb.sheetnames:
         gt = sheet_name.replace("GT", "")
@@ -164,12 +177,17 @@ def build_grid(
         for pos in positions:
             variants = [
                 (aa, format_freq(pct))
-                for aa, pct in sorted(profile_rows[gt][subtype].get(pos, []), key=lambda item: (-item[1], item[0]))
+                for aa, pct in sorted(
+                    profile_rows[gt][subtype].get(pos, []),
+                    key=lambda item: (-item[1], item[0]),
+                )
                 if aa not in EXCLUDED_AAS and pct >= FREQUENCY_THRESHOLD_PERCENT
             ]
             pos_variants[pos] = variants
 
-        coverage_values = [position_coverage[gt][subtype].get(pos, 0) for pos in positions]
+        coverage_values = [
+            position_coverage[gt][subtype].get(pos, 0) for pos in positions
+        ]
         row: list[GridCell] = [
             f"GT{gt}_{subtype} ({subtype_counts[gt][subtype]}, {format_coverage_range(coverage_values)})",
         ]
@@ -189,7 +207,9 @@ def write_excel(path: Path, grid: list[list[GridCell]], positions: list[int]) ->
     for row_idx, row in enumerate(grid, start=1):
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx)
-            cell.value = variants_to_rich_text(value) if isinstance(value, list) else value
+            cell.value = (
+                variants_to_rich_text(value) if isinstance(value, list) else value
+            )
         first = row[0]
         if isinstance(first, str) and first.startswith("GT"):
             for cell in ws[row_idx]:
@@ -203,9 +223,23 @@ def write_excel(path: Path, grid: list[list[GridCell]], positions: list[int]) ->
     wb.save(path)
 
 
-def grid_to_profile_rows(grid: list[list[GridCell]]) -> tuple[list[object], list[list[object]]]:
-    headers = list(grid[0]); headers[0] = None
-    rows = [[row[0], *["".join(f"{aa}{pct}" for aa, pct in value) if isinstance(value, list) else value for value in row[1:]]] for row in grid[1:]]
+def grid_to_profile_rows(
+    grid: list[list[GridCell]],
+) -> tuple[list[object], list[list[object]]]:
+    headers = list(grid[0])
+    headers[0] = None
+    rows = [
+        [
+            row[0],
+            *[
+                "".join(f"{aa}{pct}" for aa, pct in value)
+                if isinstance(value, list)
+                else value
+                for value in row[1:]
+            ],
+        ]
+        for row in grid[1:]
+    ]
     return headers, rows
 
 
@@ -217,19 +251,31 @@ def main() -> int:
     positions = parse_positions(args.positions)
     script_temp_dir()
 
-    profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(subtype_profile_workbook, positions)
+    profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(
+        subtype_profile_workbook, positions
+    )
     grid = build_grid(profile_rows, subtype_counts, position_coverage, positions)
     headers, subtype_rows = grid_to_profile_rows(grid)
-    gt_headers, gt_rows = read_profile_workbook(Path(args.gt_ras_profile_workbook).expanduser())
+    gt_headers, gt_rows = read_profile_workbook(
+        Path(args.gt_ras_profile_workbook).expanduser()
+    )
     if headers != gt_headers:
-        raise RuntimeError("GT and subtype RAS profile workbooks have different position rows")
+        raise RuntimeError(
+            "GT and subtype RAS profile workbooks have different position rows"
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     excel_path = output_dir / "NS5A_Subtype_RAS_Profiles.xlsx"
     explicit_excel_path = output_dir / "NS5A_Subtype_RAS_Profiles_Explicit_AA.xlsx"
     write_excel(explicit_excel_path, grid, positions)
     genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
-        excel_path, None, headers, gt_rows, subtype_rows, FREQUENCY_THRESHOLD_PERCENT, include_all_rows=True
+        excel_path,
+        None,
+        headers,
+        gt_rows,
+        subtype_rows,
+        FREQUENCY_THRESHOLD_PERCENT,
+        include_all_rows=True,
     )
 
     summary = {

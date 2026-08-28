@@ -56,7 +56,8 @@ def resolve_repo_path(value: str) -> Path:
 
 def iter_fasta_paths(fasta_dir: Path) -> list[Path]:
     return sorted(
-        path for path in fasta_dir.iterdir()
+        path
+        for path in fasta_dir.iterdir()
         if path.is_file() and path.suffix.lower() in FASTA_EXTENSIONS
     )
 
@@ -80,7 +81,9 @@ def collect_sequences(fasta_paths: list[Path]) -> dict[str, str]:
             if not accession:
                 continue
             if accession in sequences:
-                raise RuntimeError(f"Duplicate accession across FASTA files or records: {accession}")
+                raise RuntimeError(
+                    f"Duplicate accession across FASTA files or records: {accession}"
+                )
             normalized = normalize_sequence(str(record.seq))
             if normalized:
                 sequences[accession] = normalized
@@ -164,7 +167,9 @@ def merge_hits(*hit_maps: dict[str, set[str]]) -> dict[str, set[str]]:
     return merged
 
 
-def detect_gene_hits(sequences: dict[str, str], reference_fasta: Path, temp_dir: Path) -> dict[str, set[str]]:
+def detect_gene_hits(
+    sequences: dict[str, str], reference_fasta: Path, temp_dir: Path
+) -> dict[str, set[str]]:
     protein_entries: list[tuple[str, str]] = []
     nucleotide_entries: list[tuple[str, str]] = []
 
@@ -186,7 +191,9 @@ def detect_gene_hits(sequences: dict[str, str], reference_fasta: Path, temp_dir:
     return merge_hits(protein_hits, nucleotide_hits)
 
 
-def write_csv(path: Path, accessions: list[str], hits_by_accession: dict[str, set[str]]) -> None:
+def write_csv(
+    path: Path, accessions: list[str], hits_by_accession: dict[str, set[str]]
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["Accession", "NS3", "NS5A", "NS5B"])
@@ -221,8 +228,12 @@ def main() -> int:
     sequences = collect_sequences(fasta_paths)
     accessions = sorted(sequences)
 
-    with tempfile.TemporaryDirectory(prefix="detect_accession_hcv_genes_") as temp_dir_text:
-        hits_by_accession = detect_gene_hits(sequences, reference_fasta, Path(temp_dir_text))
+    with tempfile.TemporaryDirectory(
+        prefix="detect_accession_hcv_genes_"
+    ) as temp_dir_text:
+        hits_by_accession = detect_gene_hits(
+            sequences, reference_fasta, Path(temp_dir_text)
+        )
 
     write_csv(output_csv, accessions, hits_by_accession)
     print(output_csv.relative_to(repo_root()))

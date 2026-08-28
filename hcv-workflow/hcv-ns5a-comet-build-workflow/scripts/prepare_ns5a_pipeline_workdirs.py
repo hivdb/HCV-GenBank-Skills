@@ -48,7 +48,9 @@ def recreate_directory(path: Path) -> Path:
     validate_directory(resolved)
     if resolved.exists():
         if not resolved.is_dir():
-            raise RuntimeError(f"Expected a directory to recreate, found a file: {resolved}")
+            raise RuntimeError(
+                f"Expected a directory to recreate, found a file: {resolved}"
+            )
         shutil.rmtree(resolved)
     resolved.mkdir(parents=True)
     return resolved
@@ -58,7 +60,9 @@ def remove_file(path: Path) -> Path:
     resolved = path.expanduser().resolve()
     if resolved.exists():
         if not resolved.is_file():
-            raise RuntimeError(f"Expected a file to remove, found a directory: {resolved}")
+            raise RuntimeError(
+                f"Expected a file to remove, found a directory: {resolved}"
+            )
         resolved.unlink()
     return resolved
 

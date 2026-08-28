@@ -40,22 +40,35 @@ def load_priority_subtypes(path: Path) -> dict[str, tuple[str, str, str, str, st
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
             if accession:
-                assignments[accession.split(".", 1)[0]] = (str(row.get("RefID") or "").strip(), str(row.get("RefName") or "").strip(), accession, genotype, subtype)
+                assignments[accession.split(".", 1)[0]] = (
+                    str(row.get("RefID") or "").strip(),
+                    str(row.get("RefName") or "").strip(),
+                    accession,
+                    genotype,
+                    subtype,
+                )
     return assignments
 
 
 def main() -> int:
     args = parse_args()
     assignments = load_subtypes(Path(args.comet_subtype_csv))
-    noncomet_priority_subtypes = load_priority_subtypes(Path(args.priority_assignments_csv))
+    noncomet_priority_subtypes = load_priority_subtypes(
+        Path(args.priority_assignments_csv)
+    )
     workbook = load_workbook(args.genotype_workbook, read_only=True, data_only=True)
     sheet = workbook[workbook.sheetnames[0]]
-    header = [str(value) if value is not None else "" for value in next(sheet.iter_rows(values_only=True))]
+    header = [
+        str(value) if value is not None else ""
+        for value in next(sheet.iter_rows(values_only=True))
+    ]
     index = {name: position for position, name in enumerate(header)}
     required = ["RefID", "RefName", "GenBankAccession", "BestGT"]
     missing = [name for name in required if name not in index]
     if missing:
-        raise RuntimeError(f"Columns missing from {args.genotype_workbook}: {', '.join(missing)}")
+        raise RuntimeError(
+            f"Columns missing from {args.genotype_workbook}: {', '.join(missing)}"
+        )
 
     rows: list[tuple[str, str, str, str, str, str, str]] = []
     seen_accessions: set[str] = set()
@@ -63,32 +76,55 @@ def main() -> int:
     for values in sheet.iter_rows(min_row=2, values_only=True):
         accession = str(values[index["GenBankAccession"]]).strip()
         accession_key = accession.split(".", 1)[0]
-        subtype = assignments.get(accession) or assignments.get(accession.split(".", 1)[0])
+        subtype = assignments.get(accession) or assignments.get(
+            accession.split(".", 1)[0]
+        )
         if subtype:
             genotype = str(values[index["BestGT"]]).strip()
             if accession_key in noncomet_priority_subtypes:
                 priority_assignment = noncomet_priority_subtypes[accession_key]
                 genotype, subtype = priority_assignment[3], priority_assignment[4]
-                source, metadata_column = "Non-Comet priority subtype override", "Non-Comet ClosestSubtype"
+                source, metadata_column = (
+                    "Non-Comet priority subtype override",
+                    "Non-Comet ClosestSubtype",
+                )
                 override_count += 1
             else:
                 source, metadata_column = "Comet", "Comet NS5B"
-            rows.append((
-                str(values[index["RefID"]]).strip(),
-                str(values[index["RefName"]]).strip(),
-                accession,
-                genotype,
-                subtype,
-                source,
-                metadata_column,
-            ))
+            rows.append(
+                (
+                    str(values[index["RefID"]]).strip(),
+                    str(values[index["RefName"]]).strip(),
+                    accession,
+                    genotype,
+                    subtype,
+                    source,
+                    metadata_column,
+                )
+            )
             seen_accessions.add(accession_key)
     workbook.close()
 
     addition_count = 0
-    for accession_key, (refid, refname, accession, genotype, subtype) in noncomet_priority_subtypes.items():
+    for accession_key, (
+        refid,
+        refname,
+        accession,
+        genotype,
+        subtype,
+    ) in noncomet_priority_subtypes.items():
         if accession_key not in seen_accessions:
-            rows.append((refid, refname, accession, genotype, subtype, "Non-Comet priority subtype addition", "Non-Comet ClosestSubtype"))
+            rows.append(
+                (
+                    refid,
+                    refname,
+                    accession,
+                    genotype,
+                    subtype,
+                    "Non-Comet priority subtype addition",
+                    "Non-Comet ClosestSubtype",
+                )
+            )
             addition_count += 1
 
     output_dir = Path(args.output_dir)
@@ -97,14 +133,30 @@ def main() -> int:
     output = Workbook()
     sheet = output.active
     sheet.title = "NS5B_Subtype_Comet"
-    sheet.append([
-        "RefID", "RefName", "AccessionID", "ClosestGT", "ClosestSubtype",
-        "ClosestSubtypeAssignmentSource", "ClosestSubtypeMetadataColumn",
-    ])
+    sheet.append(
+        [
+            "RefID",
+            "RefName",
+            "AccessionID",
+            "ClosestGT",
+            "ClosestSubtype",
+            "ClosestSubtypeAssignmentSource",
+            "ClosestSubtypeMetadataColumn",
+        ]
+    )
     for row in rows:
         sheet.append(row)
     output.save(output_path)
-    print(json.dumps({"output_workbook": str(output_path.resolve()), "row_count": len(rows), "noncomet_priority_subtype_override_count": override_count, "noncomet_priority_subtype_addition_count": addition_count}))
+    print(
+        json.dumps(
+            {
+                "output_workbook": str(output_path.resolve()),
+                "row_count": len(rows),
+                "noncomet_priority_subtype_override_count": override_count,
+                "noncomet_priority_subtype_addition_count": addition_count,
+            }
+        )
+    )
     return 0
 
 

@@ -53,7 +53,9 @@ def reference_aa_by_gene(gt_reference_fasta: Path) -> dict[tuple[str, str], str]
             continue
         genotype, gene = match.groups()
         aa = str(Seq(nucleotide_sequence).translate()).rstrip("*")
-        refs[(genotype, "NS5A_NTD" if gene == "NS5A" else gene)] = aa[:213] if gene == "NS5A" else aa
+        refs[(genotype, "NS5A_NTD" if gene == "NS5A" else gene)] = (
+            aa[:213] if gene == "NS5A" else aa
+        )
     return refs
 
 
@@ -75,7 +77,9 @@ def extract_gene(reference_aa: str, polyprotein_aa: str) -> str:
     start, end = int(alignment.coordinates[1][0]), int(alignment.coordinates[1][-1])
     sequence = polyprotein_aa[start:end]
     if len(sequence) < len(reference_aa) * 0.8:
-        raise ValueError(f"Low-coverage extraction: {len(sequence)} AA for a {len(reference_aa)} AA reference")
+        raise ValueError(
+            f"Low-coverage extraction: {len(sequence)} AA for a {len(reference_aa)} AA reference"
+        )
     return sequence
 
 
@@ -91,7 +95,8 @@ def main() -> int:
     for subtype, (genotype, accession) in ADDITIONS.items():
         polyprotein = polyprotein_translation(args.genbank_dir / f"{accession}.gb")
         additions[subtype] = {
-            gene: extract_gene(gene_refs[(genotype, gene)], polyprotein) for gene in GENES
+            gene: extract_gene(gene_refs[(genotype, gene)], polyprotein)
+            for gene in GENES
         }
 
     for gene in GENES:
@@ -105,7 +110,11 @@ def main() -> int:
                 .replace("genotypeName=Genotype6xa5", "genotypeName=Genotype6xa")
             )
             records.append((header, sequence))
-        existing = {header.split("|accession=")[1].split("|")[0] for header, _ in records if "|accession=" in header}
+        existing = {
+            header.split("|accession=")[1].split("|")[0]
+            for header, _ in records
+            if "|accession=" in header
+        }
         for subtype, (genotype, accession) in ADDITIONS.items():
             if accession not in existing:
                 header = (
@@ -113,7 +122,12 @@ def main() -> int:
                     f"|genotypeName=Genotype{subtype}|source=ICTV_Jan2026"
                 )
                 records.append((header, additions[subtype][gene]))
-        records.sort(key=lambda item: (int(re.search(r"genotype=(\d+)", item[0]).group(1)), item[0]))
+        records.sort(
+            key=lambda item: (
+                int(re.search(r"genotype=(\d+)", item[0]).group(1)),
+                item[0],
+            )
+        )
         write_fasta(path, records)
         print(path)
     return 0

@@ -20,8 +20,16 @@ def display_path(path: Path) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--matched-files", required=True, help="Newline-delimited matched FASTA file list")
-    parser.add_argument("--output-dir", required=True, help="Empty staging directory for copied FASTA files")
+    parser.add_argument(
+        "--matched-files",
+        required=True,
+        help="Newline-delimited matched FASTA file list",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Empty staging directory for copied FASTA files",
+    )
     return parser.parse_args()
 
 
@@ -41,7 +49,9 @@ def main() -> int:
     matched_files_path = Path(args.matched_files).expanduser().resolve()
     output_dir = Path(args.output_dir).expanduser().resolve()
     if not matched_files_path.is_file():
-        raise RuntimeError(f"Matched FASTA file list was not found: {matched_files_path}")
+        raise RuntimeError(
+            f"Matched FASTA file list was not found: {matched_files_path}"
+        )
     if not output_dir.is_dir():
         raise RuntimeError(f"Staging directory was not found: {output_dir}")
 

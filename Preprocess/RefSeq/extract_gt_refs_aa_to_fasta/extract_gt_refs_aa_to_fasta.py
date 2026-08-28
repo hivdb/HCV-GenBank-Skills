@@ -70,7 +70,14 @@ def load_entries(json_path: Path, ns5a_label: str) -> list[tuple[int, str, str]]
         seen.add(key)
         entries.append((genotype, header_gene, sequence))
 
-    entries.sort(key=lambda item: (item[0], TARGET_GENES.index("NS5A_NTD" if item[1] in {"NS5A", "NS5A_NTD"} else item[1])))
+    entries.sort(
+        key=lambda item: (
+            item[0],
+            TARGET_GENES.index(
+                "NS5A_NTD" if item[1] in {"NS5A", "NS5A_NTD"} else item[1]
+            ),
+        )
+    )
     return entries
 
 

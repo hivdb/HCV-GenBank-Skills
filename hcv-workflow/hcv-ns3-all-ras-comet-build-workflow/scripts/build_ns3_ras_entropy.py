@@ -11,16 +11,42 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font
 
 
-RESISTANCE_POSITIONS = [36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175]
+RESISTANCE_POSITIONS = [
+    36,
+    41,
+    43,
+    54,
+    55,
+    56,
+    80,
+    122,
+    155,
+    156,
+    158,
+    166,
+    168,
+    170,
+    175,
+]
 EXCLUDED_AAS = {"X", "*"}
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Calculate NS3 RAS-position Shannon entropy by genotype and subtype.")
-    parser.add_argument("--gt-profile-workbook", default="outputs/NS3_GT_CompleteProfiles_TabsPerGT.xlsx")
-    parser.add_argument("--subtype-profile-workbook", default="outputs/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx")
+    parser = argparse.ArgumentParser(
+        description="Calculate NS3 RAS-position Shannon entropy by genotype and subtype."
+    )
+    parser.add_argument(
+        "--gt-profile-workbook",
+        default="outputs/NS3_GT_CompleteProfiles_TabsPerGT.xlsx",
+    )
+    parser.add_argument(
+        "--subtype-profile-workbook",
+        default="outputs/NS3_Subtype_CompleteProfiles_TabsPerGT.xlsx",
+    )
     parser.add_argument("--gt-output-xlsx", default="outputs/NS3_GT_RAS_Entropy.xlsx")
-    parser.add_argument("--subtype-output-xlsx", default="outputs/NS3_Subtype_RAS_Entropy.xlsx")
+    parser.add_argument(
+        "--subtype-output-xlsx", default="outputs/NS3_Subtype_RAS_Entropy.xlsx"
+    )
     return parser.parse_args()
 
 
@@ -60,19 +86,33 @@ def subtype_sort_key(label: str) -> tuple[int, str]:
     return 999, label
 
 
-def load_gt_counts(workbook_path: Path) -> tuple[dict[str, dict[int, dict[str, int]]], dict[str, dict[int, int]]]:
+def load_gt_counts(
+    workbook_path: Path,
+) -> tuple[dict[str, dict[int, dict[str, int]]], dict[str, dict[int, int]]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    counts: dict[str, dict[int, dict[str, int]]] = defaultdict(lambda: defaultdict(dict))
+    counts: dict[str, dict[int, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
     coverage: dict[str, dict[int, int]] = defaultdict(dict)
     for sheet_name in wb.sheetnames:
         gt = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         index = {name: idx for idx, name in enumerate(header)}
-        required = ["NS3Position", "NumSeqsIncludingPosition", "AminoAcid", "CountWithAA"]
+        required = [
+            "NS3Position",
+            "NumSeqsIncludingPosition",
+            "AminoAcid",
+            "CountWithAA",
+        ]
         missing = [name for name in required if name not in index]
         if missing:
-            raise RuntimeError(f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}"
+            )
         for row in ws.iter_rows(min_row=2, values_only=True):
             position = int(row[index["NS3Position"]])
             if position not in RESISTANCE_POSITIONS:
@@ -80,7 +120,9 @@ def load_gt_counts(workbook_path: Path) -> tuple[dict[str, dict[int, dict[str, i
             aa = str(row[index["AminoAcid"]]).strip().upper()
             if aa in EXCLUDED_AAS:
                 continue
-            counts[gt][position][aa] = counts[gt][position].get(aa, 0) + int(row[index["CountWithAA"]])
+            counts[gt][position][aa] = counts[gt][position].get(aa, 0) + int(
+                row[index["CountWithAA"]]
+            )
             coverage[gt][position] = int(row[index["NumSeqsIncludingPosition"]])
     wb.close()
     return counts, coverage
@@ -88,19 +130,37 @@ def load_gt_counts(workbook_path: Path) -> tuple[dict[str, dict[int, dict[str, i
 
 def load_subtype_counts(
     workbook_path: Path,
-) -> tuple[dict[str, dict[str, dict[int, dict[str, int]]]], dict[str, dict[str, dict[int, int]]]]:
+) -> tuple[
+    dict[str, dict[str, dict[int, dict[str, int]]]],
+    dict[str, dict[str, dict[int, int]]],
+]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    counts: dict[str, dict[str, dict[int, dict[str, int]]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-    coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(lambda: defaultdict(dict))
+    counts: dict[str, dict[str, dict[int, dict[str, int]]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(dict))
+    )
+    coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
     for sheet_name in wb.sheetnames:
         gt = sheet_name.strip()
         ws = wb[sheet_name]
-        header = [str(value) if value is not None else "" for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        header = [
+            str(value) if value is not None else ""
+            for value in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        ]
         index = {name: idx for idx, name in enumerate(header)}
-        required = ["Subtype", "NS3Position", "NumSeqsIncludingPosition", "AminoAcid", "CountWithAA"]
+        required = [
+            "Subtype",
+            "NS3Position",
+            "NumSeqsIncludingPosition",
+            "AminoAcid",
+            "CountWithAA",
+        ]
         missing = [name for name in required if name not in index]
         if missing:
-            raise RuntimeError(f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"{workbook_path}:{sheet_name} is missing columns: {', '.join(missing)}"
+            )
         for row in ws.iter_rows(min_row=2, values_only=True):
             subtype = str(row[index["Subtype"]]).strip()
             position = int(row[index["NS3Position"]])
@@ -110,8 +170,12 @@ def load_subtype_counts(
             if aa in EXCLUDED_AAS:
                 continue
             subtype_counts = counts[gt][subtype][position]
-            subtype_counts[aa] = subtype_counts.get(aa, 0) + int(row[index["CountWithAA"]])
-            coverage[gt][subtype][position] = int(row[index["NumSeqsIncludingPosition"]])
+            subtype_counts[aa] = subtype_counts.get(aa, 0) + int(
+                row[index["CountWithAA"]]
+            )
+            coverage[gt][subtype][position] = int(
+                row[index["NumSeqsIncludingPosition"]]
+            )
     wb.close()
     return counts, coverage
 
@@ -150,7 +214,9 @@ def write_gt_entropy(output_path: Path, source_workbook: Path) -> None:
     for gt in sorted(counts, key=genotype_sort_key):
         row = [gt]
         for pos in RESISTANCE_POSITIONS:
-            row.append(round_sig(shannon_entropy(list(counts[gt].get(pos, {}).values()))))
+            row.append(
+                round_sig(shannon_entropy(list(counts[gt].get(pos, {}).values())))
+            )
         ws.append(row)
     style_sheet(ws)
 
@@ -169,7 +235,11 @@ def write_subtype_entropy(output_path: Path, source_workbook: Path) -> None:
         for subtype in sorted(counts[gt], key=subtype_sort_key):
             row = [subtype]
             for pos in RESISTANCE_POSITIONS:
-                row.append(round_sig(shannon_entropy(list(counts[gt][subtype].get(pos, {}).values()))))
+                row.append(
+                    round_sig(
+                        shannon_entropy(list(counts[gt][subtype].get(pos, {}).values()))
+                    )
+                )
             ws.append(row)
         style_sheet(ws)
 

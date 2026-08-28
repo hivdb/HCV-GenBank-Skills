@@ -61,7 +61,9 @@ def read_fasta(path: Path) -> list[tuple[str, str]]:
     return records
 
 
-def aligned_strings(alignment: Align.Alignment, target: str, query: str) -> tuple[str, str]:
+def aligned_strings(
+    alignment: Align.Alignment, target: str, query: str
+) -> tuple[str, str]:
     """Return Biopython's gapped target and query rows.
 
     ``Alignment.coordinates`` can combine an indel and matching residues in a
@@ -94,19 +96,25 @@ def process_gene(reference_dir: Path, gene: str, suffix: str) -> tuple[Path, int
     aligner = build_aligner()
 
     with output_path.open("w", encoding="utf-8") as handle:
-        for pair_index, (query_header, query_sequence) in enumerate(records[1:], start=1):
+        for pair_index, (query_header, query_sequence) in enumerate(
+            records[1:], start=1
+        ):
             alignment = aligner.align(reference_sequence, query_sequence)[0]
             aligned_reference, aligned_query = aligned_strings(
                 alignment, reference_sequence, query_sequence
             )
             if len(aligned_reference) != len(aligned_query):
-                raise RuntimeError(f"Unequal pairwise alignment lengths for {query_header}")
+                raise RuntimeError(
+                    f"Unequal pairwise alignment lengths for {query_header}"
+                )
             write_record(
                 handle,
                 f"{reference_header}|pairwise_target_for={pair_index}",
                 aligned_reference,
             )
-            write_record(handle, f"{query_header}|pairwise_query={pair_index}", aligned_query)
+            write_record(
+                handle, f"{query_header}|pairwise_query={pair_index}", aligned_query
+            )
     return output_path, len(records) - 1
 
 

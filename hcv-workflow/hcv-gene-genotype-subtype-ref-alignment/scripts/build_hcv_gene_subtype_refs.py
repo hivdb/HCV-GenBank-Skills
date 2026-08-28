@@ -31,7 +31,7 @@ from Bio import Align
 
 TARGET_GENES = ("NS3", "NS5A_NTD", "NS5B")
 NS5A_NTD_AA_LENGTH = 213
-NEG_INF = -10**9
+NEG_INF = -(10**9)
 MATCH_SCORE = 3
 MISMATCH_SCORE = -2
 STOP_SCORE = -6
@@ -85,22 +85,70 @@ GENE_AA_SIGNATURES: dict[tuple[str, str], tuple[str, str]] = {
     ("8", "NS5B"): ("SMS", "PNR"),
 }
 CODON_TABLE = {
-    "TTT": "F", "TTC": "F", "TTA": "L", "TTG": "L",
-    "TCT": "S", "TCC": "S", "TCA": "S", "TCG": "S",
-    "TAT": "Y", "TAC": "Y", "TAA": "*", "TAG": "*",
-    "TGT": "C", "TGC": "C", "TGA": "*", "TGG": "W",
-    "CTT": "L", "CTC": "L", "CTA": "L", "CTG": "L",
-    "CCT": "P", "CCC": "P", "CCA": "P", "CCG": "P",
-    "CAT": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
-    "CGT": "R", "CGC": "R", "CGA": "R", "CGG": "R",
-    "ATT": "I", "ATC": "I", "ATA": "I", "ATG": "M",
-    "ACT": "T", "ACC": "T", "ACA": "T", "ACG": "T",
-    "AAT": "N", "AAC": "N", "AAA": "K", "AAG": "K",
-    "AGT": "S", "AGC": "S", "AGA": "R", "AGG": "R",
-    "GTT": "V", "GTC": "V", "GTA": "V", "GTG": "V",
-    "GCT": "A", "GCC": "A", "GCA": "A", "GCG": "A",
-    "GAT": "D", "GAC": "D", "GAA": "E", "GAG": "E",
-    "GGT": "G", "GGC": "G", "GGA": "G", "GGG": "G",
+    "TTT": "F",
+    "TTC": "F",
+    "TTA": "L",
+    "TTG": "L",
+    "TCT": "S",
+    "TCC": "S",
+    "TCA": "S",
+    "TCG": "S",
+    "TAT": "Y",
+    "TAC": "Y",
+    "TAA": "*",
+    "TAG": "*",
+    "TGT": "C",
+    "TGC": "C",
+    "TGA": "*",
+    "TGG": "W",
+    "CTT": "L",
+    "CTC": "L",
+    "CTA": "L",
+    "CTG": "L",
+    "CCT": "P",
+    "CCC": "P",
+    "CCA": "P",
+    "CCG": "P",
+    "CAT": "H",
+    "CAC": "H",
+    "CAA": "Q",
+    "CAG": "Q",
+    "CGT": "R",
+    "CGC": "R",
+    "CGA": "R",
+    "CGG": "R",
+    "ATT": "I",
+    "ATC": "I",
+    "ATA": "I",
+    "ATG": "M",
+    "ACT": "T",
+    "ACC": "T",
+    "ACA": "T",
+    "ACG": "T",
+    "AAT": "N",
+    "AAC": "N",
+    "AAA": "K",
+    "AAG": "K",
+    "AGT": "S",
+    "AGC": "S",
+    "AGA": "R",
+    "AGG": "R",
+    "GTT": "V",
+    "GTC": "V",
+    "GTA": "V",
+    "GTG": "V",
+    "GCT": "A",
+    "GCC": "A",
+    "GCA": "A",
+    "GCG": "A",
+    "GAT": "D",
+    "GAC": "D",
+    "GAA": "E",
+    "GAG": "E",
+    "GGT": "G",
+    "GGC": "G",
+    "GGA": "G",
+    "GGG": "G",
 }
 
 
@@ -141,7 +189,9 @@ def parse_args() -> argparse.Namespace:
             "and subtype nucleotide/amino-acid reference FASTA files from FASTA/JSON datasets."
         )
     )
-    parser.add_argument("--gt-gene-na-fasta", required=True, help="Path to HCV_GT_RefSeqs.fasta")
+    parser.add_argument(
+        "--gt-gene-na-fasta", required=True, help="Path to HCV_GT_RefSeqs.fasta"
+    )
     parser.add_argument(
         "--subtype-genome-na-json",
         required=True,
@@ -172,7 +222,9 @@ def load_json(path: Path) -> Any:
 def parse_genotype_and_subtype(genotype_name: str) -> tuple[str, str]:
     match = re.match(r"Genotype(\d+)([A-Za-z0-9]+)$", genotype_name)
     if not match:
-        raise RuntimeError(f"Could not parse genotype/subtype from genotypeName: {genotype_name}")
+        raise RuntimeError(
+            f"Could not parse genotype/subtype from genotypeName: {genotype_name}"
+        )
     genotype = match.group(1)
     subtype = f"{genotype}{match.group(2)}"
     return genotype, subtype
@@ -211,7 +263,9 @@ def translate_codon(codon: str) -> str:
         concrete_codons = product(*(IUPAC_NT_BASES[base] for base in codon))
     except KeyError:
         return "X"
-    amino_acids = {CODON_TABLE["".join(concrete_codon)] for concrete_codon in concrete_codons}
+    amino_acids = {
+        CODON_TABLE["".join(concrete_codon)] for concrete_codon in concrete_codons
+    }
     if len(amino_acids) == 1:
         return amino_acids.pop()
     return "X"
@@ -233,7 +287,9 @@ def write_fasta(path: Path, entries: list[tuple[str, str]]) -> None:
 
 
 def write_json(path: Path, payload: Any) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+    )
 
 
 def read_fasta(path: Path) -> list[tuple[str, str]]:
@@ -263,7 +319,9 @@ def parse_gt_fasta_header(header: str) -> tuple[str, str]:
     return match.group(1), match.group(2)
 
 
-def build_gt_gene_references(records: list[tuple[str, str]]) -> dict[tuple[str, str], str]:
+def build_gt_gene_references(
+    records: list[tuple[str, str]],
+) -> dict[tuple[str, str], str]:
     refs: dict[tuple[str, str], str] = {}
 
     for header, sequence in records:
@@ -282,7 +340,9 @@ def build_gt_gene_references(records: list[tuple[str, str]]) -> dict[tuple[str, 
     for genotype in map(str, range(1, 9)):
         for gene in TARGET_GENES:
             if (genotype, gene) not in refs:
-                raise RuntimeError(f"Missing genotype reference for genotype {genotype} gene {gene}")
+                raise RuntimeError(
+                    f"Missing genotype reference for genotype {genotype} gene {gene}"
+                )
     return refs
 
 
@@ -392,7 +452,9 @@ def stop_codon_positions(sequence: str) -> list[int]:
     return [idx for idx, aa in enumerate(sequence, start=1) if aa == "*"]
 
 
-def reference_aa_span(aligned_reference_aa: str, aligned_query_aa: str) -> tuple[int, int]:
+def reference_aa_span(
+    aligned_reference_aa: str, aligned_query_aa: str
+) -> tuple[int, int]:
     ref_pos = 0
     ref_positions: list[int] = []
     for ref_aa, query_aa in zip(aligned_reference_aa, aligned_query_aa):
@@ -405,7 +467,9 @@ def reference_aa_span(aligned_reference_aa: str, aligned_query_aa: str) -> tuple
     return ref_positions[0], ref_positions[-1]
 
 
-def stop_codon_reference_positions(aligned_reference_aa: str, aligned_query_aa: str) -> list[str]:
+def stop_codon_reference_positions(
+    aligned_reference_aa: str, aligned_query_aa: str
+) -> list[str]:
     ref_pos = 0
     insertions_after_ref_pos: dict[int, int] = {}
     positions: list[str] = []
@@ -423,7 +487,9 @@ def stop_codon_reference_positions(aligned_reference_aa: str, aligned_query_aa: 
     return positions
 
 
-def query_insertion_reference_positions(aligned_reference_aa: str, aligned_query_aa: str) -> list[str]:
+def query_insertion_reference_positions(
+    aligned_reference_aa: str, aligned_query_aa: str
+) -> list[str]:
     ref_pos = 0
     insertions_after_ref_pos: dict[int, int] = {}
     positions: list[str] = []
@@ -438,7 +504,9 @@ def query_insertion_reference_positions(aligned_reference_aa: str, aligned_query
     return positions
 
 
-def query_deletion_reference_positions(aligned_reference_aa: str, aligned_query_aa: str) -> list[str]:
+def query_deletion_reference_positions(
+    aligned_reference_aa: str, aligned_query_aa: str
+) -> list[str]:
     ref_pos = 0
     positions: list[str] = []
     for ref_aa, query_aa in zip(aligned_reference_aa, aligned_query_aa):
@@ -480,7 +548,9 @@ def aa_signature_stats(
     return matches, mismatches, expected_begin, expected_end
 
 
-def is_better_result(candidate: AlignmentResult, incumbent: AlignmentResult | None) -> bool:
+def is_better_result(
+    candidate: AlignmentResult, incumbent: AlignmentResult | None
+) -> bool:
     if incumbent is None:
         return True
     candidate_stops = len(stop_codon_positions(candidate.extracted_aa))
@@ -583,8 +653,12 @@ def alignment_strings(reference: str, query: str, coordinates: Any) -> tuple[str
     return "".join(ref_chunks), "".join(query_chunks)
 
 
-def aa_alignment_to_codon_alignment(aligned_reference_aa: str, aligned_query_aa: str, reference_nt: str, query_nt: str) -> tuple[str, str]:
-    reference_codons = [reference_nt[idx : idx + 3] for idx in range(0, len(reference_nt), 3)]
+def aa_alignment_to_codon_alignment(
+    aligned_reference_aa: str, aligned_query_aa: str, reference_nt: str, query_nt: str
+) -> tuple[str, str]:
+    reference_codons = [
+        reference_nt[idx : idx + 3] for idx in range(0, len(reference_nt), 3)
+    ]
     query_codons = [query_nt[idx : idx + 3] for idx in range(0, len(query_nt), 3)]
 
     ref_index = 0
@@ -608,7 +682,9 @@ def aa_alignment_to_codon_alignment(aligned_reference_aa: str, aligned_query_aa:
     return "".join(aligned_reference_nt), "".join(aligned_query_nt)
 
 
-def discover_gene_window_nt(reference_nt: str, query_nt: str, flank_nt: int = 30) -> tuple[int, int]:
+def discover_gene_window_nt(
+    reference_nt: str, query_nt: str, flank_nt: int = 30
+) -> tuple[int, int]:
     local_alignment = build_nt_window_aligner().align(
         mask_ambiguous_nt_for_alignment(reference_nt),
         mask_ambiguous_nt_for_alignment(query_nt),
@@ -617,7 +693,9 @@ def discover_gene_window_nt(reference_nt: str, query_nt: str, flank_nt: int = 30
     query_start, query_end = alignment_bounds(local_alignment.aligned[1])
 
     window_start = max(0, query_start - ref_start - flank_nt)
-    window_end = min(len(query_nt), query_end + (len(reference_nt) - ref_end) + flank_nt)
+    window_end = min(
+        len(query_nt), query_end + (len(reference_nt) - ref_end) + flank_nt
+    )
     return window_start, window_end
 
 
@@ -628,14 +706,18 @@ def codon_align_gene(
 ) -> tuple[float, str, str, str, str, int, int, int]:
     query_aa = translate_nt(query_nt)
     global_alignment = build_aligner("global").align(reference_aa, query_aa)[0]
-    aligned_reference_aa, aligned_query_aa = alignment_strings(reference_aa, query_aa, global_alignment.coordinates)
+    aligned_reference_aa, aligned_query_aa = alignment_strings(
+        reference_aa, query_aa, global_alignment.coordinates
+    )
     aligned_reference_nt, aligned_query_nt = aa_alignment_to_codon_alignment(
         aligned_reference_aa,
         aligned_query_aa,
         reference_nt,
         query_nt,
     )
-    score, matches, informative, ignored = sequence_identity(aligned_reference_aa, aligned_query_aa)
+    score, matches, informative, ignored = sequence_identity(
+        aligned_reference_aa, aligned_query_aa
+    )
     return (
         score,
         aligned_reference_aa,
@@ -654,15 +736,27 @@ def trim_terminal_query_overhangs(
     aligned_query_aa: str,
 ) -> str:
     try:
-        first_ref_column = next(idx for idx, aa in enumerate(aligned_reference_aa) if aa != "-")
-        last_ref_column = len(aligned_reference_aa) - 1 - next(
-            idx for idx, aa in enumerate(reversed(aligned_reference_aa)) if aa != "-"
+        first_ref_column = next(
+            idx for idx, aa in enumerate(aligned_reference_aa) if aa != "-"
+        )
+        last_ref_column = (
+            len(aligned_reference_aa)
+            - 1
+            - next(
+                idx
+                for idx, aa in enumerate(reversed(aligned_reference_aa))
+                if aa != "-"
+            )
         )
     except StopIteration:
         return query_nt
 
-    leading_query_codons = sum(1 for aa in aligned_query_aa[:first_ref_column] if aa != "-")
-    trailing_query_codons = sum(1 for aa in aligned_query_aa[last_ref_column + 1 :] if aa != "-")
+    leading_query_codons = sum(
+        1 for aa in aligned_query_aa[:first_ref_column] if aa != "-"
+    )
+    trailing_query_codons = sum(
+        1 for aa in aligned_query_aa[last_ref_column + 1 :] if aa != "-"
+    )
     if leading_query_codons == 0 and trailing_query_codons == 0:
         return query_nt
 
@@ -678,7 +772,9 @@ def frameshift_refine(reference_aa: str, nt_window: str) -> FrameshiftRefinement
     m = len(reference_aa)
     n = len(nt_window)
     dp = [[NEG_INF] * (n + 1) for _ in range(m + 1)]
-    trace: list[list[tuple[str, int, int, str] | None]] = [[None] * (n + 1) for _ in range(m + 1)]
+    trace: list[list[tuple[str, int, int, str] | None]] = [
+        [None] * (n + 1) for _ in range(m + 1)
+    ]
     dp[0] = [0] * (n + 1)
 
     best_score = NEG_INF
@@ -779,7 +875,9 @@ def build_alignment_result(
         informative,
         ignored,
     ) = codon_align_gene(extracted_nt, reference_nt, reference_aa)
-    trimmed_nt = trim_terminal_query_overhangs(extracted_nt, aligned_reference_aa, aligned_query_aa)
+    trimmed_nt = trim_terminal_query_overhangs(
+        extracted_nt, aligned_reference_aa, aligned_query_aa
+    )
     if trimmed_nt != extracted_nt:
         extracted_nt = trimmed_nt
         (
@@ -793,7 +891,12 @@ def build_alignment_result(
             ignored,
         ) = codon_align_gene(extracted_nt, reference_nt, reference_aa)
     extracted_aa = translate_nt(extracted_nt)
-    signature_match_count, signature_mismatch_count, expected_begin_aa, expected_end_aa = aa_signature_stats(
+    (
+        signature_match_count,
+        signature_mismatch_count,
+        expected_begin_aa,
+        expected_end_aa,
+    ) = aa_signature_stats(
         genotype,
         gene,
         extracted_aa,
@@ -820,7 +923,9 @@ def build_alignment_result(
     )
 
 
-def frame_offsets_by_preference(window_start: int, preferred_frame: int | None) -> list[int]:
+def frame_offsets_by_preference(
+    window_start: int, preferred_frame: int | None
+) -> list[int]:
     preferred_offset = None
     if preferred_frame is not None:
         preferred_offset = (preferred_frame - (window_start % 3)) % 3
@@ -841,7 +946,9 @@ def extract_gene_from_subtype(
     window_start, window_end = discover_gene_window_nt(reference_nt, nt_sequence)
     nt_window = nt_sequence[window_start:window_end]
     if not nt_window:
-        raise RuntimeError("No nucleotide window could be extracted from subtype sequence")
+        raise RuntimeError(
+            "No nucleotide window could be extracted from subtype sequence"
+        )
 
     candidates: list[AlignmentResult] = []
     last_error: Exception | None = None
@@ -903,7 +1010,9 @@ def build_alignment_marker(reference: str, query: str) -> str:
     return "".join(chars)
 
 
-def write_alignment_report(path: Path, alignments: list[dict[str, Any]], width_codons: int = 68) -> None:
+def write_alignment_report(
+    path: Path, alignments: list[dict[str, Any]], width_codons: int = 68
+) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for idx, row in enumerate(alignments, start=1):
             header = (
@@ -945,7 +1054,9 @@ def write_alignment_report(path: Path, alignments: list[dict[str, Any]], width_c
                     deletion_positions=row["query_deletion_positions"],
                 )
             )
-            marker = build_alignment_marker(row["aligned_reference_aa"], row["aligned_query_aa"])
+            marker = build_alignment_marker(
+                row["aligned_reference_aa"], row["aligned_query_aa"]
+            )
             ref_pos = 0
             for start in range(0, len(row["aligned_reference_aa"]), width_codons):
                 aa_stop = start + width_codons
@@ -961,7 +1072,9 @@ def write_alignment_report(path: Path, alignments: list[dict[str, Any]], width_c
                 ref_pos = block_ref_pos
                 handle.write(f"REF_AA {ref_label:>4} {ref_block}\n")
                 handle.write(f"MAT_AA {'':>4} {marker[start:aa_stop]}\n")
-                handle.write(f"QRY_AA {'':>4} {row['aligned_query_aa'][start:aa_stop]}\n")
+                handle.write(
+                    f"QRY_AA {'':>4} {row['aligned_query_aa'][start:aa_stop]}\n"
+                )
                 handle.write("\n")
             handle.write("\n")
 
@@ -975,7 +1088,9 @@ def main() -> int:
     if not gt_gene_na_fasta.exists():
         raise RuntimeError(f"Genotype NA FASTA not found: {gt_gene_na_fasta}")
     if not subtype_genome_na_json.exists():
-        raise RuntimeError(f"Subtype genome NA JSON not found: {subtype_genome_na_json}")
+        raise RuntimeError(
+            f"Subtype genome NA JSON not found: {subtype_genome_na_json}"
+        )
 
     base_output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = make_job_dir(base_output_dir)
@@ -983,20 +1098,34 @@ def main() -> int:
     gt_refs = build_gt_gene_references(read_fasta(gt_gene_na_fasta))
     subtype_rows = load_json(subtype_genome_na_json)
 
-    gt_nt_fasta_entries: dict[str, list[tuple[str, str]]] = {gene: [] for gene in TARGET_GENES}
-    gt_aa_fasta_entries: dict[str, list[tuple[str, str]]] = {gene: [] for gene in TARGET_GENES}
+    gt_nt_fasta_entries: dict[str, list[tuple[str, str]]] = {
+        gene: [] for gene in TARGET_GENES
+    }
+    gt_aa_fasta_entries: dict[str, list[tuple[str, str]]] = {
+        gene: [] for gene in TARGET_GENES
+    }
     for genotype in map(str, range(1, 9)):
         for gene in TARGET_GENES:
             header = f"gene={gene}|genotype={genotype}|source=HCV_GT_RefSeqs.fasta"
             gt_nt_fasta_entries[gene].append((header, gt_refs[(genotype, gene)]))
-            gt_aa_fasta_entries[gene].append((header, translate_nt(gt_refs[(genotype, gene)])))
+            gt_aa_fasta_entries[gene].append(
+                (header, translate_nt(gt_refs[(genotype, gene)]))
+            )
     for gene, entries in gt_nt_fasta_entries.items():
-        write_fasta(output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_na.fasta", entries)
+        write_fasta(
+            output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_na.fasta", entries
+        )
     for gene, entries in gt_aa_fasta_entries.items():
-        write_fasta(output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_aa.fasta", entries)
+        write_fasta(
+            output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_aa.fasta", entries
+        )
 
-    subtype_nt_entries: dict[str, list[tuple[str, str]]] = {gene: [] for gene in TARGET_GENES}
-    subtype_aa_entries: dict[str, list[tuple[str, str]]] = {gene: [] for gene in TARGET_GENES}
+    subtype_nt_entries: dict[str, list[tuple[str, str]]] = {
+        gene: [] for gene in TARGET_GENES
+    }
+    subtype_aa_entries: dict[str, list[tuple[str, str]]] = {
+        gene: [] for gene in TARGET_GENES
+    }
     summary_rows: list[dict[str, Any]] = []
     alignment_report_rows: list[dict[str, Any]] = []
 
@@ -1018,9 +1147,15 @@ def main() -> int:
                 enable_frameshift_refinement=args.enable_frameshift_refinement,
                 preferred_frame=preferred_frame,
             )
-            stop_positions = stop_codon_reference_positions(result.aligned_reference_aa, result.aligned_query_aa)
-            query_insertions = query_insertion_reference_positions(result.aligned_reference_aa, result.aligned_query_aa)
-            query_deletions = query_deletion_reference_positions(result.aligned_reference_aa, result.aligned_query_aa)
+            stop_positions = stop_codon_reference_positions(
+                result.aligned_reference_aa, result.aligned_query_aa
+            )
+            query_insertions = query_insertion_reference_positions(
+                result.aligned_reference_aa, result.aligned_query_aa
+            )
+            query_deletions = query_deletion_reference_positions(
+                result.aligned_reference_aa, result.aligned_query_aa
+            )
 
             base_header = (
                 f"gene={gene}|genotype={genotype}|subtype={subtype}|"
@@ -1048,9 +1183,13 @@ def main() -> int:
                     "signature_match_count": result.signature_match_count,
                     "signature_mismatch_count": result.signature_mismatch_count,
                     "expected_begin_aa": result.expected_begin_aa,
-                    "observed_begin_aa": result.extracted_aa[: len(result.expected_begin_aa)],
+                    "observed_begin_aa": result.extracted_aa[
+                        : len(result.expected_begin_aa)
+                    ],
                     "expected_end_aa": result.expected_end_aa,
-                    "observed_end_aa": result.extracted_aa[-len(result.expected_end_aa) :],
+                    "observed_end_aa": result.extracted_aa[
+                        -len(result.expected_end_aa) :
+                    ],
                     "has_stop_codon": bool(stop_positions),
                     "stop_codon_count": len(stop_positions),
                     "stop_codon_positions": ",".join(stop_positions),
@@ -1080,9 +1219,13 @@ def main() -> int:
                     "signature_match_count": result.signature_match_count,
                     "signature_mismatch_count": result.signature_mismatch_count,
                     "expected_begin_aa": result.expected_begin_aa,
-                    "observed_begin_aa": result.extracted_aa[: len(result.expected_begin_aa)],
+                    "observed_begin_aa": result.extracted_aa[
+                        : len(result.expected_begin_aa)
+                    ],
                     "expected_end_aa": result.expected_end_aa,
-                    "observed_end_aa": result.extracted_aa[-len(result.expected_end_aa) :],
+                    "observed_end_aa": result.extracted_aa[
+                        -len(result.expected_end_aa) :
+                    ],
                     "has_stop_codon": bool(stop_positions),
                     "stop_codon_count": len(stop_positions),
                     "stop_codon_positions": ",".join(stop_positions),
@@ -1098,47 +1241,81 @@ def main() -> int:
             )
 
     for gene, entries in subtype_nt_entries.items():
-        write_fasta(output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_na.fasta", entries)
+        write_fasta(
+            output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_na.fasta", entries
+        )
     for gene, entries in subtype_aa_entries.items():
-        write_fasta(output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_aa.fasta", entries)
+        write_fasta(
+            output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_aa.fasta", entries
+        )
     for gene in TARGET_GENES:
         slug = gene_slug(gene)
         gene_summary_rows = [row for row in summary_rows if row["gene"] == gene]
-        gene_alignment_rows = [row for row in alignment_report_rows if row["gene"] == gene]
-        write_alignment_scores_xlsx(output_dir / f"{slug}_alignment_scores.xlsx", gene_summary_rows)
-        write_alignment_report(output_dir / f"{slug}_alignment_views.txt", gene_alignment_rows)
+        gene_alignment_rows = [
+            row for row in alignment_report_rows if row["gene"] == gene
+        ]
+        write_alignment_scores_xlsx(
+            output_dir / f"{slug}_alignment_scores.xlsx", gene_summary_rows
+        )
+        write_alignment_report(
+            output_dir / f"{slug}_alignment_views.txt", gene_alignment_rows
+        )
 
     summary = {
         "gt_gene_na_fasta": str(gt_gene_na_fasta.resolve()),
         "subtype_genome_na_json": str(subtype_genome_na_json.resolve()),
         "target_genes": list(TARGET_GENES),
         "frameshift_refinement_enabled": bool(args.enable_frameshift_refinement),
-        "genotype_reference_count": sum(len(entries) for entries in gt_nt_fasta_entries.values()),
+        "genotype_reference_count": sum(
+            len(entries) for entries in gt_nt_fasta_entries.values()
+        ),
         "subtype_record_count": len(subtype_rows),
-        "subtype_gene_sequence_count": sum(len(entries) for entries in subtype_nt_entries.values()),
+        "subtype_gene_sequence_count": sum(
+            len(entries) for entries in subtype_nt_entries.values()
+        ),
         "outputs": {
             "gt_gene_refs_na_fastas": {
-                gene: str((output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_na.fasta").resolve())
+                gene: str(
+                    (
+                        output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_na.fasta"
+                    ).resolve()
+                )
                 for gene in TARGET_GENES
             },
             "gt_gene_refs_aa_fastas": {
-                gene: str((output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_aa.fasta").resolve())
+                gene: str(
+                    (
+                        output_dir / f"hcv_gt_gene_refs_{gene_slug(gene)}_aa.fasta"
+                    ).resolve()
+                )
                 for gene in TARGET_GENES
             },
             "subtype_gene_refs_na_fastas": {
-                gene: str((output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_na.fasta").resolve())
+                gene: str(
+                    (
+                        output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_na.fasta"
+                    ).resolve()
+                )
                 for gene in TARGET_GENES
             },
             "subtype_gene_refs_aa_fastas": {
-                gene: str((output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_aa.fasta").resolve())
+                gene: str(
+                    (
+                        output_dir / f"hcv_subtype_gene_refs_{gene_slug(gene)}_aa.fasta"
+                    ).resolve()
+                )
                 for gene in TARGET_GENES
             },
             "alignment_scores_xlsx": {
-                gene: str((output_dir / f"{gene_slug(gene)}_alignment_scores.xlsx").resolve())
+                gene: str(
+                    (output_dir / f"{gene_slug(gene)}_alignment_scores.xlsx").resolve()
+                )
                 for gene in TARGET_GENES
             },
             "alignment_views_txt": {
-                gene: str((output_dir / f"{gene_slug(gene)}_alignment_views.txt").resolve())
+                gene: str(
+                    (output_dir / f"{gene_slug(gene)}_alignment_views.txt").resolve()
+                )
                 for gene in TARGET_GENES
             },
         },
@@ -1146,16 +1323,22 @@ def main() -> int:
     }
     write_json(output_dir / "summary.json", summary)
 
-    print(json.dumps(
-        {
-            "output_dir": str(output_dir.resolve()),
-            "genotype_reference_count": sum(len(entries) for entries in gt_nt_fasta_entries.values()),
-            "subtype_gene_sequence_count": sum(len(entries) for entries in subtype_nt_entries.values()),
-            "summary_json": str((output_dir / "summary.json").resolve()),
-        },
-        indent=2,
-        ensure_ascii=True,
-    ))
+    print(
+        json.dumps(
+            {
+                "output_dir": str(output_dir.resolve()),
+                "genotype_reference_count": sum(
+                    len(entries) for entries in gt_nt_fasta_entries.values()
+                ),
+                "subtype_gene_sequence_count": sum(
+                    len(entries) for entries in subtype_nt_entries.values()
+                ),
+                "summary_json": str((output_dir / "summary.json").resolve()),
+            },
+            indent=2,
+            ensure_ascii=True,
+        )
+    )
     return 0
 
 

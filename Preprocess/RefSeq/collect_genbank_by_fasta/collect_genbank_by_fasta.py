@@ -90,8 +90,10 @@ def migrate_legacy_tsv_indexes(output_dir: Path, temp_dir: Path) -> None:
         output_dir / "accession_index.tsv": output_dir / "accession_index.csv",
         output_dir / "genbank_record_index.tsv": temp_dir / "genbank_record_index.csv",
         output_dir / "genbank_file_index.tsv": temp_dir / "genbank_file_index.csv",
-        output_dir / "genbank_accession_source_index.tsv": temp_dir / "genbank_accession_source_index.csv",
-        output_dir / "output_accession_index.tsv": temp_dir / "output_accession_index.csv",
+        output_dir / "genbank_accession_source_index.tsv": temp_dir
+        / "genbank_accession_source_index.csv",
+        output_dir / "output_accession_index.tsv": temp_dir
+        / "output_accession_index.csv",
     }
     for source_path, dest_path in migrations.items():
         if source_path.is_file():
@@ -169,14 +171,22 @@ def iter_raw_genbank_records_with_offsets(path: Path):
             chunks.append(line)
             if line.rstrip(b"\r\n") == b"//":
                 byte_end = handle.tell()
-                yield byte_start, byte_end, b"".join(chunks).decode("utf-8", errors="replace")
+                yield (
+                    byte_start,
+                    byte_end,
+                    b"".join(chunks).decode("utf-8", errors="replace"),
+                )
                 chunks = []
                 byte_start = byte_end
     if chunks:
         byte_end = byte_start + sum(len(chunk) for chunk in chunks)
         tail = b"".join(chunks).strip()
         if tail:
-            yield byte_start, byte_end, b"".join(chunks).decode("utf-8", errors="replace")
+            yield (
+                byte_start,
+                byte_end,
+                b"".join(chunks).decode("utf-8", errors="replace"),
+            )
 
 
 def accessions_from_raw_record(record_text: str) -> set[str]:
@@ -203,15 +213,27 @@ def build_genbank_record_index_file(
     with index_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=["accession", "genbank_file", "byte_start", "byte_end", "is_primary_match"],
+            fieldnames=[
+                "accession",
+                "genbank_file",
+                "byte_start",
+                "byte_end",
+                "is_primary_match",
+            ],
         )
         writer.writeheader()
         for genbank_path in iter_genbank_paths(genbank_dir):
             file_accessions: set[str] = set()
-            for byte_start, byte_end, record_text in iter_raw_genbank_records_with_offsets(genbank_path):
+            for (
+                byte_start,
+                byte_end,
+                record_text,
+            ) in iter_raw_genbank_records_with_offsets(genbank_path):
                 for accession in accessions_from_raw_record(record_text):
                     file_accessions.add(accession)
-                    is_primary_match = "yes" if accession not in seen_accessions else "no"
+                    is_primary_match = (
+                        "yes" if accession not in seen_accessions else "no"
+                    )
                     seen_accessions.add(accession)
                     writer.writerow(
                         {
@@ -226,7 +248,9 @@ def build_genbank_record_index_file(
     return accessions_by_file
 
 
-def load_genbank_record_index(index_path: Path) -> tuple[GenbankIndex, dict[Path, set[str]]]:
+def load_genbank_record_index(
+    index_path: Path,
+) -> tuple[GenbankIndex, dict[Path, set[str]]]:
     index: GenbankIndex = {}
     accessions_by_file: dict[Path, set[str]] = {}
     with index_path.open(encoding="utf-8", newline="") as handle:
@@ -238,7 +262,9 @@ def load_genbank_record_index(index_path: Path) -> tuple[GenbankIndex, dict[Path
             byte_end = int(row["byte_end"])
             accessions_by_file.setdefault(source_path, set()).add(accession)
             if accession not in index:
-                index[accession] = GenbankRecordLocation(source_path, byte_start, byte_end)
+                index[accession] = GenbankRecordLocation(
+                    source_path, byte_start, byte_end
+                )
     return index, accessions_by_file
 
 
@@ -284,7 +310,9 @@ def write_genbank_source_indexes(
         writer.writeheader()
         for genbank_path in sorted(accessions_by_file):
             for accession in sorted(accessions_by_file[genbank_path]):
-                writer.writerow({"accession": accession, "genbank_file": str(genbank_path)})
+                writer.writerow(
+                    {"accession": accession, "genbank_file": str(genbank_path)}
+                )
 
 
 def output_path_for_fasta(output_dir: Path, fasta_path: Path) -> Path:
@@ -355,7 +383,9 @@ def write_output_accession_index(output_dir: Path, rows: list[dict[str, str]]) -
                 )
 
 
-def write_detailed_output_accession_index(temp_dir: Path, rows: list[dict[str, str]]) -> None:
+def write_detailed_output_accession_index(
+    temp_dir: Path, rows: list[dict[str, str]]
+) -> None:
     path = temp_dir / "output_accession_index.csv"
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -430,7 +460,9 @@ def main() -> None:
     for fasta_path in fasta_paths:
         accessions = collect_fasta_accessions(fasta_path)
         output_path = output_path_for_fasta(output_dir, fasta_path)
-        found_count, index_rows = write_records_for_fasta(output_path, accessions, genbank_index)
+        found_count, index_rows = write_records_for_fasta(
+            output_path, accessions, genbank_index
+        )
         for row in index_rows:
             row["fasta_file"] = fasta_path.name
         output_index_rows.extend(index_rows)

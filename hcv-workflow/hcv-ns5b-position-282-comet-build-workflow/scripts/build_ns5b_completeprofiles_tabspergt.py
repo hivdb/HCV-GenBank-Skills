@@ -21,10 +21,19 @@ CALLABLE_AAS = frozenset(AA_ORDER) - {"*"}
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build GT and subtype NS5B amino-acid profile workbooks.")
-    parser.add_argument("--input-workbook", required=True, help="Path to NS5B AA extraction workbook.")
-    parser.add_argument("--output-dir", default="outputs", help="Base output directory.")
-    parser.add_argument("--profile-accessions-csv", help="CSV listing accessions included in profile construction.")
+    parser = argparse.ArgumentParser(
+        description="Build GT and subtype NS5B amino-acid profile workbooks."
+    )
+    parser.add_argument(
+        "--input-workbook", required=True, help="Path to NS5B AA extraction workbook."
+    )
+    parser.add_argument(
+        "--output-dir", default="outputs", help="Base output directory."
+    )
+    parser.add_argument(
+        "--profile-accessions-csv",
+        help="CSV listing accessions included in profile construction.",
+    )
     parser.add_argument(
         "--min-range-coverage",
         type=float,
@@ -42,13 +51,23 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282/temp")) / Path(__file__).stem
+    path = (
+        Path(
+            os.environ.get(
+                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282/temp"
+            )
+        )
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def sanitize_label(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-") or "job"
+    return (
+        "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-")
+        or "job"
+    )
 
 
 def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
@@ -66,7 +85,11 @@ def missing_profile_positions(start: int, aa_sequence: str) -> list[int]:
     sequence = aa_sequence.upper()
     for position in PROFILE_REQUIRED_POSITIONS:
         offset = position - start
-        if offset < 0 or offset >= len(sequence) or sequence[offset] not in CALLABLE_AAS:
+        if (
+            offset < 0
+            or offset >= len(sequence)
+            or sequence[offset] not in CALLABLE_AAS
+        ):
             missing.append(position)
     return missing
 
@@ -79,19 +102,32 @@ def has_minimum_range_coverage(
     covered = sum(
         1
         for position in range(range_start, range_end + 1)
-        if 0 <= position - start < len(sequence) and sequence[position - start].upper() != "X"
+        if 0 <= position - start < len(sequence)
+        and sequence[position - start].upper() != "X"
     )
     return covered / (range_end - range_start + 1) >= minimum_coverage
 
 
 def load_rows(
-    workbook_path: Path, minimum_range_coverage: float = 0.0, range_start: int = 150, range_end: int = 321
+    workbook_path: Path,
+    minimum_range_coverage: float = 0.0,
+    range_start: int = 150,
+    range_end: int = 321,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
     ws = wb[wb.sheetnames[0]]
-    header = [str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))]
+    header = [
+        str(v) if v is not None else "" for v in next(ws.iter_rows(values_only=True))
+    ]
     index = {name: i for i, name in enumerate(header)}
-    required = ["AccessionID", "ClosestGT", "ClosestSubtype", "StartAAPosition", "EndAAPosition", "AASequence"]
+    required = [
+        "AccessionID",
+        "ClosestGT",
+        "ClosestSubtype",
+        "StartAAPosition",
+        "EndAAPosition",
+        "AASequence",
+    ]
     for name in required:
         if name not in index:
             raise RuntimeError(f"Column '{name}' not found in {workbook_path}")
@@ -101,7 +137,10 @@ def load_rows(
     incomplete_ras_accessions: set[str] = set()
     insufficient_range_coverage_accessions: set[str] = set()
     for values in ws.iter_rows(min_row=2, values_only=True):
-        if "AlignmentQCStatus" in index and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS":
+        if (
+            "AlignmentQCStatus" in index
+            and str(values[index["AlignmentQCStatus"]] or "").strip() != "PASS"
+        ):
             continue
         aa_sequence = values[index["AASequence"]]
         start = values[index["StartAAPosition"]]
@@ -115,14 +154,18 @@ def load_rows(
             unassigned_genotype_accessions.add(accession)
         if subtype.casefold().startswith("unassign"):
             unassigned_subtype_accessions.add(accession)
-        if genotype.casefold().startswith("unassign") or subtype.casefold().startswith("unassign"):
+        if genotype.casefold().startswith("unassign") or subtype.casefold().startswith(
+            "unassign"
+        ):
             continue
         start_position = int(start)
         sequence = str(aa_sequence).strip()
         if missing_profile_positions(start_position, sequence):
             incomplete_ras_accessions.add(accession)
             continue
-        if not has_minimum_range_coverage(start_position, sequence, range_start, range_end, minimum_range_coverage):
+        if not has_minimum_range_coverage(
+            start_position, sequence, range_start, range_end, minimum_range_coverage
+        ):
             insufficient_range_coverage_accessions.add(accession)
             continue
         rows.append(
@@ -137,15 +180,27 @@ def load_rows(
         )
     wb.close()
     return rows, {
-        "ignored_unassigned_genotype_accession_count": len(unassigned_genotype_accessions),
-        "ignored_unassigned_subtype_accession_count": len(unassigned_subtype_accessions),
-        "ignored_unassigned_accession_count": len(unassigned_genotype_accessions | unassigned_subtype_accessions),
-        "ignored_incomplete_ras_coverage_accession_count": len(incomplete_ras_accessions),
-        "ignored_insufficient_range_coverage_accession_count": len(insufficient_range_coverage_accessions),
+        "ignored_unassigned_genotype_accession_count": len(
+            unassigned_genotype_accessions
+        ),
+        "ignored_unassigned_subtype_accession_count": len(
+            unassigned_subtype_accessions
+        ),
+        "ignored_unassigned_accession_count": len(
+            unassigned_genotype_accessions | unassigned_subtype_accessions
+        ),
+        "ignored_incomplete_ras_coverage_accession_count": len(
+            incomplete_ras_accessions
+        ),
+        "ignored_insufficient_range_coverage_accession_count": len(
+            insufficient_range_coverage_accessions
+        ),
     }
 
 
-def build_position_counts(rows: list[dict[str, Any]]) -> tuple[dict[int, int], dict[int, Counter[str]]]:
+def build_position_counts(
+    rows: list[dict[str, Any]],
+) -> tuple[dict[int, int], dict[int, Counter[str]]]:
     included_counts: dict[int, int] = defaultdict(int)
     aa_counts: dict[int, Counter[str]] = defaultdict(Counter)
     for row in rows:
@@ -190,7 +245,9 @@ def write_profile_accessions(path: Path, rows: list[dict[str, Any]]) -> None:
             writer.writerow([accession, genotype, subtype])
 
 
-def write_gt_workbook(path: Path, rows_by_gt: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
+def write_gt_workbook(
+    path: Path, rows_by_gt: dict[str, list[dict[str, Any]]]
+) -> dict[str, int]:
     wb = Workbook()
     wb.remove(wb.active)
     summary: dict[str, int] = {}
@@ -214,12 +271,24 @@ def write_gt_workbook(path: Path, rows_by_gt: dict[str, list[dict[str, Any]]]) -
                 count = aa_counts[pos].get(aa, 0)
                 if count == 0:
                     continue
-                ws.append([pos, denom, aa, count, count, 100.0 * count / denom, 100.0 * count / denom])
+                ws.append(
+                    [
+                        pos,
+                        denom,
+                        aa,
+                        count,
+                        count,
+                        100.0 * count / denom,
+                        100.0 * count / denom,
+                    ]
+                )
     wb.save(path)
     return summary
 
 
-def write_subtype_workbook(path: Path, rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]]) -> dict[str, dict[str, int]]:
+def write_subtype_workbook(
+    path: Path, rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]]
+) -> dict[str, dict[str, int]]:
     wb = Workbook()
     wb.remove(wb.active)
     summary: dict[str, dict[str, int]] = {}
@@ -279,7 +348,9 @@ def main() -> int:
         write_profile_accessions(Path(args.profile_accessions_csv), rows)
 
     rows_by_gt: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
+    rows_by_gt_subtype: dict[str, dict[str, list[dict[str, Any]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for row in rows:
         gt = row["ClosestGT"]
         subtype = row["ClosestSubtype"]

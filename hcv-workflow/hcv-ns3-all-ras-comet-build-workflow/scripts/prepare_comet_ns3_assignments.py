@@ -16,7 +16,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--comet-csv", required=True)
     parser.add_argument("--fasta-dir", required=True)
-    parser.add_argument("--accessions-csv", help="Optional kept-accessions CSV limiting the COMET input set.")
+    parser.add_argument(
+        "--accessions-csv",
+        help="Optional kept-accessions CSV limiting the COMET input set.",
+    )
     parser.add_argument("--genotype-output-csv", required=True)
     parser.add_argument("--subtype-output-csv", required=True)
     parser.add_argument("--not-found-output-csv", required=True)
@@ -72,27 +75,37 @@ def load_accessions(path: Path) -> set[str]:
         reader = csv.DictReader(handle)
         if "accession" not in (reader.fieldnames or []):
             raise RuntimeError(f"Column 'accession' was not found in {path}")
-        return {accession for row in reader if (accession := (row.get("accession") or "").strip())}
+        return {
+            accession
+            for row in reader
+            if (accession := (row.get("accession") or "").strip())
+        }
 
 
 def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["accession", "genotype", "subtype", "column_name"])
+        writer = csv.DictWriter(
+            handle, fieldnames=["accession", "genotype", "subtype", "column_name"]
+        )
         writer.writeheader()
         writer.writerows(rows)
 
 
 def write_fasta(path: Path, records: list[list[str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(line for record in records for line in record), encoding="utf-8")
+    path.write_text(
+        "".join(line for record in records for line in record), encoding="utf-8"
+    )
 
 
 def main() -> int:
     args = parse_args()
     fasta_dir = Path(args.fasta_dir)
     calls = load_comet(Path(args.comet_csv))
-    requested_accessions = load_accessions(Path(args.accessions_csv)) if args.accessions_csv else None
+    requested_accessions = (
+        load_accessions(Path(args.accessions_csv)) if args.accessions_csv else None
+    )
     genotype_rows: list[dict[str, str]] = []
     subtype_rows: list[dict[str, str]] = []
     missing_rows: list[dict[str, str]] = []
@@ -105,29 +118,59 @@ def main() -> int:
         kept: list[list[str]] = []
         for record in read_fasta(fasta_path):
             accession = accession_from_header(record[0])
-            if requested_accessions is not None and accession not in requested_accessions:
+            if (
+                requested_accessions is not None
+                and accession not in requested_accessions
+            ):
                 continue
             seen_accessions.add(accession)
             total_accessions += 1
             call = calls.get(accession) or calls.get(accession.split(".", 1)[0])
             if call is None:
-                status = "unassigned" if accession in calls or accession.split(".", 1)[0] in calls else "missing"
+                status = (
+                    "unassigned"
+                    if accession in calls or accession.split(".", 1)[0] in calls
+                    else "missing"
+                )
                 unassigned += status == "unassigned"
                 missing += status == "missing"
-                missing_rows.append({"accession": accession, "genotype": "", "subtype": "", "column_name": status})
+                missing_rows.append(
+                    {
+                        "accession": accession,
+                        "genotype": "",
+                        "subtype": "",
+                        "column_name": status,
+                    }
+                )
                 missing_or_unassigned_records.append(record)
                 continue
             genotype, subtype = call
             assigned += 1
             kept.append(record)
-            genotype_rows.append({"accession": accession, "genotype": genotype, "subtype": "", "column_name": "Comet NS3"})
-            subtype_rows.append({"accession": accession, "genotype": genotype, "subtype": subtype, "column_name": "Comet NS3"})
+            genotype_rows.append(
+                {
+                    "accession": accession,
+                    "genotype": genotype,
+                    "subtype": "",
+                    "column_name": "Comet NS3",
+                }
+            )
+            subtype_rows.append(
+                {
+                    "accession": accession,
+                    "genotype": genotype,
+                    "subtype": subtype,
+                    "column_name": "Comet NS3",
+                }
+            )
         kept_records_by_path[fasta_path] = kept
 
     missing_from_fasta = (requested_accessions or set()) - seen_accessions
     if missing_from_fasta:
         preview = ", ".join(sorted(missing_from_fasta)[:10])
-        raise RuntimeError(f"{len(missing_from_fasta)} Step 6 kept accession(s) were absent from {fasta_dir}: {preview}")
+        raise RuntimeError(
+            f"{len(missing_from_fasta)} Step 6 kept accession(s) were absent from {fasta_dir}: {preview}"
+        )
 
     print(f"comet_input_accession_count={total_accessions}")
     print(f"comet_assigned_accession_count={assigned}")
@@ -136,7 +179,9 @@ def main() -> int:
     if args.remove_unassigned:
         print("removing_missing_or_unassigned_accessions=true")
         for fasta_path, kept in kept_records_by_path.items():
-            fasta_path.write_text("".join(line for record in kept for line in record), encoding="utf-8")
+            fasta_path.write_text(
+                "".join(line for record in kept for line in record), encoding="utf-8"
+            )
     else:
         print("removing_missing_or_unassigned_accessions=false")
     write_csv(Path(args.genotype_output_csv), genotype_rows)

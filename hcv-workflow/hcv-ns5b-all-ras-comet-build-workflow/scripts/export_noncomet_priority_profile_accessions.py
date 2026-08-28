@@ -25,20 +25,41 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     with Path(args.profile_accessions_csv).open(encoding="utf-8", newline="") as handle:
-        profile_accessions = {accession_key(row["accession"]): row["accession"].strip() for row in csv.DictReader(handle) if accession_key(row.get("accession"))}
+        profile_accessions = {
+            accession_key(row["accession"]): row["accession"].strip()
+            for row in csv.DictReader(handle)
+            if accession_key(row.get("accession"))
+        }
     with Path(args.comet_subtype_csv).open(encoding="utf-8", newline="") as handle:
-        comet_subtypes = {accession_key(row.get("name") or row.get("accession")): str(row.get("subtype") or "").strip().lower() for row in csv.DictReader(handle)}
+        comet_subtypes = {
+            accession_key(row.get("name") or row.get("accession")): str(
+                row.get("subtype") or ""
+            )
+            .strip()
+            .lower()
+            for row in csv.DictReader(handle)
+        }
 
     priority_subtypes: dict[str, str] = {}
-    with Path(args.noncomet_coverage_csv).open(encoding="utf-8-sig", newline="") as handle:
+    with Path(args.noncomet_coverage_csv).open(
+        encoding="utf-8-sig", newline=""
+    ) as handle:
         for row in csv.DictReader(handle):
             accession = accession_key(row.get("Accession"))
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
-            if accession and (subtype == "1d" or genotype in {"7", "8"} or subtype.startswith(("7", "8"))):
+            if accession and (
+                subtype == "1d"
+                or genotype in {"7", "8"}
+                or subtype.startswith(("7", "8"))
+            ):
                 priority_subtypes[accession] = subtype
 
-    rows = [(profile_accessions[key], comet_subtypes.get(key, ""), subtype) for key, subtype in priority_subtypes.items() if key in profile_accessions]
+    rows = [
+        (profile_accessions[key], comet_subtypes.get(key, ""), subtype)
+        for key, subtype in priority_subtypes.items()
+        if key in profile_accessions
+    ]
     rows.sort(key=lambda row: row[0])
     output = Path(args.output_csv)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -46,7 +67,14 @@ def main() -> None:
         writer = csv.writer(handle)
         writer.writerow(["AccessionID", "CometSubtype", "NonCometSubtype"])
         writer.writerows(rows)
-    print(json.dumps({"output_csv": str(output.resolve()), "profile_used_noncomet_priority_accession_count": len(rows)}))
+    print(
+        json.dumps(
+            {
+                "output_csv": str(output.resolve()),
+                "profile_used_noncomet_priority_accession_count": len(rows),
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

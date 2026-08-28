@@ -47,17 +47,26 @@ def load_references(path: Path) -> dict[tuple[str, str], str]:
         match = re.fullmatch(r"genotype ([1-8]) \| (NS3|NS5A_NTD|NS5B)", header)
         if match:
             references[(match.group(1), match.group(2))] = sequence
-    missing = [f"GT{gt} {gene}" for gt in "12345678" for gene in GENES if (gt, gene) not in references]
+    missing = [
+        f"GT{gt} {gene}"
+        for gt in "12345678"
+        for gene in GENES
+        if (gt, gene) not in references
+    ]
     if missing:
         raise ValueError(f"Missing reference sequences: {', '.join(missing)}")
     return references
 
 
-def covered_alignment_pairs(reference: str, consensus: str) -> dict[int, tuple[str, str]]:
+def covered_alignment_pairs(
+    reference: str, consensus: str
+) -> dict[int, tuple[str, str]]:
     """Compare fixed gene coordinates; inputs are already position-aligned."""
     return {
         position: (reference_aa, consensus_aa)
-        for position, (reference_aa, consensus_aa) in enumerate(zip(reference, consensus), start=1)
+        for position, (reference_aa, consensus_aa) in enumerate(
+            zip(reference, consensus), start=1
+        )
         if reference_aa in VALID_AAS and consensus_aa in VALID_AAS
     }
 
@@ -81,7 +90,9 @@ def write_excel(output_path: Path, rows: list[list[str | int]]) -> None:
     worksheet.freeze_panes = "A2"
     for column_cells in worksheet.columns:
         width = max((len(str(cell.value or "")) for cell in column_cells), default=0)
-        worksheet.column_dimensions[column_cells[0].column_letter].width = min(width + 2, 30)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = min(
+            width + 2, 30
+        )
     workbook.save(output_path)
 
 
@@ -108,7 +119,14 @@ def write_subtype_alignment(
         if not genotype or not subtype or consensus is None:
             missing_consensuses.append((gene, f"GT{genotype}", subtype, accession))
             continue
-        rows.append((genotype, subtype, accession, covered_alignment_pairs(reference, consensus)))
+        rows.append(
+            (
+                genotype,
+                subtype,
+                accession,
+                covered_alignment_pairs(reference, consensus),
+            )
+        )
         matched_lengths.append((header, consensus_name, len(reference), len(consensus)))
     rows.sort(key=lambda row: (int(row[0]), row[1], row[2]))
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -119,12 +137,17 @@ def write_subtype_alignment(
         excel_rows.append(["Gene", "Genotype", "Subtype", "Sequence"] + list(positions))
         excel_rows.append(
             [gene, f"GT{genotype}", subtype, "Reference"]
-            + [pairs[position][0] if position in pairs else "" for position in positions]
+            + [
+                pairs[position][0] if position in pairs else ""
+                for position in positions
+            ]
         )
         excel_rows.append(
             [gene, f"GT{genotype}", subtype, "Consensus"]
             + [
-                pairs[position][1] if position in pairs and pairs[position][1] != pairs[position][0] else ""
+                pairs[position][1]
+                if position in pairs and pairs[position][1] != pairs[position][0]
+                else ""
                 for position in positions
             ]
         )
@@ -144,7 +167,10 @@ def write_missing_subtype_consensus_report(
     output_path: Path, rows: list[tuple[str, str, str, str]]
 ) -> None:
     """Write all subtype references that lack a profile-derived Comet consensus."""
-    sorted_rows = sorted(rows, key=lambda row: (row[0], int(row[1].removeprefix("GT") or 0), row[2], row[3]))
+    sorted_rows = sorted(
+        rows,
+        key=lambda row: (row[0], int(row[1].removeprefix("GT") or 0), row[2], row[3]),
+    )
     write_excel(
         output_path,
         [["Gene", "Genotype", "Subtype", "ReferenceAccession"]]
@@ -152,7 +178,9 @@ def write_missing_subtype_consensus_report(
     )
 
 
-def write_differences(gene: str, refs: dict[tuple[str, str], str], consensus_path: Path, output_path: Path) -> int:
+def write_differences(
+    gene: str, refs: dict[tuple[str, str], str], consensus_path: Path, output_path: Path
+) -> int:
     consensuses = read_fasta(consensus_path)
     sequences: dict[str, dict[int, tuple[str, str]]] = {}
     for genotype in "12345678":
@@ -169,10 +197,14 @@ def write_differences(gene: str, refs: dict[tuple[str, str], str], consensus_pat
         positions = RAS_POSITIONS[gene]
         excel_rows.append([])
         excel_rows.append(["Gene", "Genotype", "Sequence"] + list(positions))
-        values = [pairs[position][0] if position in pairs else "" for position in positions]
+        values = [
+            pairs[position][0] if position in pairs else "" for position in positions
+        ]
         excel_rows.append([gene, f"GT{genotype}", "Reference"] + values)
         values = [
-            pairs[position][1] if position in pairs and pairs[position][1] != pairs[position][0] else ""
+            pairs[position][1]
+            if position in pairs and pairs[position][1] != pairs[position][0]
+            else ""
             for position in positions
         ]
         excel_rows.append([gene, f"GT{genotype}", "Consensus"] + values)
@@ -225,11 +257,20 @@ def main() -> int:
 
     refs = load_references(args.reference_fasta)
     genes = args.gene or GENES
-    if (args.subtype_reference_fasta or args.subtype_consensus_fasta or args.subtype_length_csv) and len(genes) != 1:
-        raise ValueError("Explicit subtype FASTA and length-CSV options require exactly one --gene value")
+    if (
+        args.subtype_reference_fasta
+        or args.subtype_consensus_fasta
+        or args.subtype_length_csv
+    ) and len(genes) != 1:
+        raise ValueError(
+            "Explicit subtype FASTA and length-CSV options require exactly one --gene value"
+        )
     for gene in genes:
         consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
-        output = args.output_dir / f"HCV_GT_Ref_vs_Comet_GT_Consensus_Differences_{gene}.xlsx"
+        output = (
+            args.output_dir
+            / f"HCV_GT_Ref_vs_Comet_GT_Consensus_Differences_{gene}.xlsx"
+        )
         count = write_differences(
             gene,
             refs,
@@ -242,9 +283,18 @@ def main() -> int:
         matched_lengths: list[tuple[str, str, int, int]] = []
         for gene in genes:
             consensus_gene = "NS5A" if gene == "NS5A_NTD" else gene
-            reference_path = args.subtype_reference_fasta or args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
-            output = args.output_dir / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx"
-            consensus_path = args.subtype_consensus_fasta or args.consensus_dir / f"{consensus_gene}_Subtype_Consensus.fasta"
+            reference_path = (
+                args.subtype_reference_fasta
+                or args.subtype_reference_dir / f"HCV_Subtype_Refs_{gene}_AA.fasta"
+            )
+            output = (
+                args.output_dir
+                / f"HCV_Subtype_Ref_vs_Comet_Subtype_Consensus_Aligned_{gene}.xlsx"
+            )
+            consensus_path = (
+                args.subtype_consensus_fasta
+                or args.consensus_dir / f"{consensus_gene}_Subtype_Consensus.fasta"
+            )
             matched, missing, lengths = write_subtype_alignment(
                 gene,
                 reference_path,
@@ -253,14 +303,22 @@ def main() -> int:
             )
             missing_consensuses.extend(missing)
             matched_lengths.extend(lengths)
-            print(f"{output}: {matched} matched subtype references; {len(missing)} without a Comet consensus")
+            print(
+                f"{output}: {matched} matched subtype references; {len(missing)} without a Comet consensus"
+            )
         suffix = "" if len(genes) == len(GENES) else f"_{genes[0]}"
-        missing_output = args.output_dir / f"HCV_Subtype_Refs_Without_Comet_Consensus{suffix}.xlsx"
+        missing_output = (
+            args.output_dir / f"HCV_Subtype_Refs_Without_Comet_Consensus{suffix}.xlsx"
+        )
         write_missing_subtype_consensus_report(missing_output, missing_consensuses)
-        print(f"{missing_output}: {len(missing_consensuses)} subtype references without a Comet consensus")
+        print(
+            f"{missing_output}: {len(missing_consensuses)} subtype references without a Comet consensus"
+        )
         if args.subtype_length_csv:
             write_subtype_length_csv(args.subtype_length_csv, matched_lengths)
-            print(f"{args.subtype_length_csv}: {len(matched_lengths)} matched subtype reference/consensus lengths")
+            print(
+                f"{args.subtype_length_csv}: {len(matched_lengths)} matched subtype reference/consensus lengths"
+            )
     return 0
 
 

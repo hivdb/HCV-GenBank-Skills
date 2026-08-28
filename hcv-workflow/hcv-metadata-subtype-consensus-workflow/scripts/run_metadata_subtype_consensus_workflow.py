@@ -18,7 +18,9 @@ from openpyxl import Workbook
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_METADATA_CSV = REPO_ROOT / "outputs/build_accessions_metadata_csv/Accessions_metadata.csv"
+DEFAULT_METADATA_CSV = (
+    REPO_ROOT / "outputs/build_accessions_metadata_csv/Accessions_metadata.csv"
+)
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs/temp/metadata_subtype_consensus_workflow"
 DEFAULT_SUBTYPE_JSON = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
 DEFAULT_GT_AA_JSON = REPO_ROOT / "HCVData" / "HCV_GT_Refs_By_Gene_AA.json"
@@ -35,7 +37,9 @@ def parse_args() -> argparse.Namespace:
             "from an accession metadata CSV and a RefID-organized FASTA directory."
         )
     )
-    parser.add_argument("--fasta-dir", help="Directory containing FASTA files named with RefID prefixes")
+    parser.add_argument(
+        "--fasta-dir", help="Directory containing FASTA files named with RefID prefixes"
+    )
     parser.add_argument("--metadata-csv", default=str(DEFAULT_METADATA_CSV))
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT))
     parser.add_argument("--subtype-json", default=str(DEFAULT_SUBTYPE_JSON))
@@ -59,7 +63,9 @@ def is_gene_present(value: str | None) -> bool:
     return (value or "").strip().lower() in {"yes", "y", "true", "1", "present"}
 
 
-def load_metadata_accessions(metadata_csv: Path, gene: str) -> tuple[dict[str, set[str]], dict[str, int]]:
+def load_metadata_accessions(
+    metadata_csv: Path, gene: str
+) -> tuple[dict[str, set[str]], dict[str, int]]:
     accessions_by_refid: dict[str, set[str]] = {}
     seen: set[tuple[str, str]] = set()
     skipped_no_gene = 0
@@ -71,7 +77,9 @@ def load_metadata_accessions(metadata_csv: Path, gene: str) -> tuple[dict[str, s
         required = {"RefID", "Accession", gene}
         missing = sorted(required - set(reader.fieldnames or []))
         if missing:
-            raise RuntimeError(f"{metadata_csv} is missing columns: {', '.join(missing)}")
+            raise RuntimeError(
+                f"{metadata_csv} is missing columns: {', '.join(missing)}"
+            )
 
         for row in reader:
             if not is_gene_present(row.get(gene)):
@@ -90,7 +98,9 @@ def load_metadata_accessions(metadata_csv: Path, gene: str) -> tuple[dict[str, s
             accessions_by_refid.setdefault(refid, set()).add(accession)
 
     return accessions_by_refid, {
-        "selected_accessions": sum(len(accessions) for accessions in accessions_by_refid.values()),
+        "selected_accessions": sum(
+            len(accessions) for accessions in accessions_by_refid.values()
+        ),
         "selected_refids": len(accessions_by_refid),
         "skipped_no_gene": skipped_no_gene,
         "skipped_missing_refid_or_accession": skipped_missing_id,
@@ -163,7 +173,11 @@ def stage_gene_fastas(
         if fasta_path is None:
             missing_fasta += len(wanted)
             continue
-        entries = [(header, seq) for header, seq in parse_fasta(fasta_path) if accession_from_header(header) in wanted]
+        entries = [
+            (header, seq)
+            for header, seq in parse_fasta(fasta_path)
+            if accession_from_header(header) in wanted
+        ]
         found = {accession_from_header(header) for header, _seq in entries}
         missing_sequence += len(wanted - found)
         if not entries:
@@ -268,7 +282,9 @@ def alignment_marker(reference: str, query: str) -> str:
 def parse_consensus_genotype(header: str) -> str:
     match = re.match(r"GT([1-8])_", header)
     if not match:
-        raise RuntimeError(f"Could not parse genotype from subtype consensus header: {header}")
+        raise RuntimeError(
+            f"Could not parse genotype from subtype consensus header: {header}"
+        )
     return match.group(1)
 
 
@@ -311,10 +327,14 @@ def write_consensus_alignment_report(
             gt = parse_consensus_genotype(header)
             reference = gt_refs.get((gt, ref_gene))
             if reference is None:
-                raise RuntimeError(f"Missing genotype {gt} {ref_gene} AA reference in {gt_aa_fasta}")
+                raise RuntimeError(
+                    f"Missing genotype {gt} {ref_gene} AA reference in {gt_aa_fasta}"
+                )
 
             alignment = aligner.align(reference, sequence)[0]
-            aligned_ref, aligned_query = alignment_strings(reference, sequence, alignment.coordinates)
+            aligned_ref, aligned_query = alignment_strings(
+                reference, sequence, alignment.coordinates
+            )
             marker = alignment_marker(aligned_ref, aligned_query)
             informative = sum(
                 1
@@ -324,7 +344,9 @@ def write_consensus_alignment_report(
             matches = marker.count("|")
             identity = matches / informative if informative else 0.0
 
-            handle.write(f"[{idx}] gene={gene} subtype_consensus={header} genotype=GT{gt} reference={ref_gene}\n")
+            handle.write(
+                f"[{idx}] gene={gene} subtype_consensus={header} genotype=GT{gt} reference={ref_gene}\n"
+            )
             handle.write(
                 f"score={alignment.score:.3f} identity={matches}/{informative} ({identity:.3%}) "
                 f"reference_length={len(reference)} consensus_length={len(sequence)}\n"
@@ -344,7 +366,9 @@ def write_consensus_alignment_report(
     }
 
 
-def run_consensus_alignment_report(args: argparse.Namespace, output_root: Path, gene: str) -> dict[str, Any]:
+def run_consensus_alignment_report(
+    args: argparse.Namespace, output_root: Path, gene: str
+) -> dict[str, Any]:
     gt_aa_fasta = Path(args.gt_aa_fasta).expanduser()
     gt_refs = load_gt_aa_fasta_refs(gt_aa_fasta)
     gene_dir = output_root / gene
@@ -362,8 +386,12 @@ def run_consensus_alignment_report(args: argparse.Namespace, output_root: Path, 
     )
 
 
-def run_consensus_alignment_reports(args: argparse.Namespace, output_root: Path) -> list[dict[str, Any]]:
-    return [run_consensus_alignment_report(args, output_root, gene) for gene in args.genes]
+def run_consensus_alignment_reports(
+    args: argparse.Namespace, output_root: Path
+) -> list[dict[str, Any]]:
+    return [
+        run_consensus_alignment_report(args, output_root, gene) for gene in args.genes
+    ]
 
 
 def run_gene(args: argparse.Namespace, gene: str, output_root: Path) -> dict[str, Any]:
@@ -377,7 +405,9 @@ def run_gene(args: argparse.Namespace, gene: str, output_root: Path) -> dict[str
 
     accessions_by_refid, metadata_summary = load_metadata_accessions(metadata_csv, gene)
     stage_dir = gene_dir / "fasta_stage"
-    seed_rows, stage_summary = stage_gene_fastas(fasta_dir, accessions_by_refid, stage_dir, gene)
+    seed_rows, stage_summary = stage_gene_fastas(
+        fasta_dir, accessions_by_refid, stage_dir, gene
+    )
     seed_workbook = gene_dir / f"{gene}_Metadata_GT_Seed.xlsx"
     write_seed_workbook(seed_workbook, seed_rows, gene)
     if not seed_rows:
@@ -480,7 +510,9 @@ def run_gene(args: argparse.Namespace, gene: str, output_root: Path) -> dict[str
         ],
         gene_dir / f"{gene}_subtype_consensus_summary.json",
     )
-    consensus_alignment_summary = run_consensus_alignment_report(args, output_root, gene)
+    consensus_alignment_summary = run_consensus_alignment_report(
+        args, output_root, gene
+    )
 
     return {
         "gene": gene,
@@ -500,7 +532,9 @@ def run_gene(args: argparse.Namespace, gene: str, output_root: Path) -> dict[str
 def main() -> int:
     args = parse_args()
     if not args.only_consensus_alignments and not args.fasta_dir:
-        raise SystemExit("--fasta-dir is required unless --only-consensus-alignments is used")
+        raise SystemExit(
+            "--fasta-dir is required unless --only-consensus-alignments is used"
+        )
     output_root = Path(args.output_root).expanduser()
     output_root.mkdir(parents=True, exist_ok=True)
 

@@ -39,7 +39,12 @@ KEY_ORDER = [
 
 
 def shell_escape_double_quoted(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("`", "\\`")
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("$", "\\$")
+        .replace("`", "\\`")
+    )
 
 
 def shell_assign(name: str, value: str) -> str:
@@ -58,7 +63,9 @@ def coerce_value(key: str, value: object, repo_root: Path) -> str:
 
 def main() -> int:
     if len(sys.argv) != 4:
-        raise SystemExit("Usage: load_pipeline_defaults.py <pipeline-name> <config-path> <repo-root>")
+        raise SystemExit(
+            "Usage: load_pipeline_defaults.py <pipeline-name> <config-path> <repo-root>"
+        )
 
     pipeline_name = sys.argv[1]
     config_path = Path(sys.argv[2]).expanduser().resolve()

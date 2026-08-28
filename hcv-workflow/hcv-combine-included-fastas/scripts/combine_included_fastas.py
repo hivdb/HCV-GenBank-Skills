@@ -18,17 +18,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ns3-dir",
         type=Path,
-        default=REPO_ROOT / "outputs/comet-NS3/temp/run_ns3_pipeline/included_refid_fastas",
+        default=REPO_ROOT
+        / "outputs/comet-NS3/temp/run_ns3_pipeline/included_refid_fastas",
     )
     parser.add_argument(
         "--ns5a-dir",
         type=Path,
-        default=REPO_ROOT / "outputs/comet-NS5A/temp/run_ns5a_pipeline/included_refid_fastas",
+        default=REPO_ROOT
+        / "outputs/comet-NS5A/temp/run_ns5a_pipeline/included_refid_fastas",
     )
     parser.add_argument(
         "--ns5b-dir",
         type=Path,
-        default=REPO_ROOT / "outputs/comet-NS5B-all-ras/08_filter-refid-fastas/included_refid_fastas",
+        default=REPO_ROOT
+        / "outputs/comet-NS5B-all-ras/08_filter-refid-fastas/included_refid_fastas",
     )
     parser.add_argument("--output-dir", type=Path, default=SKILL_ROOT / "assets")
     return parser.parse_args()
@@ -59,9 +62,17 @@ def main() -> int:
     output_dir = args.output_dir.expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for gene, source_dir in (("NS3", args.ns3_dir), ("NS5A", args.ns5a_dir), ("NS5B", args.ns5b_dir)):
-        output_path, input_count, record_count = combine(gene, source_dir.expanduser(), output_dir)
-        print(f"{gene}: input_files={input_count} records={record_count} output={output_path.resolve()}")
+    for gene, source_dir in (
+        ("NS3", args.ns3_dir),
+        ("NS5A", args.ns5a_dir),
+        ("NS5B", args.ns5b_dir),
+    ):
+        output_path, input_count, record_count = combine(
+            gene, source_dir.expanduser(), output_dir
+        )
+        print(
+            f"{gene}: input_files={input_count} records={record_count} output={output_path.resolve()}"
+        )
     return 0
 
 

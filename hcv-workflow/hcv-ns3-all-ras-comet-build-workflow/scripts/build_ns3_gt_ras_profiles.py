@@ -20,7 +20,23 @@ from openpyxl.styles import Alignment, Font, PatternFill
 # from PIL import Image, ImageDraw, ImageFont
 
 
-RESISTANCE_POSITIONS = [36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175]
+RESISTANCE_POSITIONS = [
+    36,
+    41,
+    43,
+    54,
+    55,
+    56,
+    80,
+    122,
+    155,
+    156,
+    158,
+    166,
+    168,
+    170,
+    175,
+]
 EXCLUDED_AAS = {"X", "*"}
 FREQUENCY_THRESHOLD_PERCENT = 1.0
 type VariantCell = list[tuple[str, str]]
@@ -38,13 +54,19 @@ def parse_args() -> argparse.Namespace:
 
 
 def script_temp_dir() -> Path:
-    path = Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3-all-ras/temp")) / Path(__file__).stem
+    path = (
+        Path(os.environ.get("NS3_STEP_OUTPUT_DIR", "outputs/comet-NS3-all-ras/temp"))
+        / Path(__file__).stem
+    )
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def sanitize_label(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-") or "job"
+    return (
+        "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value).strip("._-")
+        or "job"
+    )
 
 
 def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
@@ -138,12 +160,16 @@ def build_grid(
         for pos in RESISTANCE_POSITIONS:
             variants = [
                 (aa, format_freq(pct))
-                for aa, pct in sorted(profile_rows[gt].get(pos, []), key=lambda item: (-item[1], item[0]))
+                for aa, pct in sorted(
+                    profile_rows[gt].get(pos, []), key=lambda item: (-item[1], item[0])
+                )
                 if aa not in EXCLUDED_AAS and pct >= FREQUENCY_THRESHOLD_PERCENT
             ]
             pos_variants[pos] = variants
 
-        coverage_values = [position_coverage.get(gt, {}).get(pos, 0) for pos in RESISTANCE_POSITIONS]
+        coverage_values = [
+            position_coverage.get(gt, {}).get(pos, 0) for pos in RESISTANCE_POSITIONS
+        ]
         row: list[GridCell] = [
             f"GT{gt} ({gt_counts.get(gt, 0)}, {format_coverage_range(coverage_values)})",
         ]
@@ -163,7 +189,9 @@ def write_excel(path: Path, grid: list[list[GridCell]]) -> None:
     for row_idx, row in enumerate(grid, start=1):
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx)
-            cell.value = variants_to_rich_text(value) if isinstance(value, list) else value
+            cell.value = (
+                variants_to_rich_text(value) if isinstance(value, list) else value
+            )
         first = row[0]
         if isinstance(first, str) and first.startswith("GT"):
             for cell in ws[row_idx]:
@@ -221,7 +249,9 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     script_temp_dir()
 
-    profile_rows, gt_counts, position_coverage = load_gt_profile_rows(gt_profile_workbook)
+    profile_rows, gt_counts, position_coverage = load_gt_profile_rows(
+        gt_profile_workbook
+    )
     grid = build_grid(profile_rows, gt_counts, position_coverage)
 
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -28,9 +28,16 @@ def main() -> int:
     workbook = load_workbook(args.subtype_workbook)
     worksheet = workbook.active
     headers = {cell.value: cell.column for cell in worksheet[1]}
-    required = {"AccessionID", "ClosestSubtype", "ClosestSubtypeAssignmentSource", "ClosestSubtypeMetadataColumn"}
+    required = {
+        "AccessionID",
+        "ClosestSubtype",
+        "ClosestSubtypeAssignmentSource",
+        "ClosestSubtypeMetadataColumn",
+    }
     if not required <= set(headers):
-        raise RuntimeError(f"Missing subtype columns: {sorted(required - set(headers))}")
+        raise RuntimeError(
+            f"Missing subtype columns: {sorted(required - set(headers))}"
+        )
     updated = missing = 0
     for row in range(2, worksheet.max_row + 1):
         accession = str(worksheet.cell(row, headers["AccessionID"]).value or "")

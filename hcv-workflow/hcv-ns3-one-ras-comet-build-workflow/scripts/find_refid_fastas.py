@@ -44,6 +44,7 @@ KNOWN_QUASISPECIES_REFIDS = {
     "2324",
 }
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -51,11 +52,17 @@ def parse_args() -> argparse.Namespace:
             "FASTA files by filename prefix."
         )
     )
-    parser.add_argument("--excel-file", required=True, help="Path to the Excel workbook")
+    parser.add_argument(
+        "--excel-file", required=True, help="Path to the Excel workbook"
+    )
     parser.add_argument("--sheet", required=True, help="Worksheet name to read")
-    parser.add_argument("--fasta-dir", required=True, help="Directory containing FASTA files")
+    parser.add_argument(
+        "--fasta-dir", required=True, help="Directory containing FASTA files"
+    )
     parser.add_argument("--output-dir", default="outputs", help="Base output directory")
-    parser.add_argument("--refid-column", default="RefID", help="Column name holding RefID values")
+    parser.add_argument(
+        "--refid-column", default="RefID", help="Column name holding RefID values"
+    )
     parser.add_argument(
         "--status-column",
         default="Status",
@@ -126,7 +133,9 @@ def load_matching_refids(
     status_column: str,
     positive_columns: list[str],
     excluded_refids: set[str],
-) -> tuple[list[str], list[dict[str, Any]], list[str], list[tuple[Any, ...]], dict[str, Any]]:
+) -> tuple[
+    list[str], list[dict[str, Any]], list[str], list[tuple[Any, ...]], dict[str, Any]
+]:
     workbook = load_workbook(excel_file, read_only=True, data_only=True)
     if sheet_name not in workbook.sheetnames:
         raise RuntimeError(f"Worksheet '{sheet_name}' was not found in {excel_file}")
@@ -141,10 +150,14 @@ def load_matching_refids(
     header_index = {header: idx for idx, header in enumerate(headers) if header}
 
     if refid_column not in header_index:
-        raise RuntimeError(f"Column '{refid_column}' was not found in worksheet '{sheet_name}'")
+        raise RuntimeError(
+            f"Column '{refid_column}' was not found in worksheet '{sheet_name}'"
+        )
     for column in positive_columns:
         if column not in header_index:
-            raise RuntimeError(f"Column '{column}' was not found in worksheet '{sheet_name}'")
+            raise RuntimeError(
+                f"Column '{column}' was not found in worksheet '{sheet_name}'"
+            )
 
     refid_idx = header_index[refid_column]
     status_idx = header_index.get(status_column)
@@ -162,7 +175,13 @@ def load_matching_refids(
 
     for row in rows[1:]:
         scanned_rows += 1
-        status = str(row[status_idx] if status_idx is not None and status_idx < len(row) and row[status_idx] is not None else "").strip()
+        status = str(
+            row[status_idx]
+            if status_idx is not None
+            and status_idx < len(row)
+            and row[status_idx] is not None
+            else ""
+        ).strip()
         has_special_include_status = is_special_include_status(status)
         special_include_status_rows += has_special_include_status
         failed_positive_filter = False
@@ -221,7 +240,9 @@ def filename_matches_refid(filename: str, refid: str) -> bool:
     return filename.startswith(prefix)
 
 
-def find_matching_files(fasta_dir: Path, refids: list[str]) -> tuple[list[str], dict[str, list[str]]]:
+def find_matching_files(
+    fasta_dir: Path, refids: list[str]
+) -> tuple[list[str], dict[str, list[str]]]:
     files_by_refid: dict[str, list[str]] = {refid: [] for refid in refids}
     for path in sorted(fasta_dir.rglob("*")):
         if not looks_like_fasta(path):
@@ -242,17 +263,23 @@ def write_lines(path: Path, lines: list[str]) -> None:
 
 
 def write_json(path: Path, payload: Any) -> None:
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
+    )
 
 
-def write_result_sheet(path: Path, headers: list[str], rows: list[tuple[Any, ...]]) -> None:
+def write_result_sheet(
+    path: Path, headers: list[str], rows: list[tuple[Any, ...]]
+) -> None:
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "FilteredRows"
     sheet.append(headers)
     column_count = len(headers)
     for row in rows:
-        sheet.append(list(row[:column_count]) + [None] * max(0, column_count - len(row)))
+        sheet.append(
+            list(row[:column_count]) + [None] * max(0, column_count - len(row))
+        )
     workbook.save(path)
 
 
@@ -270,7 +297,9 @@ def main() -> int:
     if not excel_file.exists():
         raise RuntimeError(f"Excel file was not found: {excel_file}")
     if not fasta_dir.is_dir():
-        raise RuntimeError(f"FASTA directory was not found or is not a directory: {fasta_dir}")
+        raise RuntimeError(
+            f"FASTA directory was not found or is not a directory: {fasta_dir}"
+        )
 
     excluded_refids = set(args.exclude_refid)
     if args.exclude_known_quasispecies_refids:
@@ -279,13 +308,15 @@ def main() -> int:
     base_output_dir.mkdir(parents=True, exist_ok=True)
     job_dir = make_job_dir(base_output_dir, excel_file, args.sheet)
 
-    refids, matching_rows, result_headers, result_rows, diagnostics = load_matching_refids(
-        excel_file,
-        args.sheet,
-        args.refid_column,
-        args.status_column,
-        args.positive_column,
-        excluded_refids,
+    refids, matching_rows, result_headers, result_rows, diagnostics = (
+        load_matching_refids(
+            excel_file,
+            args.sheet,
+            args.refid_column,
+            args.status_column,
+            args.positive_column,
+            excluded_refids,
+        )
     )
     matched_files, files_by_refid = find_matching_files(fasta_dir, refids)
 

@@ -8,6 +8,11 @@ import sys
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[2] / "hcv-ns3-comet-build-workflow" / "scripts" / "build_ns3_subtype_ras_consensus_difference_summary.py"
+SCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "hcv-ns3-comet-build-workflow"
+    / "scripts"
+    / "build_ns3_subtype_ras_consensus_difference_summary.py"
+)
 sys.argv = [str(SCRIPT), "--gene", "NS5B", *sys.argv[1:]]
 runpy.run_path(str(SCRIPT), run_name="__main__")

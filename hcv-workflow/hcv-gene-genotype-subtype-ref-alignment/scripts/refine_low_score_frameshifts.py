@@ -11,25 +11,73 @@ from typing import Any
 
 
 CODON_TABLE = {
-    "TTT": "F", "TTC": "F", "TTA": "L", "TTG": "L",
-    "TCT": "S", "TCC": "S", "TCA": "S", "TCG": "S",
-    "TAT": "Y", "TAC": "Y", "TAA": "*", "TAG": "*",
-    "TGT": "C", "TGC": "C", "TGA": "*", "TGG": "W",
-    "CTT": "L", "CTC": "L", "CTA": "L", "CTG": "L",
-    "CCT": "P", "CCC": "P", "CCA": "P", "CCG": "P",
-    "CAT": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
-    "CGT": "R", "CGC": "R", "CGA": "R", "CGG": "R",
-    "ATT": "I", "ATC": "I", "ATA": "I", "ATG": "M",
-    "ACT": "T", "ACC": "T", "ACA": "T", "ACG": "T",
-    "AAT": "N", "AAC": "N", "AAA": "K", "AAG": "K",
-    "AGT": "S", "AGC": "S", "AGA": "R", "AGG": "R",
-    "GTT": "V", "GTC": "V", "GTA": "V", "GTG": "V",
-    "GCT": "A", "GCC": "A", "GCA": "A", "GCG": "A",
-    "GAT": "D", "GAC": "D", "GAA": "E", "GAG": "E",
-    "GGT": "G", "GGC": "G", "GGA": "G", "GGG": "G",
+    "TTT": "F",
+    "TTC": "F",
+    "TTA": "L",
+    "TTG": "L",
+    "TCT": "S",
+    "TCC": "S",
+    "TCA": "S",
+    "TCG": "S",
+    "TAT": "Y",
+    "TAC": "Y",
+    "TAA": "*",
+    "TAG": "*",
+    "TGT": "C",
+    "TGC": "C",
+    "TGA": "*",
+    "TGG": "W",
+    "CTT": "L",
+    "CTC": "L",
+    "CTA": "L",
+    "CTG": "L",
+    "CCT": "P",
+    "CCC": "P",
+    "CCA": "P",
+    "CCG": "P",
+    "CAT": "H",
+    "CAC": "H",
+    "CAA": "Q",
+    "CAG": "Q",
+    "CGT": "R",
+    "CGC": "R",
+    "CGA": "R",
+    "CGG": "R",
+    "ATT": "I",
+    "ATC": "I",
+    "ATA": "I",
+    "ATG": "M",
+    "ACT": "T",
+    "ACC": "T",
+    "ACA": "T",
+    "ACG": "T",
+    "AAT": "N",
+    "AAC": "N",
+    "AAA": "K",
+    "AAG": "K",
+    "AGT": "S",
+    "AGC": "S",
+    "AGA": "R",
+    "AGG": "R",
+    "GTT": "V",
+    "GTC": "V",
+    "GTA": "V",
+    "GTG": "V",
+    "GCT": "A",
+    "GCC": "A",
+    "GCA": "A",
+    "GCG": "A",
+    "GAT": "D",
+    "GAC": "D",
+    "GAA": "E",
+    "GAG": "E",
+    "GGT": "G",
+    "GGC": "G",
+    "GGA": "G",
+    "GGG": "G",
 }
 
-NEG_INF = -10**9
+NEG_INF = -(10**9)
 MATCH_SCORE = 3
 MISMATCH_SCORE = -2
 STOP_SCORE = -6
@@ -60,11 +108,31 @@ def parse_args() -> argparse.Namespace:
             "frameshift-aware codon alignment."
         )
     )
-    parser.add_argument("--output-dir", required=True, help="Existing output directory from build_hcv_gene_subtype_refs.py")
-    parser.add_argument("--gt-gene-aa-json", required=True, help="Path to HCV_GT_Refs_By_Gene_AA.json")
-    parser.add_argument("--subtype-genome-na-json", required=True, help="Path to HCV_Subtype_Refs_By_Genome_NA.json")
-    parser.add_argument("--threshold", type=float, default=0.80, help="Refine only records below this aa match proportion")
-    parser.add_argument("--flank-nt", type=int, default=15, help="Extra nucleotides to include on each side of the initial window")
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Existing output directory from build_hcv_gene_subtype_refs.py",
+    )
+    parser.add_argument(
+        "--gt-gene-aa-json", required=True, help="Path to HCV_GT_Refs_By_Gene_AA.json"
+    )
+    parser.add_argument(
+        "--subtype-genome-na-json",
+        required=True,
+        help="Path to HCV_Subtype_Refs_By_Genome_NA.json",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.80,
+        help="Refine only records below this aa match proportion",
+    )
+    parser.add_argument(
+        "--flank-nt",
+        type=int,
+        default=15,
+        help="Extra nucleotides to include on each side of the initial window",
+    )
     return parser.parse_args()
 
 
@@ -73,7 +141,11 @@ def load_json(path: Path) -> Any:
 
 
 def normalize_nt(sequence: str) -> str:
-    return "".join(base for base in sequence.upper().replace("U", "T") if base in {"A", "C", "G", "T", "N"})
+    return "".join(
+        base
+        for base in sequence.upper().replace("U", "T")
+        if base in {"A", "C", "G", "T", "N"}
+    )
 
 
 def parse_gt_from_name(name: str) -> str:
@@ -83,7 +155,7 @@ def parse_gt_from_name(name: str) -> str:
     idx = len(prefix)
     while idx < len(name) and name[idx].isdigit():
         idx += 1
-    return name[len(prefix):idx]
+    return name[len(prefix) : idx]
 
 
 def build_gt_refs(rows: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
@@ -92,7 +164,9 @@ def build_gt_refs(rows: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
         gene = str(row["abstractGene"])
         if gene not in {"NS3", "NS5A_NTD", "NS5B"}:
             continue
-        refs[(parse_gt_from_name(str(row["name"])), gene)] = str(row["refSequence"]).strip().upper()
+        refs[(parse_gt_from_name(str(row["name"])), gene)] = (
+            str(row["refSequence"]).strip().upper()
+        )
     return refs
 
 
@@ -112,11 +186,15 @@ def wrap(text: str, width: int = 80) -> list[str]:
     return [text[i : i + width] for i in range(0, len(text), width)]
 
 
-def frameshift_refine(reference_aa: str, nt_window: str, source_nt_start: int) -> RefinedResult:
+def frameshift_refine(
+    reference_aa: str, nt_window: str, source_nt_start: int
+) -> RefinedResult:
     m = len(reference_aa)
     n = len(nt_window)
     dp = [[NEG_INF] * (n + 1) for _ in range(m + 1)]
-    trace: list[list[tuple[str, int, int, str] | None]] = [[None] * (n + 1) for _ in range(m + 1)]
+    trace: list[list[tuple[str, int, int, str] | None]] = [
+        [None] * (n + 1) for _ in range(m + 1)
+    ]
     dp[0] = [0] * (n + 1)
 
     best_score = NEG_INF
@@ -211,13 +289,18 @@ def main() -> int:
     gt_refs = build_gt_refs(gt_rows)
     subtype_by_accession = {str(row["accession"]): row for row in subtype_rows}
 
-    low_rows = [row for row in summary["records"] if float(row["alignment_score"]) < args.threshold]
+    low_rows = [
+        row
+        for row in summary["records"]
+        if float(row["alignment_score"]) < args.threshold
+    ]
     refined_rows: list[dict[str, Any]] = []
 
     csv_path = output_dir / "frameshift_refined_records_below_0_80.csv"
     md_by_gene = {
         "NS3": output_dir / "ns3_frameshift_refined_comparisons_below_0_80.txt",
-        "NS5A_NTD": output_dir / "ns5a_ntd_frameshift_refined_comparisons_below_0_80.txt",
+        "NS5A_NTD": output_dir
+        / "ns5a_ntd_frameshift_refined_comparisons_below_0_80.txt",
         "NS5B": output_dir / "ns5b_frameshift_refined_comparisons_below_0_80.txt",
     }
     md_lines = {
@@ -316,7 +399,9 @@ def main() -> int:
         "threshold": args.threshold,
         "refined_record_count": len(refined_rows),
         "csv": str(csv_path.resolve()),
-        "comparison_files": {gene: str(path.resolve()) for gene, path in md_by_gene.items()},
+        "comparison_files": {
+            gene: str(path.resolve()) for gene, path in md_by_gene.items()
+        },
     }
     (output_dir / "frameshift_refinement_summary.json").write_text(
         json.dumps(summary_payload, indent=2, ensure_ascii=True) + "\n",

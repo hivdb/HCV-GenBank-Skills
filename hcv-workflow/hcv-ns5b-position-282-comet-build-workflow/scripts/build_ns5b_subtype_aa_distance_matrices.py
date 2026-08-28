@@ -30,10 +30,19 @@ def parse_args() -> argparse.Namespace:
         help="Subtype complete-profile workbook used to determine sequence counts",
     )
     parser.add_argument("--min-subtype-sequences", type=int, default=10)
-    parser.add_argument("--output-xlsx", default="outputs/NS5B_Subtype_AA_Distance_Pos150_321.xlsx")
-    parser.add_argument("--temp-dir", default="outputs/comet-NS5B-position-282/temp/ns5b_subtype_aa_distance_matrices")
-    parser.add_argument("--start", type=int, default=150, help="1-based aligned start position")
-    parser.add_argument("--end", type=int, default=321, help="1-based aligned end position, inclusive")
+    parser.add_argument(
+        "--output-xlsx", default="outputs/NS5B_Subtype_AA_Distance_Pos150_321.xlsx"
+    )
+    parser.add_argument(
+        "--temp-dir",
+        default="outputs/comet-NS5B-position-282/temp/ns5b_subtype_aa_distance_matrices",
+    )
+    parser.add_argument(
+        "--start", type=int, default=150, help="1-based aligned start position"
+    )
+    parser.add_argument(
+        "--end", type=int, default=321, help="1-based aligned end position, inclusive"
+    )
     parser.add_argument("--mafft-bin", default="mafft")
     return parser.parse_args()
 
@@ -83,7 +92,9 @@ def subtype_sort_key(label: str) -> tuple[int, str]:
     return 999, subtype
 
 
-def group_by_genotype(records: list[tuple[str, str]]) -> dict[str, list[tuple[str, str]]]:
+def group_by_genotype(
+    records: list[tuple[str, str]],
+) -> dict[str, list[tuple[str, str]]]:
     grouped: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for name, sequence in records:
         if "_" not in name:
@@ -103,14 +114,22 @@ def load_subtype_sequence_counts(workbook_path: Path) -> dict[str, int]:
     try:
         for sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
-            header = [str(value) if value is not None else "" for value in next(ws.iter_rows(max_row=1, values_only=True))]
+            header = [
+                str(value) if value is not None else ""
+                for value in next(ws.iter_rows(max_row=1, values_only=True))
+            ]
             index = {name: i for i, name in enumerate(header)}
             required = {"Subtype", "NumSeqsIncludingPosition"}
             missing = required - index.keys()
             if missing:
-                raise RuntimeError(f"Worksheet {sheet_name} is missing columns: {', '.join(sorted(missing))}")
+                raise RuntimeError(
+                    f"Worksheet {sheet_name} is missing columns: {', '.join(sorted(missing))}"
+                )
             for row in ws.iter_rows(min_row=2, values_only=True):
-                subtype, count = row[index["Subtype"]], row[index["NumSeqsIncludingPosition"]]
+                subtype, count = (
+                    row[index["Subtype"]],
+                    row[index["NumSeqsIncludingPosition"]],
+                )
                 if subtype not in (None, "") and count not in (None, ""):
                     label = f"{sheet_name.strip()}_{str(subtype).strip()}"
                     counts[label] = max(counts.get(label, 0), int(count))
@@ -149,7 +168,9 @@ def display_name(label: str) -> str:
     return label.split("_", 1)[1] if "_" in label else label
 
 
-def add_distance_sheet(wb: Workbook, genotype: str, records: list[tuple[str, str]]) -> None:
+def add_distance_sheet(
+    wb: Workbook, genotype: str, records: list[tuple[str, str]]
+) -> None:
     labels = [name for name, _ in records]
     display_labels = [display_name(name) for name in labels]
     seqs = dict(records)
@@ -173,11 +194,20 @@ def add_distance_sheet(wb: Workbook, genotype: str, records: list[tuple[str, str
 
 def write_summary(path: Path, rows: list[dict[str, str | int]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    headers = ["genotype", "subtype", "sequence_count", "input_length", "status", "reason"]
+    headers = [
+        "genotype",
+        "subtype",
+        "sequence_count",
+        "input_length",
+        "status",
+        "reason",
+    ]
     with path.open("w", encoding="utf-8") as handle:
         handle.write(",".join(headers) + "\n")
         for row in rows:
-            handle.write(",".join(str(row.get(header, "")) for header in headers) + "\n")
+            handle.write(
+                ",".join(str(row.get(header, "")) for header in headers) + "\n"
+            )
 
 
 def main() -> int:
@@ -188,7 +218,9 @@ def main() -> int:
     if args.start < 1 or args.end < args.start:
         raise SystemExit("--start/--end must define a valid 1-based inclusive range")
     if input_fasta.suffix.lower() not in FASTA_EXTENSIONS:
-        raise SystemExit(f"Input FASTA extension should be one of {sorted(FASTA_EXTENSIONS)}")
+        raise SystemExit(
+            f"Input FASTA extension should be one of {sorted(FASTA_EXTENSIONS)}"
+        )
     if args.min_subtype_sequences < 1:
         raise SystemExit("--min-subtype-sequences must be at least 1")
 
@@ -210,7 +242,16 @@ def main() -> int:
             subtype = display_name(name)
             sequence_count = subtype_counts.get(name, 0)
             if sequence_count < args.min_subtype_sequences:
-                summary_rows.append({"genotype": genotype, "subtype": subtype, "sequence_count": sequence_count, "input_length": len(sequence), "status": "ignored", "reason": f"sequence count below minimum {args.min_subtype_sequences}"})
+                summary_rows.append(
+                    {
+                        "genotype": genotype,
+                        "subtype": subtype,
+                        "sequence_count": sequence_count,
+                        "input_length": len(sequence),
+                        "status": "ignored",
+                        "reason": f"sequence count below minimum {args.min_subtype_sequences}",
+                    }
+                )
                 continue
             if len(sequence) < args.end:
                 summary_rows.append(
@@ -245,19 +286,22 @@ def main() -> int:
         aligned = read_fasta(group_aligned)
         lengths = {len(sequence) for _, sequence in aligned}
         if len(lengths) != 1:
-            raise RuntimeError(f"{genotype} MAFFT output has inconsistent lengths: {sorted(lengths)}")
+            raise RuntimeError(
+                f"{genotype} MAFFT output has inconsistent lengths: {sorted(lengths)}"
+            )
         aligned_length = next(iter(lengths))
         if aligned_length < args.end:
             continue
         window_records = [
-            (name, sequence[args.start - 1 : args.end])
-            for name, sequence in aligned
+            (name, sequence[args.start - 1 : args.end]) for name, sequence in aligned
         ]
         add_distance_sheet(wb, genotype, window_records)
         sheet_count += 1
 
     if sheet_count == 0:
-        raise RuntimeError("No genotype groups had at least two subtype records covering the requested range")
+        raise RuntimeError(
+            "No genotype groups had at least two subtype records covering the requested range"
+        )
 
     output_xlsx.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_xlsx)
@@ -269,7 +313,9 @@ def main() -> int:
     print(f"summary_csv={summary_path.resolve()}")
     print(f"sheet_count={sheet_count}")
     print(f"input_record_count={len(records)}")
-    print(f"ignored_record_count={sum(1 for row in summary_rows if row['status'] == 'ignored')}")
+    print(
+        f"ignored_record_count={sum(1 for row in summary_rows if row['status'] == 'ignored')}"
+    )
     return 0
 
 

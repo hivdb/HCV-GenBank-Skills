@@ -15,9 +15,21 @@ def parse_args() -> argparse.Namespace:
             "files produced by split_refid_metadata_csv.py."
         )
     )
-    parser.add_argument("--metadata-dir", required=True, help="Directory containing RefID_*_metadata.csv files")
-    parser.add_argument("--fasta-dir", required=True, help="Directory containing copied RefID FASTA files")
-    parser.add_argument("--kept-accessions-output", required=True, help="CSV manifest of accessions retained after RefID metadata filtering.")
+    parser.add_argument(
+        "--metadata-dir",
+        required=True,
+        help="Directory containing RefID_*_metadata.csv files",
+    )
+    parser.add_argument(
+        "--fasta-dir",
+        required=True,
+        help="Directory containing copied RefID FASTA files",
+    )
+    parser.add_argument(
+        "--kept-accessions-output",
+        required=True,
+        help="CSV manifest of accessions retained after RefID metadata filtering.",
+    )
     return parser.parse_args()
 
 
@@ -142,11 +154,17 @@ def main() -> int:
     write_accession_manifest(kept_accessions_output, output_accessions)
     print(f"staged_fasta_accessions_before_filter={len(input_accessions)}")
     print(f"staged_fasta_accessions_after_filter={len(output_accessions)}")
-    print(f"staged_fasta_accessions_removed={len(input_accessions - output_accessions)}")
+    print(
+        f"staged_fasta_accessions_removed={len(input_accessions - output_accessions)}"
+    )
     print(f"refid_fasta_files_filtered={filtered_fasta_refids}")
     print(f"filter_rules_without_matching_fasta={missing_fasta_count}")
-    sorted_per_refid_counts = sorted(per_refid_counts, key=lambda item: refid_sort_key(item[0]))
-    print(f"filtered_refids={','.join(refid for refid, _before_count, _after_count in sorted_per_refid_counts)}")
+    sorted_per_refid_counts = sorted(
+        per_refid_counts, key=lambda item: refid_sort_key(item[0])
+    )
+    print(
+        f"filtered_refids={','.join(refid for refid, _before_count, _after_count in sorted_per_refid_counts)}"
+    )
     for refid, before_count, after_count in sorted_per_refid_counts:
         print(
             f"refid_filter_result=RefID:{refid},"
