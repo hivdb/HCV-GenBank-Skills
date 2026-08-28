@@ -4,7 +4,6 @@
 from __future__ import annotations
 import argparse
 import re
-import shutil
 from pathlib import Path
 from docx import Document
 from openpyxl import load_workbook
@@ -88,26 +87,6 @@ def write_summary_documents(
         (root / f"README_Subtype_Consensus_Mutations{suffix}").unlink(missing_ok=True)
 
 
-def publish_shared_report(
-    comparison_paths: dict[str, Path],
-    documents_root: Path,
-    destination: Path,
-    genes: list[str],
-) -> None:
-    """Copy the requested gene-specific report set."""
-    destination.mkdir(parents=True, exist_ok=True)
-    for gene in genes:
-        path = comparison_paths[gene]
-        shutil.copy2(path, destination / path.name)
-        for suffix in (".md", ".docx"):
-            filename = f"README_Subtype_Consensus_Mutations_{gene}{suffix}"
-            shutil.copy2(documents_root / filename, destination / filename)
-    for suffix in (".md", ".docx"):
-        (destination / f"README_Subtype_Consensus_Mutations{suffix}").unlink(
-            missing_ok=True
-        )
-
-
 def validate_reported_mutations(
     comparison_paths: dict[str, Path],
     profile_paths: dict[str, Path],
@@ -156,19 +135,13 @@ def validate_reported_mutations(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--shared-report-dir",
-        type=Path,
-        default=Path("outputs/shared_report/ICTV_ref_local_cons_compare"),
-        help="Destination for copies of the final three-gene report set.",
-    )
-    parser.add_argument(
         "--comparison-output-dir", type=Path, default=Path("outputs/reference_seqs")
     )
     parser.add_argument(
         "--ns3-output-dir", type=Path, default=Path("outputs/comet-NS3")
     )
     parser.add_argument(
-        "--ns5a-output-dir", type=Path, default=Path("outputs/comet-NS5A-one-ras")
+        "--ns5a-output-dir", type=Path, default=Path("outputs/comet-NS5A")
     )
     parser.add_argument(
         "--ns5b-output-dir", type=Path, default=Path("outputs/comet-NS5B")
@@ -227,7 +200,7 @@ def main() -> None:
     required = [comparison_paths[report_genes[0]], profile_paths[gene_tokens[0][1]]]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
-        print("shared_report_status=waiting_for_gene_inputs")
+        print("report_status=waiting_for_gene_inputs")
         print("missing_inputs=" + ";".join(missing))
         return
     validate_reported_mutations(comparison_paths, profile_paths, gene_tokens)
@@ -280,9 +253,6 @@ def main() -> None:
         ws.column_dimensions[ws.cell(1, col).column_letter].width = 50
         wb.save(path)
     write_summary_documents(output_root, readme, report_genes)
-    publish_shared_report(
-        comparison_paths, output_root, args.shared_report_dir, report_genes
-    )
 
 
 if __name__ == "__main__":
