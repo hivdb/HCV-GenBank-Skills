@@ -1338,7 +1338,7 @@ class Pipeline:
                     "--combined-profile-workbook",
                     combined_ras,
                     "--comparison-output-dir",
-                    self.step_dir("compare-reference-consensus"),
+                    self.step_dir("publish-ictv-report"),
                     "--ns5b-output-dir",
                     self.step_dir("build-subtype-ras-profile"),
                 ),
