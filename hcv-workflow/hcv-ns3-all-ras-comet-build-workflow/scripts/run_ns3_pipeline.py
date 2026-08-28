@@ -57,7 +57,6 @@ STEP_NAMES = (
     "build-genotype-aa-consensus-distance",
     "build-subtype-aa-consensus-distance",
     "build-paired-distance-matrices",
-    "build-subtype-profile-coverage",
     "build-ras-entropy",
     "publish-ictv-report",
     "audit-gt7-gt8-sequences",
@@ -1191,34 +1190,6 @@ class Pipeline:
                 "build-paired-distance-matrices",
                 "build paired AA and NA RAS/range distance matrices",
                 paired_distances,
-            ),
-            Step(
-                "build-subtype-profile-coverage",
-                "build the NS3 genotype 5 subtype 5a coverage audit",
-                lambda: self.run(
-                    "build_ns3_subtype_profile_coverage_report.py",
-                    "--profile-input-workbook",
-                    self.aa_workbook,
-                    "--profile-accessions-csv",
-                    self.profile_accessions_csv,
-                    "--genotype",
-                    "5",
-                    "--subtype",
-                    "5a",
-                    "--range-start",
-                    "1",
-                    "--range-end",
-                    "631",
-                    "--output-xlsx",
-                    self.step_dir("build-subtype-profile-coverage")
-                    / "NS3_GT5_5a_Profile_Coverage.xlsx",
-                    "--position-coverage-csv",
-                    self.step_dir("build-subtype-profile-coverage")
-                    / "NS3_GT5_5a_Profile_Position_Coverage.csv",
-                    "--position-coverage-png",
-                    self.step_dir("build-subtype-profile-coverage")
-                    / "NS3_GT5_5a_Profile_Position_Coverage.png",
-                ),
             ),
             Step(
                 "build-ras-entropy",

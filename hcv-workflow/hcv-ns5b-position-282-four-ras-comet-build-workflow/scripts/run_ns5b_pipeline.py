@@ -54,7 +54,6 @@ STEP_NAMES = (
     "build-subtype-ras-profile",
     "build-combined-ras-reports",
     "add-nonconsensus-row",
-    "build-90pct-range-coverage-combined-profile",
     "summarize-subtype-ras-differences",
     "build-genotype-aa-consensus-distance",
     "build-subtype-aa-consensus-distance",
@@ -292,14 +291,6 @@ class Pipeline:
         return self.output_dir / f"{STEP_ORDER[name]:02d}_{name}"
 
     def profile_accessions_for_current_step(self) -> Path:
-        if (
-            self.current_step_order
-            == STEP_ORDER["build-90pct-range-coverage-combined-profile"]
-        ):
-            return (
-                self.step_dir("build-90pct-range-coverage-combined-profile")
-                / "NS5B_Profile_Accessions_90Pct_Range_Coverage.csv"
-            )
         return self.profile_accessions_csv
 
     def ensure_summary_directories(self) -> None:
@@ -1226,11 +1217,6 @@ class Pipeline:
                     "--genotype-consensus-fasta",
                     gt_consensus,
                 ),
-            ),
-            Step(
-                "build-90pct-range-coverage-combined-profile",
-                "build a combined profile from accessions with at least 90% non-X coverage of NS5B positions 150-321",
-                build_90pct_range_coverage_combined_profile,
             ),
             Step(
                 "summarize-subtype-ras-differences",

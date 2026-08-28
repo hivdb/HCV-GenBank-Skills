@@ -70,8 +70,6 @@ The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.
 The priority-assignment stage uses `HCVData/Reference_seqs/HCV_Subtype_Refs_AA_Accession_Subtype.csv` as the highest-priority accession/subtype source, then selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 
 Complete-profile construction retains an accession only when it has callable amino-acid coverage at every NS5B RAS position: 150, 159, 206, 282, 316, 320, and 321. Missing, `X`, stop (`*`), or non-standard calls at any of these positions exclude that accession from the profile and its downstream RAS and distance reports.
-The `build-90pct-range-coverage-combined-profile` step is separate from the standard combined profile. It applies the same RAS requirements plus at least 90% non-`X` coverage across positions 150–321, and writes its own profile-accession list and intermediate profiles.
-
 ## Outputs
 
 The final GT7/GT8 comparison step reads `HCVData/HCV-all-seq-subtype/NS5B_AllSeq_NonComet_Coverage.csv` and writes the workflow/non-COMET-coverage subtype comparison workbook and CSV in its own numbered output directory.
@@ -101,7 +99,6 @@ The workflow writes NS5B outputs under `outputs/comet-NS5B-all-ras/`, including:
 - `NS5B_GT_RAS_Profiles.xlsx`
 - `NS5B_Subtype_RAS_Profiles.xlsx`
 - `NS5B_Subtype_RAS_Profiles_Explicit_AA.xlsx` (all reportable subtype amino acids at RAS positions; used by the ICTV publication step)
-- `NS5B_Combined_RAS_Profiles_90Pct_Range_Coverage.xlsx` under `26_build-90pct-range-coverage-combined-profile/` (combined profile restricted to at least 90% coverage of positions 150–321)
 - paired AA/NA RAS and position-range distance workbooks under `outputs/`
 
 ## Operating Rules
