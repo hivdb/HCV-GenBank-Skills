@@ -90,7 +90,17 @@ def main():
             for lab, seqs in groups[kind].items():
                 gt, _, st = lab.partition("_")
                 blocks[gt][st] = seqs
-        for name, block in blocks.items():
+        for name, block in sorted(
+            blocks.items(),
+            key=lambda item: (
+                (
+                    0,
+                    int(item[0][2:]),
+                )
+                if item[0].startswith("GT") and item[0][2:].isdigit()
+                else (1, item[0])
+            ),
+        ):
             keep = {
                 k: v
                 for k, v in block.items()
