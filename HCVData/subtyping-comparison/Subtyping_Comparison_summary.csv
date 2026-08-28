@@ -1,0 +1,4 @@
+Gene,SameCount,DifferentCount,CompareCondition
+NS3,47390,672,Comet_vs_PerGene
+NS5A,30813,4213,Comet_vs_PerGene
+NS5B,55347,3177,Comet_vs_PerGene

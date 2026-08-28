@@ -135,7 +135,7 @@ def make_database(input_fasta: Path, database: Path) -> None:
 def assignment_calls(
     input_fasta: Path, work_dir: Path, threads: int, min_aligned_nt: int
 ) -> dict[str, dict[str, dict[str, str]]]:
-    """Apply the archived assigner's two-stage BLAST method to this input FASTA."""
+    """Assign full-genome genotype and subtype calls once, then reuse by gene."""
     work_dir.mkdir(parents=True, exist_ok=True)
     records = fasta_records(input_fasta)
     genotype_db = work_dir / "genotype_refs"
@@ -147,17 +147,15 @@ def assignment_calls(
         threads,
         "assigning genotypes",
     )
-    best_genotype: dict[tuple[str, str], tuple[tuple[float, int], str, list[str]]] = {}
+    best_genotype: dict[str, tuple[tuple[float, int], str, list[str]]] = {}
     for hit in genotype_hits:
         query, subject = hit[0], hit[1]
         match = re.search(r"genotype=([1-8])(?:\||$)", subject)
         if not match or int(hit[2]) < min_aligned_nt:
             continue
         genotype, score = match.group(1), (float(hit[7]), int(hit[2]))
-        for gene in GENES:
-            key = (query, gene)
-            if key not in best_genotype or score > best_genotype[key][0]:
-                best_genotype[key] = (score, genotype, hit)
+        if query not in best_genotype or score > best_genotype[query][0]:
+            best_genotype[query] = (score, genotype, hit)
 
     subtype_by_genotype: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for header, sequence in fasta_header_records(SUBTYPE_REFERENCES).items():
@@ -165,61 +163,56 @@ def assignment_calls(
         if match and sequence:
             subtype_by_genotype[match.group(1)[0]].append((match.group(1), sequence))
 
-    results: dict[str, dict[str, dict[str, str]]] = {gene: {} for gene in GENES}
-    for gene in GENES:
-        query_ids_by_genotype: dict[str, list[str]] = defaultdict(list)
-        for (accession, hit_gene), (_, genotype, _) in best_genotype.items():
-            if hit_gene == gene:
-                query_ids_by_genotype[genotype].append(accession)
-        for genotype, accessions in query_ids_by_genotype.items():
-            subtype_records = {
-                f"S{index}": sequence
-                for index, (_, sequence) in enumerate(subtype_by_genotype[genotype])
+    query_ids_by_genotype: dict[str, list[str]] = defaultdict(list)
+    for accession, (_, genotype, _) in best_genotype.items():
+        query_ids_by_genotype[genotype].append(accession)
+
+    calls: dict[str, dict[str, str]] = {}
+    for genotype, accessions in query_ids_by_genotype.items():
+        subtype_records = {
+            f"S{index}": sequence
+            for index, (_, sequence) in enumerate(subtype_by_genotype[genotype])
+        }
+        subtype_labels = {
+            f"S{index}": subtype
+            for index, (subtype, _) in enumerate(subtype_by_genotype[genotype])
+        }
+        subtype_fasta = work_dir / f"{genotype}_subtypes.fasta"
+        subtype_db = work_dir / f"{genotype}_subtypes"
+        write_fasta(subtype_fasta, subtype_records)
+        make_database(subtype_fasta, subtype_db)
+        query_fasta = work_dir / f"{genotype}_queries.fasta"
+        write_fasta(query_fasta, {accession: records[accession] for accession in accessions})
+        subtype_hits = blast(
+            query_fasta,
+            subtype_db,
+            work_dir / f"{genotype}_subtypes.tsv",
+            threads,
+            f"assigning genotype {genotype} subtypes",
+        )
+        best_subtype: dict[str, tuple[tuple[float, int], list[str]]] = {}
+        for hit in subtype_hits:
+            score = (float(hit[7]), int(hit[2]))
+            if int(hit[2]) >= min_aligned_nt and (
+                hit[0] not in best_subtype or score > best_subtype[hit[0]][0]
+            ):
+                best_subtype[hit[0]] = (score, hit)
+        for accession in accessions:
+            _, assigned_genotype, genotype_hit = best_genotype[accession]
+            call = {
+                "genotype": assigned_genotype,
+                "genotype_pident": genotype_hit[5],
+                "subtype": "",
+                "subtype_pident": "",
             }
-            subtype_labels = {
-                f"S{index}": subtype
-                for index, (subtype, _) in enumerate(subtype_by_genotype[genotype])
-            }
-            subtype_fasta, subtype_db = (
-                work_dir / f"{gene}_{genotype}_subtypes.fasta",
-                work_dir / f"{gene}_{genotype}_subtypes",
-            )
-            write_fasta(subtype_fasta, subtype_records)
-            make_database(subtype_fasta, subtype_db)
-            query_fasta = work_dir / f"{gene}_{genotype}_queries.fasta"
-            write_fasta(
-                query_fasta, {accession: records[accession] for accession in accessions}
-            )
-            subtype_hits = blast(
-                query_fasta,
-                subtype_db,
-                work_dir / f"{gene}_{genotype}_subtypes.tsv",
-                threads,
-                f"assigning {gene} genotype {genotype} subtypes",
-            )
-            best_subtype: dict[str, tuple[tuple[float, int], list[str]]] = {}
-            for hit in subtype_hits:
-                score = (float(hit[7]), int(hit[2]))
-                if int(hit[2]) >= min_aligned_nt and (
-                    hit[0] not in best_subtype or score > best_subtype[hit[0]][0]
-                ):
-                    best_subtype[hit[0]] = (score, hit)
-            for accession in accessions:
-                _, assigned_genotype, genotype_hit = best_genotype[(accession, gene)]
-                call = {
-                    "genotype": assigned_genotype,
-                    "genotype_pident": genotype_hit[5],
-                    "subtype": "",
-                    "subtype_pident": "",
-                }
-                if accession in best_subtype:
-                    subtype_hit = best_subtype[accession][1]
-                    call.update(
-                        subtype=subtype_labels[subtype_hit[1]],
-                        subtype_pident=subtype_hit[5],
-                    )
-                results[gene][accession] = call
-    return results
+            if accession in best_subtype:
+                subtype_hit = best_subtype[accession][1]
+                call.update(
+                    subtype=subtype_labels[subtype_hit[1]],
+                    subtype_pident=subtype_hit[5],
+                )
+            calls[accession] = call
+    return {gene: dict(calls) for gene in GENES}
 
 
 def run_with_spinner(command: list[str], label: str) -> None:
@@ -330,7 +323,7 @@ def main() -> None:
         type=Path,
         default=REPO_ROOT / "HCVData" / "nonComet-Full-genome",
     )
-    parser.add_argument("--min-aligned-nt", type=int, default=200)
+    parser.add_argument("--min-aligned-nt", type=int, default=100)
     parser.add_argument(
         "--threads",
         type=int,

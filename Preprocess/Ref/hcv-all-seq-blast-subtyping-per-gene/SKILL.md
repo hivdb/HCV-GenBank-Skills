@@ -30,6 +30,9 @@ Each table has seven columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePi
 
 The script displays a live stage-level progress bar. Its BLAST searches use four workers by default; change `--threads` only when the available CPU capacity requires it.
 
+The default `--min-aligned-nt` is 100. Use the option to set a different
+minimum aligned nucleotide length for genotype and subtype calls.
+
 Keep the default targets unless explicitly requested otherwise:
 
 - NS3: amino-acid positions 36-175

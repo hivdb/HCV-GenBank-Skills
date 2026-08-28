@@ -10,6 +10,10 @@ genotype-matched subtype assignment directly from the input FASTA, using the
 full-genome genotype and subtype references below, then writes one CSV per gene
 in the requested output directory.
 
+Genotype and subtype calls are made once from the full-genome references, then
+reused in all three gene-specific output tables. The coverage result is also
+mapped once and evaluated against each gene target range.
+
 - Genotype references: `HCVData/Genotype-Ref/HCV_GT_FullGenome_RefSeqs.fasta`
 - Subtype references: `HCVData/Subtype-Ref/HCV_Subtype_FullGenome_Refs.fasta`
 
@@ -29,6 +33,9 @@ Each table has seven columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePi
 `FullyCover` is `Yes` only when the best genotype alignment spans the whole requested target range; it is blank for partial or absent overlap.
 
 The script displays a live stage-level progress bar. Its BLAST searches use four workers by default; change `--threads` only when the available CPU capacity requires it.
+
+The default `--min-aligned-nt` is 100. Use the option to set a different
+minimum aligned nucleotide length for genotype and subtype calls.
 
 Keep the default targets unless explicitly requested otherwise:
 

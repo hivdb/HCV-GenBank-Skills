@@ -319,7 +319,7 @@ def main() -> None:
         type=Path,
         default=REPO_ROOT / "HCVData" / "nonComet-PerGene",
     )
-    parser.add_argument("--min-aligned-nt", type=int, default=200)
+    parser.add_argument("--min-aligned-nt", type=int, default=100)
     parser.add_argument(
         "--threads",
         type=int,
