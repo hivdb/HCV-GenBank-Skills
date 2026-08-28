@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV Per-Gene BLAST Subtyping"
+  short_description: "Subtype with per-gene references and report coverage."
+  default_prompt: "Use $hcv-all-seq-blast-subtyping-per-gene to subtype an HCV FASTA collection with NS3, NS5A, and NS5B nucleotide references and report target-gene coverage."

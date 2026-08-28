@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import re
 import subprocess
 import sys
@@ -17,9 +16,14 @@ from pathlib import Path
 
 
 GENES = {"NS3": (36, 175), "NS5A": (26, 93), "NS5B": (150, 321)}
+# H77 full-genome nucleotide coordinates (one-based) for the first codon of
+# each gene.  Coverage is evaluated in the reference coordinate system.
+GENE_START_NT = {"NS3": 3420, "NS5A": 6258, "NS5B": 7602}
 REPO_ROOT = Path(__file__).resolve().parents[4]
-GT_REFERENCES = REPO_ROOT / "HCVData" / "HCV_GT_RefSeqs.fasta"
-SUBTYPE_REFERENCES = REPO_ROOT / "HCVData" / "HCV_Subtype_Refs_By_Genome_NA.json"
+GT_REFERENCES = REPO_ROOT / "HCVData" / "Genotype-Ref" / "HCV_GT_FullGenome_RefSeqs.fasta"
+SUBTYPE_REFERENCES = (
+    REPO_ROOT / "HCVData" / "Subtype-Ref" / "HCV_Subtype_FullGenome_Refs.fasta"
+)
 
 
 def fasta_accessions(path: Path) -> list[str]:
@@ -46,6 +50,24 @@ def fasta_records(path: Path) -> dict[str, str]:
             sequence.append(re.sub(r"\s+", "", line))
     if accession is not None:
         records[accession] = "".join(sequence).upper()
+    return records
+
+
+def fasta_header_records(path: Path) -> dict[str, str]:
+    """Return sequences keyed by their complete FASTA header."""
+    records: dict[str, str] = {}
+    header = None
+    sequence: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith(">"):
+            if header is not None:
+                records[header] = "".join(sequence).upper()
+            header = line[1:].strip()
+            sequence = []
+        elif line.strip():
+            sequence.append(re.sub(r"\s+", "", line))
+    if header is not None:
+        records[header] = "".join(sequence).upper()
     return records
 
 
@@ -128,20 +150,18 @@ def assignment_calls(
     best_genotype: dict[tuple[str, str], tuple[tuple[float, int], str, list[str]]] = {}
     for hit in genotype_hits:
         query, subject = hit[0], hit[1]
-        match = re.search(r"HCV([1-8])(NS3|NS5A|NS5B)", subject)
+        match = re.search(r"genotype=([1-8])(?:\||$)", subject)
         if not match or int(hit[2]) < min_aligned_nt:
             continue
-        gene, genotype = match.group(2), match.group(1)
-        key, score = (query, gene), (float(hit[7]), int(hit[2]))
-        if key not in best_genotype or score > best_genotype[key][0]:
-            best_genotype[key] = (score, genotype, hit)
+        genotype, score = match.group(1), (float(hit[7]), int(hit[2]))
+        for gene in GENES:
+            key = (query, gene)
+            if key not in best_genotype or score > best_genotype[key][0]:
+                best_genotype[key] = (score, genotype, hit)
 
     subtype_by_genotype: dict[str, list[tuple[str, str]]] = defaultdict(list)
-    for reference in json.loads(SUBTYPE_REFERENCES.read_text(encoding="utf-8")):
-        match = re.search(
-            r"Genotype\s*([1-8][A-Za-z0-9]*)", str(reference.get("genotypeName", ""))
-        )
-        sequence = str(reference.get("sequence", "")).upper()
+    for header, sequence in fasta_header_records(SUBTYPE_REFERENCES).items():
+        match = re.search(r"subtype=([1-8][A-Za-z0-9]*)", header)
         if match and sequence:
             subtype_by_genotype[match.group(1)[0]].append((match.group(1), sequence))
 
@@ -284,22 +304,18 @@ def coverage_hits(
     }
     for line in result.read_text(encoding="utf-8").splitlines():
         qid, sid, qstart, qend, sstart, send, bitscore, length = line.split("\t")
-        gene = next(
-            (
-                candidate
-                for candidate in GENES
-                if any(
-                    sid.split()[0].startswith(f"HCV{genotype}{candidate}")
-                    for genotype in range(1, 9)
-                )
-            ),
-            None,
-        )
-        if gene is None:
+        if not re.search(r"genotype=[1-8](?:\||$)", sid):
             continue
         score = (float(bitscore), int(length))
-        if qid not in best[gene] or score > best[gene][qid][:2]:
-            best[gene][qid] = (*score, int(qstart), int(qend), int(sstart), int(send))
+        for gene in GENES:
+            if qid not in best[gene] or score > best[gene][qid][:2]:
+                best[gene][qid] = (
+                    *score,
+                    int(qstart),
+                    int(qend),
+                    int(sstart),
+                    int(send),
+                )
     return {
         gene: {accession: values[2:] for accession, values in hits.items()}
         for gene, hits in best.items()
@@ -362,7 +378,9 @@ def main() -> None:
                 for gene, (start_aa, end_aa) in GENES.items():
                     assignment = assignments_by_gene[gene].get(accession, {})
                     hits = hits_by_gene[gene]
-                    target_start_nt, target_end_nt = (start_aa - 1) * 3 + 1, end_aa * 3
+                    gene_start_nt = GENE_START_NT[gene]
+                    target_start_nt = gene_start_nt + (start_aa - 1) * 3
+                    target_end_nt = gene_start_nt + end_aa * 3 - 1
                     reference_overlap = fully_cover = ""
                     if accession in hits:
                         qstart, qend, sstart, send = hits[accession]

@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV Full-Genome BLAST Subtyping"
+  short_description: "Assign non-COMET types and report gene coverage."
+  default_prompt: "Use $hcv-all-seq-blast-subtyping-full-genome to subtype an HCV FASTA collection with full-genome references and report target-gene coverage."

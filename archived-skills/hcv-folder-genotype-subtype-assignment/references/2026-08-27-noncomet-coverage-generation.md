@@ -23,7 +23,7 @@ HCVData/HCV-all-seq-subtype/all.fasta
 Run the coverage-audit script from the repository root:
 
 ```bash
-.venv/bin/python Preprocess/Ref/hcv-all-seq-noncomet-coverage-audit/scripts/audit_all_fasta_coverage.py \
+.venv/bin/python Preprocess/Ref/hcv-all-seq-blast-subtyping-full-genome/scripts/audit_all_fasta_coverage.py \
   --input-fasta HCVData/HCV-all-seq-subtype/all.fasta \
   --output-dir HCVData/nonComet-Full-genome \
   --threads 4
