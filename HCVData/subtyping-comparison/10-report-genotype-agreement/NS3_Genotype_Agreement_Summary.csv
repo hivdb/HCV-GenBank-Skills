@@ -1,0 +1,6 @@
+Gene,AgreementStatus,AccessionCount,PercentOfAccessions
+NS3,AllFiveAgree,17261,82.87
+NS3,AllFiveDisagree,59,0.28
+NS3,AvailableCallsAgree,3449,16.56
+NS3,AvailableCallsDisagree,60,0.29
+NS3,InsufficientCalls,0,0.00

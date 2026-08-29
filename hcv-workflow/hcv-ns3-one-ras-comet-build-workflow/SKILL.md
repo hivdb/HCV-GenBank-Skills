@@ -10,7 +10,7 @@ Use this skill for the full NS3 high-throughput build workflow. The first step r
 ## Script Order
 
 1. `find_refid_fastas/find_refid_fastas.py`
-2. copy matched FASTA files to `included_refid_fastas/`
+2. copy matched FASTA files to `included_refid_fastas/` and save the unique accession list as `staged_accessions.csv`
 3. `filter_accessions_metadata_by_fasta/filter_accessions_metadata_by_fasta.py`
 4. `split_refid_metadata_csv/split_refid_metadata_csv.py`
 5. `filter_refid_fastas_by_metadata/filter_refid_fastas_by_metadata.py`

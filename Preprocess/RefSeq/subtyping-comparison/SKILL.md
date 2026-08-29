@@ -5,42 +5,15 @@ description: Compare HCV COMET, per-gene BLAST, and full-genome BLAST subtype ca
 
 # HCV COMET, per-gene, and full-genome subtyping comparison
 
-Run from the repository root:
+Run these steps in order:
 
-```bash
-.venv/bin/python Preprocess/RefSeq/subtyping-comparison/scripts/compare_pergene_noncomet_comet.py
-```
-
-The workflow reads the three coverage CSVs from both
-`HCVData/nonComet-PerGene/` and `HCVData/nonComet-Full-genome/`, plus COMET
-calls from `HCVData/Comet-Full-genome/all_comet_subtype.csv`.
-
-For each BLAST method and gene, it excludes rows with a blank `ClosestGenotype`.
-The assigned accessions in each PerGene CSV define the comparison universe for
-that gene. It then joins calls by accession and creates four comparison
-conditions:
-
-- `Comet_vs_PerGene`
-- `Comet_vs_FullGenome`
-- `PerGene_vs_FullGenome`
-- `Comet_vs_PerGene_vs_FullGenome`
-
-A blank subtype is counted as different from a non-blank subtype.
-
-Outputs are written to `HCVData/subtyping-comparison/`:
-
-- `Subtyping_Comparison_summary.csv`, containing `Gene`, `SameCount`,
-  `DifferentCount`, and `CompareCondition`;
-- `Subtyping_Comparison_differences.csv`, containing `Gene`, `Accession`,
-  `CometSubtype`, `BlastPerGeneSubtype`, `BlastFullGenomeSubtype`, and
-  `CompareCondition` for every difference.
-- `Subtyping_Comparison_difference_subtype_counts.csv`, grouping differences
-  by gene, method subtype calls, and comparison condition with `DifferentCount`.
-- `Subtyping_Comparison_difference_subtype_counts.xlsx`, containing the same
-  subtype-difference counts with one comparison condition per worksheet.
-
-Every output includes a final `CompareCondition` column set to
-`Comet_vs_PerGene`.
-
-Use `--noncomet-dir`, `--comet-csv`, or `--output-dir` to override the default
-paths.
+1. [01-filter-ns3-ras-overlap](01-filter-ns3-ras-overlap/STEP.md)
+2. [02-filter-ns5a-ras-overlap](02-filter-ns5a-ras-overlap/STEP.md)
+3. [03-filter-ns5b-ras-overlap](03-filter-ns5b-ras-overlap/STEP.md)
+4. [04-filter-full-genome-by-ras-accessions](04-filter-full-genome-by-ras-accessions/STEP.md)
+5. [05-filter-comet-pergene-by-ras-accessions](05-filter-comet-pergene-by-ras-accessions/STEP.md)
+6. [06-filter-comet-full-genome-by-ras-accessions](06-filter-comet-full-genome-by-ras-accessions/STEP.md)
+7. [07-filter-genbank-subtypes-by-ras-accessions](07-filter-genbank-subtypes-by-ras-accessions/STEP.md)
+8. [08-merge-ns3-subtyping-sources](08-merge-ns3-subtyping-sources/STEP.md)
+9. [09-count-merged-blank-values](09-count-merged-blank-values/STEP.md)
+10. [10-report-genotype-agreement](10-report-genotype-agreement/STEP.md)

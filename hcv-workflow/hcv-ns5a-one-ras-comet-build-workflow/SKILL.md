@@ -22,7 +22,7 @@ Run the workflow in this order. For an individual step, invoke its listed script
    - Python: `prepare_ns5a_pipeline_workdirs.py`
 3. Discover RefID FASTA files.
    - Python: `find_refid_fastas.py`
-4. Stage the matched FASTA files.
+4. Stage the matched FASTA files and save unique accessions as `staged_accessions.csv`.
    - Python: `stage_matched_refid_fastas.py`
 5. Create COMET assignment files and remove missing or unassigned records.
    - Python: `prepare_comet_ns5a_assignments.py`

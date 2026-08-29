@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import shutil
 from pathlib import Path
 
@@ -44,6 +45,13 @@ def accessions_in_fasta(path: Path) -> set[str]:
     return accessions
 
 
+def write_accessions(path: Path, accessions: set[str]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(["Accession"])
+        writer.writerows((accession,) for accession in sorted(accessions))
+
+
 def main() -> int:
     args = parse_args()
     matched_files_path = Path(args.matched_files).expanduser().resolve()
@@ -72,9 +80,13 @@ def main() -> int:
         shutil.copy2(source_path, destination)
         staged_accessions.update(accessions_in_fasta(destination))
 
+    accession_csv = output_dir.parent / "staged_accessions.csv"
+    write_accessions(accession_csv, staged_accessions)
+
     print(f"staged_file_count={len(source_paths)}")
     print(f"staged_fasta_accessions_input={len(source_accessions)}")
     print(f"staged_fasta_accessions_output={len(staged_accessions)}")
+    print(f"staged_accessions_csv={display_path(accession_csv)}")
     print(f"staged_fasta_dir={display_path(output_dir)}")
     return 0
 
