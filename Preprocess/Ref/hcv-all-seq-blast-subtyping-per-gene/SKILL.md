@@ -28,6 +28,27 @@ Each genotype-distance CSV has one row per accession, a distance column for ever
 
 Each gene's workbook combines its distance CSVs: `Genotype` contains the genotype-distance table, and every `Subtype_<genotype>` sheet contains that genotype's subtype-distance table.
 
+## Plot genotype-distance groups
+
+Use the histogram script to inspect the distributions of `FirstChoiceDistance`
+and `SecondChoiceDistance`. It uses one-distance-unit bins, which makes the
+value groups directly comparable, and writes PNG files to a `figures`
+subfolder beside the input CSV by default.
+Use `--skip-empty` when processing every distance CSV so that files without a
+second-choice value are reported and skipped instead of stopping the batch.
+
+```bash
+uv run python Preprocess/Ref/hcv-all-seq-blast-subtyping-per-gene/scripts/plot_distance_histogram.py \
+  --input-csv HCVData/nonComet-PerGene/NS3_Genotype_Distances.csv
+uv run python Preprocess/Ref/hcv-all-seq-blast-subtyping-per-gene/scripts/plot_distance_histogram.py \
+  --input-csv HCVData/nonComet-PerGene/NS3_Genotype_Distances.csv \
+  --column SecondChoiceDistance
+```
+
+For the NS3 input above, the image is
+`HCVData/nonComet-PerGene/figures/NS3_FirstChoiceDistance_Histogram.png` and
+`HCVData/nonComet-PerGene/figures/NS3_SecondChoiceDistance_Histogram.png`.
+
 `ReferenceOverlapAA` is blank when the best genotype alignment does not overlap the requested target range. When it overlaps, it reports the overlapping reference amino-acid interval, including partial overlap.
 
 `FullyCover` is `Yes` only when the best genotype alignment spans the whole requested target range; it is blank for partial or absent overlap.

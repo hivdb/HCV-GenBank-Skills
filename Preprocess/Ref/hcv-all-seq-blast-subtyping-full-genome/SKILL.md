@@ -32,6 +32,21 @@ Each table has seven columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePi
 
 `Subtyping_Distances.xlsx` combines these distance tables: its `Genotype` sheet contains `Genotype_Distances.csv`, and each `Subtype_<genotype>` sheet contains the corresponding genotype-specific subtype table.
 
+## Plot genotype-distance groups
+
+Use the shared histogram script for `FirstChoiceDistance` and
+`SecondChoiceDistance`. It writes figures to a `figures` subfolder beside the
+input CSV. Use `--skip-empty` when processing all distance CSVs because some
+subtype tables can have no second-choice values.
+
+```bash
+uv run python Preprocess/Ref/hcv-all-seq-blast-subtyping-per-gene/scripts/plot_distance_histogram.py \
+  --input-csv HCVData/nonComet-Full-genome/Genotype_Distances.csv
+uv run python Preprocess/Ref/hcv-all-seq-blast-subtyping-per-gene/scripts/plot_distance_histogram.py \
+  --input-csv HCVData/nonComet-Full-genome/Genotype_Distances.csv \
+  --column SecondChoiceDistance
+```
+
 `ReferenceOverlapAA` is blank when the best genotype alignment does not overlap the requested target range. When it overlaps, it reports the overlapping reference amino-acid interval, including partial overlap.
 
 `FullyCover` is `Yes` only when the best genotype alignment spans the whole requested target range; it is blank for partial or absent overlap.
