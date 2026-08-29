@@ -92,7 +92,9 @@ def main() -> None:
         "--accessions-csv", type=Path, default=DATA_DIR / "Accessions.csv"
     )
     parser.add_argument(
-        "--comet-csv", type=Path, default=DATA_DIR / "all_comet_subtype.csv"
+        "--comet-csv",
+        type=Path,
+        default=REPO_ROOT / "HCVData" / "Comet-Full-genome" / "all_comet_subtype.csv",
     )
     parser.add_argument(
         "--coverage-csv",

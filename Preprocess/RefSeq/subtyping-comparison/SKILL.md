@@ -13,7 +13,7 @@ Run from the repository root:
 
 The workflow reads the three coverage CSVs from both
 `HCVData/nonComet-PerGene/` and `HCVData/nonComet-Full-genome/`, plus COMET
-calls from `HCVData/HCV-all-seq-subtype/all_comet_subtype.csv`.
+calls from `HCVData/Comet-Full-genome/all_comet_subtype.csv`.
 
 For each BLAST method and gene, it excludes rows with a blank `ClosestGenotype`.
 The assigned accessions in each PerGene CSV define the comparison universe for

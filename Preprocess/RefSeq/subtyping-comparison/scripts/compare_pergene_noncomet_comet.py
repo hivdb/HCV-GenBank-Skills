@@ -21,7 +21,7 @@ COMPARISONS = {
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_PERGENE_DIR = REPO_ROOT / "HCVData" / "nonComet-PerGene"
 DEFAULT_FULLGENOME_DIR = REPO_ROOT / "HCVData" / "nonComet-Full-genome"
-DEFAULT_COMET_CSV = REPO_ROOT / "HCVData" / "HCV-all-seq-subtype" / "all_comet_subtype.csv"
+DEFAULT_COMET_CSV = REPO_ROOT / "HCVData" / "Comet-Full-genome" / "all_comet_subtype.csv"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison"
 
 

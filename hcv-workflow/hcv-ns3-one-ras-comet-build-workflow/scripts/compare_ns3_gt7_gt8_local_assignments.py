@@ -18,7 +18,7 @@ REFERENCE_SUBTYPES_CSV = (
 )
 ALL_COMET_SUBTYPE_CSV = (
     Path(__file__).resolve().parents[3]
-    / "HCVData/HCV-all-seq-subtype/all_comet_subtype.csv"
+    / "HCVData/Comet-Full-genome/all_comet_subtype.csv"
 )
 
 

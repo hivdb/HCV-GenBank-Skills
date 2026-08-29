@@ -221,7 +221,7 @@ class Pipeline:
             value(
                 "comet_subtyping_csv",
                 "COMET_SUBTYPING_CSV",
-                "HCVData/HCV-all-seq-subtype/all_comet_subtype.csv",
+                "HCVData/Comet-Full-genome/all_comet_subtype.csv",
             )
         )
         self.noncomet_coverage_csv = path_value(

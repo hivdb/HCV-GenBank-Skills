@@ -1,0 +1,4 @@
+interface:
+  display_name: "Extract H77 gene NA"
+  short_description: "Extract H77-matched HCV gene nucleotide FASTAs"
+  default_prompt: "Use $hcv-all-seq-h77-gene-na to extract H77-matched NS3, NS5A, and NS5B nucleotide sequences from all.fasta."
