@@ -12,3 +12,6 @@ GenBank. It writes an accession-level report and a summary report per gene.
 Calls are considered in agreement when all nonblank genotype values for that
 accession are identical. The report separately identifies complete five-method
 agreement, disagreement, and accessions with fewer than two available calls.
+The accession-level report includes `PresentMethodCount` and `BlankMethods`;
+the latter lists each source without a genotype call.
+The summary includes `AgreementStatusDescription` to define every status.

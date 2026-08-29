@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report agreement among five genotype sources in Step 8 merged results."""
+"""Report agreement among five subtype sources in Step 8 merged results."""
 
 from __future__ import annotations
 
@@ -10,32 +10,32 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 STEP8_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison" / "08-merge-ns3-subtyping-sources"
-OUTPUT_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison" / "10-report-genotype-agreement"
+OUTPUT_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison" / "11-report-subtype-agreement"
 GENES = ("NS3", "NS5A", "NS5B")
 METHOD_COLUMNS = (
-    "PerGeneGenotype",
-    "FullGenomeGenotype",
-    "CometPerGeneGenotype",
-    "CometFullGenomeGenotype",
-    "GenBankGenotype",
+    "PerGeneSubtype",
+    "FullGenomeSubtype",
+    "CometPerGeneSubtype",
+    "CometFullGenomeSubtype",
+    "GenBankSubtype",
 )
 METHOD_NAMES = {
-    "PerGeneGenotype": "PerGene",
-    "FullGenomeGenotype": "FullGenome",
-    "CometPerGeneGenotype": "CometPerGene",
-    "CometFullGenomeGenotype": "CometFullGenome",
-    "GenBankGenotype": "GenBank",
+    "PerGeneSubtype": "PerGene",
+    "FullGenomeSubtype": "FullGenome",
+    "CometPerGeneSubtype": "CometPerGene",
+    "CometFullGenomeSubtype": "CometFullGenome",
+    "GenBankSubtype": "GenBank",
 }
 STATUS_DESCRIPTIONS = {
-    "AllFiveAgree": "All five methods have a genotype call, and all calls are identical.",
-    "AllFiveDisagree": "All five methods have a genotype call, but at least two calls differ.",
-    "AvailableCallsAgree": "Two to four methods have genotype calls, and all available calls are identical.",
-    "AvailableCallsDisagree": "Two to four methods have genotype calls, but at least two available calls differ.",
-    "InsufficientCalls": "Fewer than two methods have a genotype call, so agreement cannot be assessed.",
+    "AllFiveAgree": "All five methods have a subtype call, and all calls are identical.",
+    "AllFiveDisagree": "All five methods have a subtype call, but at least two calls differ.",
+    "AvailableCallsAgree": "Two to four methods have subtype calls, and all available calls are identical.",
+    "AvailableCallsDisagree": "Two to four methods have subtype calls, but at least two available calls differ.",
+    "InsufficientCalls": "Fewer than two methods have a subtype call, so agreement cannot be assessed.",
 }
 
 
-def genotype(value: str) -> str:
+def subtype(value: str) -> str:
     return value.strip().upper()
 
 
@@ -49,8 +49,8 @@ def agreement_status(present_count: int, distinct_count: int) -> str:
 
 def build_reports(gene: str) -> None:
     input_csv = STEP8_DIR / f"{gene}_Subtyping_Sources_Merged.csv"
-    detail_csv = OUTPUT_DIR / f"{gene}_Genotype_Agreement_By_Accession.csv"
-    summary_csv = OUTPUT_DIR / f"{gene}_Genotype_Agreement_Summary.csv"
+    detail_csv = OUTPUT_DIR / f"{gene}_Subtype_Agreement_By_Accession.csv"
+    summary_csv = OUTPUT_DIR / f"{gene}_Subtype_Agreement_Summary.csv"
 
     with input_csv.open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
@@ -64,7 +64,7 @@ def build_reports(gene: str) -> None:
         detail_rows: list[dict[str, str | int]] = []
         statuses: Counter[str] = Counter()
         for row in reader:
-            calls = {column: genotype(row.get(column, "")) for column in METHOD_COLUMNS}
+            calls = {column: subtype(row.get(column, "")) for column in METHOD_COLUMNS}
             present_calls = [value for value in calls.values() if value]
             blank_methods = [METHOD_NAMES[column] for column in METHOD_COLUMNS if not calls[column]]
             unique_calls = sorted(set(present_calls))
@@ -76,8 +76,8 @@ def build_reports(gene: str) -> None:
                     **calls,
                     "PresentMethodCount": len(present_calls),
                     "BlankMethods": ";".join(blank_methods),
-                    "DistinctGenotypeCount": len(unique_calls),
-                    "GenotypesObserved": ";".join(unique_calls),
+                    "DistinctSubtypeCount": len(unique_calls),
+                    "SubtypesObserved": ";".join(unique_calls),
                     "AgreementStatus": status,
                 }
             )
@@ -88,8 +88,8 @@ def build_reports(gene: str) -> None:
         *METHOD_COLUMNS,
         "PresentMethodCount",
         "BlankMethods",
-        "DistinctGenotypeCount",
-        "GenotypesObserved",
+        "DistinctSubtypeCount",
+        "SubtypesObserved",
         "AgreementStatus",
     )
     with detail_csv.open("w", encoding="utf-8", newline="") as destination:

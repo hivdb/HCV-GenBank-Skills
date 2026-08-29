@@ -17,3 +17,4 @@ Run these steps in order:
 8. [08-merge-ns3-subtyping-sources](08-merge-ns3-subtyping-sources/STEP.md)
 9. [09-count-merged-blank-values](09-count-merged-blank-values/STEP.md)
 10. [10-report-genotype-agreement](10-report-genotype-agreement/STEP.md)
+11. [11-report-subtype-agreement](11-report-subtype-agreement/STEP.md)

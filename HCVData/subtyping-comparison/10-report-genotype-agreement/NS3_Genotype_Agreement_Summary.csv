@@ -1,6 +1,6 @@
-Gene,AgreementStatus,AccessionCount,PercentOfAccessions
-NS3,AllFiveAgree,17261,82.87
-NS3,AllFiveDisagree,59,0.28
-NS3,AvailableCallsAgree,3449,16.56
-NS3,AvailableCallsDisagree,60,0.29
-NS3,InsufficientCalls,0,0.00
+Gene,AgreementStatus,AgreementStatusDescription,AccessionCount,PercentOfAccessions
+NS3,AllFiveAgree,"All five methods have a genotype call, and all calls are identical.",17261,82.87
+NS3,AllFiveDisagree,"All five methods have a genotype call, but at least two calls differ.",59,0.28
+NS3,AvailableCallsAgree,"Two to four methods have genotype calls, and all available calls are identical.",3449,16.56
+NS3,AvailableCallsDisagree,"Two to four methods have genotype calls, but at least two available calls differ.",60,0.29
+NS3,InsufficientCalls,"Fewer than two methods have a genotype call, so agreement cannot be assessed.",0,0.00

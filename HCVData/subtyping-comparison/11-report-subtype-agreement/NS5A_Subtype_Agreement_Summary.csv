@@ -1,0 +1,6 @@
+Gene,AgreementStatus,AgreementStatusDescription,AccessionCount,PercentOfAccessions
+NS5A,AllFiveAgree,"All five methods have a subtype call, and all calls are identical.",8737,70.74
+NS5A,AllFiveDisagree,"All five methods have a subtype call, but at least two calls differ.",288,2.33
+NS5A,AvailableCallsAgree,"Two to four methods have subtype calls, and all available calls are identical.",2944,23.84
+NS5A,AvailableCallsDisagree,"Two to four methods have subtype calls, but at least two available calls differ.",382,3.09
+NS5A,InsufficientCalls,"Fewer than two methods have a subtype call, so agreement cannot be assessed.",0,0.00
