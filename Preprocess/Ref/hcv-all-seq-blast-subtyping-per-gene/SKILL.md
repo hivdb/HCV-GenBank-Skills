@@ -20,9 +20,13 @@ requested output directory.
   --threads 4
 ```
 
-The output files are `NS3_AllSeq_NonComet_Coverage.csv`, `NS5A_AllSeq_NonComet_Coverage.csv`, and `NS5B_AllSeq_NonComet_Coverage.csv`.
+The output files are `NS3_AllSeq_NonComet_Coverage.csv`, `NS5A_AllSeq_NonComet_Coverage.csv`, and `NS5B_AllSeq_NonComet_Coverage.csv`. Each gene also has a `*_Genotype_Distances.csv` file, one `*_Subtype_Distances_Genotype_<genotype>.csv` file per genotype, and a `*_Subtyping_Distances.xlsx` workbook.
 
 Each table has seven columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePident`, `ClosestSubtype`, `ClosestSubtypePident`, `ReferenceOverlapAA`, and `FullyCover`. The percent-identity columns are the BLAST percent identities for the best gene-specific genotype and genotype-matched subtype hits. Blank assignment fields mean the sequence did not meet the assignment threshold.
+
+Each genotype-distance CSV has one row per accession, a distance column for every reference genotype, and the first and second choices with their distances. Each genotype-specific subtype-distance CSV does the same only for subtype references and accessions of that genotype. Distance is BLAST nucleotide percent-identity distance (`100 - pident`); blank values did not meet the minimum aligned-length threshold.
+
+Each gene's workbook combines its distance CSVs: `Genotype` contains the genotype-distance table, and every `Subtype_<genotype>` sheet contains that genotype's subtype-distance table.
 
 `ReferenceOverlapAA` is blank when the best genotype alignment does not overlap the requested target range. When it overlaps, it reports the overlapping reference amino-acid interval, including partial overlap.
 

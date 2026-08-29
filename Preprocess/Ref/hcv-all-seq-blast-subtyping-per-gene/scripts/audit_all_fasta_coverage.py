@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import xlsxwriter
 from collections import defaultdict
 from contextlib import ExitStack
 from pathlib import Path
@@ -138,13 +139,135 @@ def make_database(input_fasta: Path, database: Path) -> None:
     )
 
 
+def distance(hit: list[str]) -> str:
+    """Return BLAST percent-identity distance, rounded for CSV output."""
+    return f"{100 - float(hit[5]):.3f}"
+
+
+def ranked_hits(
+    hits: list[list[str]], label_for_subject, min_aligned_nt: int
+) -> dict[str, list[tuple[str, list[str]]]]:
+    """Keep the strongest hit for each query and reference label."""
+    best: dict[str, dict[str, tuple[tuple[float, int], list[str]]]] = defaultdict(dict)
+    for hit in hits:
+        label = label_for_subject(hit[1])
+        if not label or int(hit[2]) < min_aligned_nt:
+            continue
+        score = (float(hit[7]), int(hit[2]))
+        current = best[hit[0]].get(label)
+        if current is None or score > current[0]:
+            best[hit[0]][label] = (score, hit)
+    return {
+        accession: [
+            (label, item[1])
+            for label, item in sorted(values.items(), key=lambda item: item[1][0], reverse=True)
+        ]
+        for accession, values in best.items()
+    }
+
+
+def write_choice_report(
+    path: Path, labels: list[str], label_kind: str, calls: dict[str, dict[str, str]],
+    distance_key: str, assigned_genotype: bool = False,
+) -> None:
+    distance_fields = [f"{label_kind}{label}Distance" for label in labels]
+    fields = ["Accession"]
+    if assigned_genotype:
+        fields.append("AssignedGenotype")
+    fields += distance_fields + [
+        f"FirstChoice{label_kind}",
+        "FirstChoiceDistance",
+        f"SecondChoice{label_kind}",
+        "SecondChoiceDistance",
+    ]
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
+        writer.writeheader()
+        for accession, call in calls.items():
+            distances = call.get(distance_key, {})
+            row = {"Accession": accession}
+            if assigned_genotype:
+                row["AssignedGenotype"] = call.get("genotype", "")
+            row.update(
+                {f"{label_kind}{label}Distance": distances.get(label, "") for label in labels}
+            )
+            choices = call.get(f"{distance_key}_choices", [])
+            for number, choice in enumerate(choices[:2], start=1):
+                row[f"{'First' if number == 1 else 'Second'}Choice{label_kind}"] = choice[0]
+                row[f"{'First' if number == 1 else 'Second'}ChoiceDistance"] = choice[1]
+            writer.writerow(row)
+
+
+def write_choice_sheet(
+    workbook, sheet_name: str, labels: list[str], label_kind: str,
+    calls: dict[str, dict[str, str]], distance_key: str, assigned_genotype: bool,
+) -> None:
+    distance_fields = [f"{label_kind}{label}Distance" for label in labels]
+    fields = ["Accession"]
+    if assigned_genotype:
+        fields.append("AssignedGenotype")
+    fields += distance_fields + [
+        f"FirstChoice{label_kind}", "FirstChoiceDistance",
+        f"SecondChoice{label_kind}", "SecondChoiceDistance",
+    ]
+    worksheet = workbook.add_worksheet(sheet_name)
+    header_format = workbook.add_format({"bold": True, "bg_color": "#5B9BD5"})
+    worksheet.write_row(0, 0, fields, header_format)
+    rows = []
+    for accession, call in calls.items():
+        distances = call.get(distance_key, {})
+        row = {"Accession": accession}
+        if assigned_genotype:
+            row["AssignedGenotype"] = call.get("genotype", "")
+        row.update({f"{label_kind}{label}Distance": distances.get(label, "") for label in labels})
+        for number, choice in enumerate(call.get(f"{distance_key}_choices", [])[:2], start=1):
+            prefix = "First" if number == 1 else "Second"
+            row[f"{prefix}Choice{label_kind}"] = choice[0]
+            row[f"{prefix}ChoiceDistance"] = choice[1]
+        rows.append(row)
+    for row_number, row in enumerate(rows, start=1):
+        worksheet.write_row(row_number, 0, [row.get(field, "") for field in fields])
+    worksheet.freeze_panes(1, 0)
+    worksheet.autofilter(0, 0, max(len(rows), 1), len(fields) - 1)
+    for column, field in enumerate(fields):
+        width = max([len(field), *[len(str(row.get(field, ""))) for row in rows]]) + 2
+        worksheet.set_column(column, column, min(width, 40))
+
+
+def write_distance_workbook(
+    path: Path, genotype_labels: list[str], subtype_labels_by_genotype: dict[str, list[str]],
+    calls: dict[str, dict[str, str]],
+) -> None:
+    with xlsxwriter.Workbook(str(path)) as workbook:
+        write_choice_sheet(
+            workbook, "Genotype", genotype_labels, "Genotype", calls,
+            "genotype_distances", False,
+        )
+        for genotype in genotype_labels:
+            calls_for_genotype = {
+                accession: call for accession, call in calls.items()
+                if call.get("genotype") == genotype
+            }
+            write_choice_sheet(
+                workbook, f"Subtype_{genotype}",
+                subtype_labels_by_genotype.get(genotype, []), "Subtype",
+                calls_for_genotype, "subtype_distances", True,
+            )
+
+
 def assignment_calls(
     input_fasta: Path, work_dir: Path, threads: int, min_aligned_nt: int
-) -> dict[str, dict[str, dict[str, str]]]:
+) -> tuple[
+    dict[str, dict[str, dict[str, str]]],
+    dict[str, list[str]],
+    dict[str, dict[str, list[str]]],
+]:
     """Assign each gene using its genotype and subtype nucleotide references."""
     work_dir.mkdir(parents=True, exist_ok=True)
     records = fasta_records(input_fasta)
     results: dict[str, dict[str, dict[str, str]]] = {gene: {} for gene in GENES}
+    genotype_labels_by_gene: dict[str, list[str]] = {}
+    subtype_labels_by_gene: dict[str, dict[str, list[str]]] = {}
     for gene in GENES:
         genotype_db = work_dir / f"{gene}_genotype_refs"
         make_database(GT_REFERENCES[gene], genotype_db)
@@ -155,14 +278,27 @@ def assignment_calls(
             threads,
             f"assigning {gene} genotypes",
         )
-        best_genotype: dict[str, tuple[tuple[float, int], str, list[str]]] = {}
-        for hit in genotype_hits:
-            match = re.search(rf"HCV([1-8]){gene}", hit[1])
-            if not match or int(hit[2]) < min_aligned_nt:
-                continue
-            score = (float(hit[7]), int(hit[2]))
-            if hit[0] not in best_genotype or score > best_genotype[hit[0]][0]:
-                best_genotype[hit[0]] = (score, match.group(1), hit)
+        genotype_for_subject = lambda subject: (
+            match.group(1)
+            if (match := re.search(rf"HCV([1-8]){gene}", subject))
+            else ""
+        )
+        genotype_labels = sorted(
+            {
+                label
+                for header in fasta_header_records(GT_REFERENCES[gene])
+                if (label := genotype_for_subject(header))
+            }
+        )
+        genotype_labels_by_gene[gene] = genotype_labels
+        genotype_rankings = ranked_hits(
+            genotype_hits, genotype_for_subject, min_aligned_nt
+        )
+        best_genotype = {
+            accession: ranking[0]
+            for accession, ranking in genotype_rankings.items()
+            if ranking
+        }
 
         subtype_by_genotype: dict[str, list[tuple[str, str]]] = defaultdict(list)
         for header, sequence in fasta_header_records(SUBTYPE_REFERENCES[gene]).items():
@@ -170,7 +306,11 @@ def assignment_calls(
             if match and sequence:
                 subtype_by_genotype[match.group(1)[0]].append((match.group(1), sequence))
         query_ids_by_genotype: dict[str, list[str]] = defaultdict(list)
-        for accession, (_, genotype, _) in best_genotype.items():
+        subtype_labels_by_gene[gene] = {
+            genotype: sorted(subtype for subtype, _ in subtypes)
+            for genotype, subtypes in subtype_by_genotype.items()
+        }
+        for accession, (genotype, _) in best_genotype.items():
             query_ids_by_genotype[genotype].append(accession)
         for genotype, accessions in query_ids_by_genotype.items():
             subtype_records = {
@@ -198,29 +338,38 @@ def assignment_calls(
                 threads,
                 f"assigning {gene} genotype {genotype} subtypes",
             )
-            best_subtype: dict[str, tuple[tuple[float, int], list[str]]] = {}
-            for hit in subtype_hits:
-                score = (float(hit[7]), int(hit[2]))
-                if int(hit[2]) >= min_aligned_nt and (
-                    hit[0] not in best_subtype or score > best_subtype[hit[0]][0]
-                ):
-                    best_subtype[hit[0]] = (score, hit)
+            subtype_rankings = ranked_hits(
+                subtype_hits, lambda subject: subtype_labels[subject], min_aligned_nt
+            )
             for accession in accessions:
-                _, assigned_genotype, genotype_hit = best_genotype[accession]
+                assigned_genotype, genotype_hit = best_genotype[accession]
+                genotype_choices = [
+                    (label, distance(hit)) for label, hit in genotype_rankings[accession]
+                ]
                 call = {
                     "genotype": assigned_genotype,
                     "genotype_pident": genotype_hit[5],
                     "subtype": "",
                     "subtype_pident": "",
+                    "genotype_distances": dict(genotype_choices),
+                    "genotype_distances_choices": genotype_choices,
+                    "subtype_distances": {},
+                    "subtype_distances_choices": [],
                 }
-                if accession in best_subtype:
-                    subtype_hit = best_subtype[accession][1]
+                subtype_choices = [
+                    (label, distance(hit))
+                    for label, hit in subtype_rankings.get(accession, [])
+                ]
+                call["subtype_distances"] = dict(subtype_choices)
+                call["subtype_distances_choices"] = subtype_choices
+                if subtype_choices:
+                    subtype_hit = subtype_rankings[accession][0][1]
                     call.update(
-                        subtype=subtype_labels[subtype_hit[1]],
+                        subtype=subtype_choices[0][0],
                         subtype_pident=subtype_hit[5],
                     )
                 results[gene][accession] = call
-    return results
+    return results, genotype_labels_by_gene, subtype_labels_by_gene
 
 
 def run_with_spinner(command: list[str], label: str) -> None:
@@ -335,7 +484,7 @@ def main() -> None:
     print(f"Auditing {len(accessions):,} FASTA records", file=sys.stderr)
     with tempfile.TemporaryDirectory(prefix="hcv_allseq_coverage_") as temp:
         temp_dir = Path(temp)
-        assignments_by_gene = assignment_calls(
+        assignments_by_gene, genotype_labels_by_gene, subtype_labels_by_gene = assignment_calls(
             input_fasta, temp_dir / "assignments", args.threads, args.min_aligned_nt
         )
         hits_by_gene = coverage_hits(input_fasta, temp_dir / "coverage", args.threads)
@@ -402,6 +551,43 @@ def main() -> None:
             print(file=sys.stderr)
         for output in output_paths.values():
             print(output)
+        for gene, calls in assignments_by_gene.items():
+            genotype_report = args.output_dir / f"{gene}_Genotype_Distances.csv"
+            write_choice_report(
+                genotype_report,
+                genotype_labels_by_gene[gene],
+                "Genotype",
+                calls,
+                "genotype_distances",
+            )
+            print(genotype_report)
+            for genotype in genotype_labels_by_gene[gene]:
+                subtype_report = (
+                    args.output_dir
+                    / f"{gene}_Subtype_Distances_Genotype_{genotype}.csv"
+                )
+                calls_for_genotype = {
+                    accession: call
+                    for accession, call in calls.items()
+                    if call.get("genotype") == genotype
+                }
+                write_choice_report(
+                    subtype_report,
+                    subtype_labels_by_gene[gene].get(genotype, []),
+                    "Subtype",
+                    calls_for_genotype,
+                    "subtype_distances",
+                    assigned_genotype=True,
+                )
+                print(subtype_report)
+            workbook = args.output_dir / f"{gene}_Subtyping_Distances.xlsx"
+            write_distance_workbook(
+                workbook,
+                genotype_labels_by_gene[gene],
+                subtype_labels_by_gene[gene],
+                calls,
+            )
+            print(workbook)
 
 
 if __name__ == "__main__":

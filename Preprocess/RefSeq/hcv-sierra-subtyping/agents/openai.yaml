@@ -1,4 +1,0 @@
-interface:
-  display_name: "HCV Sierra Subtyping"
-  short_description: "Batch HCV FASTA records to an HCV Sierra service."
-  default_prompt: "Use $hcv-sierra-subtyping to submit HCV all.fasta records to an HCV-compatible Sierra GraphQL service and save resumable subtype calls."
