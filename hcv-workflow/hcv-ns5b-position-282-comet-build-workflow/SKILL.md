@@ -58,7 +58,7 @@ Step 11 caches RefID FASTAs and parallelizes accession preparation/AA extraction
 - `HCV_GT_RefSeqs.fasta`
 - `HCV_Subtype_Refs_By_Genome_NA.json`
 - `HCV_GT_Refs_By_Gene_AA.json`
-- `HCVData/nonComet-Full-genome/NS5B_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET subtype 1d and genotype 7/8 overrides and additions
+- `HCVData/nonComet-Full-genome/NS5B_AllSeq_NonComet_Coverage.csv` for mandatory non-COMET genotype 7/8 overrides and additions
 - `Accessions_metadata.csv` for filtering metadata to accessions present in included FASTA files
 
 The discovery step keeps every row with a non-empty `RefID`. It does not require or filter on patient-count columns, `NS5BCount`, or `Notes`.
@@ -67,7 +67,7 @@ After every stage following staging, the runner prints the current number of uni
 The metadata filtering step writes `included_accessions_metadata.csv` and reports any FASTA accessions missing from `Accessions_metadata.csv` in `missing_accessions_from_metadata.txt`; both files live in the parent folder of `included_refid_fastas/`.
 The per-RefID metadata split step writes CSVs only for RefIDs that have explicit filters under `refid_metadata/`. Current filters: `30` source_isolate contains `day1`; `142` accession is listed in `HCVData/Ref-selection/NS5_Ref_filter/NS5B/142.csv`; `346` source_isolate contains `baseline`; `891` source_isolate contains a token from `Ha01` through `Ha97`; and `943` source_isolate contains `day 1`.
 The per-RefID FASTA filtering step reads `refid_metadata/RefID_<RefID>_metadata.csv`, keeps only matching `Accession` records in the corresponding copied FASTA file under `included_refid_fastas/`, and prints per-RefID and total before/after record counts.
-The priority-assignment stage uses `HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv` as the highest-priority accession/subtype source, then selects non-COMET calls for retained accessions called `1d` and for genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
+The priority-assignment stage uses `HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv` as the highest-priority accession/subtype source, then selects non-COMET calls for retained genotype 7 or 8 accessions. The following genotype and subtype steps consume that single selection to override COMET calls or add accessions absent from COMET. Amino-acid extraction reads the configured FASTA pool for added accessions.
 
 Complete-profile construction retains an accession only when it has a callable standard amino acid at NS5B position 282. A missing, `X`, stop (`*`), or non-standard call at position 282 excludes that accession from the profile and its downstream RAS and distance reports. The remaining RAS positions are still included in downstream RAS reports.
 ## Outputs

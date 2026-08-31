@@ -48,11 +48,7 @@ def main() -> None:
             accession = accession_key(row.get("Accession"))
             genotype = str(row.get("ClosestGenotype") or "").strip().lower()
             subtype = str(row.get("ClosestSubtype") or "").strip().lower()
-            if accession and (
-                subtype == "1d"
-                or genotype in {"7", "8"}
-                or subtype.startswith(("7", "8"))
-            ):
+            if accession and genotype in {"7", "8"}:
                 priority_subtypes[accession] = subtype
 
     rows = [

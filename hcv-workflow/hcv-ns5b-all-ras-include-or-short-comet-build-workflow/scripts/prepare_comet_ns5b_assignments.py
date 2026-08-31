@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
         help="FASTA file containing raw records missing from Comet or marked unassigned.",
     )
     parser.add_argument(
+        "--unassigned-count-output",
+        required=True,
+        help="Text file receiving the number of COMET-unassigned accessions.",
+    )
+    parser.add_argument(
         "--remove-unassigned",
         action="store_true",
         help="Remove missing and unassigned records after reporting their counts.",
@@ -188,10 +193,14 @@ def main() -> int:
     write_csv(Path(args.subtype_output_csv), subtype_rows)
     write_csv(Path(args.not_found_output_csv), missing_rows)
     write_fasta(Path(args.not_found_fasta_output), missing_or_unassigned_records)
+    unassigned_count_output = Path(args.unassigned_count_output)
+    unassigned_count_output.parent.mkdir(parents=True, exist_ok=True)
+    unassigned_count_output.write_text(f"{unassigned}\n", encoding="utf-8")
     print(f"comet_genotype_assignments={Path(args.genotype_output_csv)}")
     print(f"comet_subtype_assignments={Path(args.subtype_output_csv)}")
     print(f"comet_not_found_or_unassigned={Path(args.not_found_output_csv)}")
     print(f"comet_not_found_or_unassigned_fasta={Path(args.not_found_fasta_output)}")
+    print(f"comet_unassigned_count_output={unassigned_count_output}")
     return 0
 
 

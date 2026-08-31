@@ -76,14 +76,7 @@ def main() -> int:
             if (row.get("Accession") or "").strip()
             and (row.get("Accession") or "").strip().split(".", 1)[0]
             not in high_confidence_comet
-            and (
-                (row.get("ClosestSubtype") or "").strip().lower() == "1d"
-                or (row.get("ClosestGenotype") or "").strip().lower() in {"7", "8"}
-                or (row.get("ClosestSubtype") or "")
-                .strip()
-                .lower()
-                .startswith(("7", "8"))
-            )
+            and (row.get("ClosestGenotype") or "").strip().lower() in {"7", "8"}
         ]
         fieldnames = [
             *fieldnames,

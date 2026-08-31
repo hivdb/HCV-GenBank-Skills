@@ -654,6 +654,9 @@ class Pipeline:
                 self.temp_root / "comet_ns3_not_found_or_unassigned.csv",
                 "--not-found-fasta-output",
                 self.temp_root / "comet_ns3_not_found_or_unassigned.fasta",
+                "--unassigned-count-output",
+                self.step_dir("prepare-comet-assignments")
+                / "NS3_Comet_Unassigned_Accession_Count.txt",
                 "--remove-unassigned",
             )
 
