@@ -2,11 +2,11 @@ Gene,Column,BlankCount,TotalRows
 NS3,Accession,0,20829
 NS3,PerGeneGenotype,0,20829
 NS3,PerGeneSubtype,0,20829
-NS3,FullGenomeGenotype,0,20829
-NS3,FullGenomeSubtype,0,20829
+NS3,FullSeqGenotype,0,20829
+NS3,FullSeqSubtype,0,20829
 NS3,CometPerGeneGenotype,9,20829
 NS3,CometPerGeneSubtype,0,20829
-NS3,CometFullGenomeGenotype,186,20829
-NS3,CometFullGenomeSubtype,0,20829
+NS3,CometFullSeqGenotype,186,20829
+NS3,CometFullSeqSubtype,0,20829
 NS3,GenBankGenotype,3355,20829
 NS3,GenBankSubtype,4753,20829

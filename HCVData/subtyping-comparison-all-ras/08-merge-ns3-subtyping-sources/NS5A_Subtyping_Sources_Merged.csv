@@ -1,4 +1,4 @@
-Accession,PerGeneGenotype,PerGeneSubtype,FullGenomeGenotype,FullGenomeSubtype,CometPerGeneGenotype,CometPerGeneSubtype,CometFullGenomeGenotype,CometFullGenomeSubtype,GenBankGenotype,GenBankSubtype
+Accession,PerGeneGenotype,PerGeneSubtype,FullSeqGenotype,FullSeqSubtype,CometPerGeneGenotype,CometPerGeneSubtype,CometFullSeqGenotype,CometFullSeqSubtype,GenBankGenotype,GenBankSubtype
 MW205376,4,4v,4,4v,4,4v,4,4v,4,
 MW205378,4,4q,4,4q,4,4v,4,4v,4,4l
 MW205379,4,4v,4,4l,4,4v,4,4v,4,4p

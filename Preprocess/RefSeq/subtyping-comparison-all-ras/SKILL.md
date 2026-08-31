@@ -1,6 +1,6 @@
 ---
 name: subtyping-comparison-all-ras
-description: Compare HCV COMET, per-gene BLAST, and full-genome BLAST subtype calls. Use when evaluating pairwise or three-way subtype agreement for NS3, NS5A, and NS5B.
+description: Compare HCV COMET, per-gene BLAST, and full-sequence BLAST subtype calls. Use when evaluating pairwise or three-way subtype agreement for NS3, NS5A, and NS5B.
 ---
 
 # HCV COMET, per-gene, and full-genome subtyping comparison

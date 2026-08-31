@@ -7,7 +7,7 @@ uv run python Preprocess/RefSeq/subtyping-comparison/scripts/report_subtype_agre
 ```
 
 For each Step 8 merged result, this step compares the subtype calls from
-per-gene BLAST, full-genome BLAST, per-gene COMET, full-genome COMET, and
+per-gene BLAST, full-sequence BLAST, per-gene COMET, full-sequence COMET, and
 GenBank. It writes accession-level and summary reports per gene. The
 accession-level report includes `PresentMethodCount` and `BlankMethods`; the
 summary splits non-unanimous calls into `MoreThanHalfAgree` (one call has

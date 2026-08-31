@@ -9,7 +9,7 @@ uv run python Preprocess/RefSeq/subtyping-comparison/scripts/merge_ns3_subtyping
 ```
 
 This step outer-merges the RAS-overlap outputs from per-gene BLAST,
-full-genome BLAST, per-gene COMET, full-genome COMET, and GenBank. The output
+full-sequence BLAST, per-gene COMET, full-sequence COMET, and GenBank. The output
 has one accession per row and paired genotype/subtype columns for each source.
 COMET genotypes are derived from the numeric prefix of the COMET subtype.
 The script also prints, for each source, the number of merged accessions absent

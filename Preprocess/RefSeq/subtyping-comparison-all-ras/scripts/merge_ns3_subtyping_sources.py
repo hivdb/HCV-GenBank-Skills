@@ -41,13 +41,13 @@ def input_paths(gene: str) -> dict[str, Path]:
         "PerGene": OUTPUT_ROOT
         / RAS_STEP_DIRS[gene]
         / f"{gene}_AllSeq_NonComet_Coverage_RAS_Overlap.csv",
-        "FullGenome": OUTPUT_ROOT
+        "FullSeq": OUTPUT_ROOT
         / "04-filter-full-genome-by-ras-accessions"
         / f"{gene}_AllSeq_NonComet_Coverage_RAS_Overlap.csv",
         "CometPerGene": OUTPUT_ROOT
         / "05-filter-comet-pergene-by-ras-accessions"
         / f"{gene}_RAS_Overlap.csv",
-        "CometFullGenome": OUTPUT_ROOT
+        "CometFullSeq": OUTPUT_ROOT
         / "06-filter-comet-full-genome-by-ras-accessions"
         / f"{gene}_Comet_FullGenome_RAS_Overlap.csv",
         "GenBank": OUTPUT_ROOT
@@ -110,9 +110,9 @@ def main() -> None:
     inputs = input_paths(args.gene)
     calls = {
         "PerGene": read_blast(inputs["PerGene"]),
-        "FullGenome": read_blast(inputs["FullGenome"]),
+        "FullSeq": read_blast(inputs["FullSeq"]),
         "CometPerGene": read_comet(inputs["CometPerGene"]),
-        "CometFullGenome": read_comet(inputs["CometFullGenome"]),
+        "CometFullSeq": read_comet(inputs["CometFullSeq"]),
         "GenBank": read_genbank(inputs["GenBank"]),
     }
     accession_order = list(calls["PerGene"])

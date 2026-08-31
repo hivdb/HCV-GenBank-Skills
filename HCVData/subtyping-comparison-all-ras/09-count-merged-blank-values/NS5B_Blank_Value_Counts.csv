@@ -2,11 +2,11 @@ Gene,Column,BlankCount,TotalRows
 NS5B,Accession,0,6597
 NS5B,PerGeneGenotype,0,6597
 NS5B,PerGeneSubtype,0,6597
-NS5B,FullGenomeGenotype,0,6597
-NS5B,FullGenomeSubtype,0,6597
+NS5B,FullSeqGenotype,0,6597
+NS5B,FullSeqSubtype,0,6597
 NS5B,CometPerGeneGenotype,2,6597
 NS5B,CometPerGeneSubtype,0,6597
-NS5B,CometFullGenomeGenotype,11,6597
-NS5B,CometFullGenomeSubtype,0,6597
+NS5B,CometFullSeqGenotype,11,6597
+NS5B,CometFullSeqSubtype,0,6597
 NS5B,GenBankGenotype,608,6597
 NS5B,GenBankSubtype,1768,6597

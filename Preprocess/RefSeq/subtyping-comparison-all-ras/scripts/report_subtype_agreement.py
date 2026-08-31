@@ -14,17 +14,17 @@ STEP8_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison-all-ras" / "08-merge-n
 OUTPUT_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison-all-ras" / "11-report-subtype-agreement"
 GENES = ("NS3", "NS5A", "NS5B")
 METHOD_COLUMNS = (
-    "PerGeneSubtype",
-    "FullGenomeSubtype",
+    "CometFullSeqSubtype",
     "CometPerGeneSubtype",
-    "CometFullGenomeSubtype",
+    "FullSeqSubtype",
+    "PerGeneSubtype",
     "GenBankSubtype",
 )
 METHOD_NAMES = {
     "PerGeneSubtype": "PerGene",
-    "FullGenomeSubtype": "FullGenome",
+    "FullSeqSubtype": "FullSeq",
     "CometPerGeneSubtype": "CometPerGene",
-    "CometFullGenomeSubtype": "CometFullGenome",
+    "CometFullSeqSubtype": "CometFullSeq",
     "GenBankSubtype": "GenBank",
 }
 STATUS_DESCRIPTIONS = {
@@ -78,24 +78,27 @@ def build_reports(gene: str) -> None:
 
         detail_rows: list[dict[str, str | int]] = []
         statuses: Counter[str] = Counter()
+        total_accessions = 0
         for row in reader:
             calls = {column: subtype(row.get(column, "")) for column in METHOD_COLUMNS}
             present_calls = [value for value in calls.values() if value]
             blank_methods = [METHOD_NAMES[column] for column in METHOD_COLUMNS if not calls[column]]
             unique_calls = sorted(set(present_calls))
             status = agreement_status(len(present_calls), len(unique_calls))
+            total_accessions += 1
             statuses[summary_status(len(present_calls), present_calls)] += 1
-            detail_rows.append(
-                {
-                    "Accession": row["Accession"].strip(),
-                    **calls,
-                    "PresentMethodCount": len(present_calls),
-                    "BlankMethods": ";".join(blank_methods),
-                    "DistinctSubtypeCount": len(unique_calls),
-                    "SubtypesObserved": ";".join(unique_calls),
-                    "AgreementStatus": status,
-                }
-            )
+            if status.endswith("Disagree"):
+                detail_rows.append(
+                    {
+                        "Accession": row["Accession"].strip(),
+                        **calls,
+                        "PresentMethodCount": len(present_calls),
+                        "BlankMethods": ";".join(blank_methods),
+                        "DistinctSubtypeCount": len(unique_calls),
+                        "SubtypesObserved": ";".join(unique_calls),
+                        "AgreementStatus": status,
+                    }
+                )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     detail_fields = (
@@ -112,7 +115,7 @@ def build_reports(gene: str) -> None:
         writer.writeheader()
         writer.writerows(detail_rows)
 
-    total = len(detail_rows)
+    total = total_accessions
     summary_rows = [
         {
             "Gene": gene,

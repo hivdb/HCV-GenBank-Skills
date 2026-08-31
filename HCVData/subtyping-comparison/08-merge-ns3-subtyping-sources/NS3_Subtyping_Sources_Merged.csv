@@ -1,4 +1,4 @@
-Accession,PerGeneGenotype,PerGeneSubtype,FullGenomeGenotype,FullGenomeSubtype,CometPerGeneGenotype,CometPerGeneSubtype,CometFullGenomeGenotype,CometFullGenomeSubtype,GenBankGenotype,GenBankSubtype
+Accession,PerGeneGenotype,PerGeneSubtype,FullSeqGenotype,FullSeqSubtype,CometPerGeneGenotype,CometPerGeneSubtype,CometFullSeqGenotype,CometFullSeqSubtype,GenBankGenotype,GenBankSubtype
 MZ327730,3,3a,3,3a,3,3a,3,3a,3,3a
 MZ327731,1,1a,1,1a,1,1a,1,1a,1,1a
 MZ327732,1,1a,1,1a,1,1a,1,1a,1,1a

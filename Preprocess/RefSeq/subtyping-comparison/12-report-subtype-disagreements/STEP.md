@@ -7,10 +7,10 @@ python3 Preprocess/RefSeq/subtyping-comparison/scripts/report_subtype_disagreeme
 ```
 
 For NS3, NS5A, and NS5B, this step groups non-unanimous subtype calls by
-`CometPerGeneSubtype`. Each output CSV has `CometSubtype`,
+`CometFullSeqSubtype`. Each output CSV has `CometSubtype`,
 `AllFiveDisagree`, `AvailableCallsDisagree`, `TotalDisagree`, and
 `OtherMethodSubtypes` as its final column. `OtherMethodSubtypes` is the
-deduplicated list of calls from per-gene BLAST, full-genome BLAST, full-genome
+deduplicated list of calls from per-gene BLAST, full-sequence BLAST, full-genome
 COMET, and GenBank for the disagreement accessions in that COMET subtype.
 The three output CSVs are merged into `Subtype_Disagreement_Reports.xlsx`,
 with one worksheet per gene.

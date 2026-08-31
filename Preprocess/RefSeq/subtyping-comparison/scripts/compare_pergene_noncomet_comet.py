@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare COMET, per-gene BLAST, and full-genome BLAST subtype calls."""
+"""Compare COMET, per-gene BLAST, and full-sequence BLAST subtype calls."""
 
 from __future__ import annotations
 
@@ -14,13 +14,13 @@ import xlsxwriter
 GENES = ("NS3", "NS5A", "NS5B")
 COMPARISONS = {
     "Comet_vs_PerGene": ("Comet", "PerGene"),
-    "Comet_vs_FullGenome": ("Comet", "FullGenome"),
-    "PerGene_vs_FullGenome": ("PerGene", "FullGenome"),
-    "Comet_vs_PerGene_vs_FullGenome": ("Comet", "PerGene", "FullGenome"),
+    "Comet_vs_FullSeq": ("Comet", "FullSeq"),
+    "PerGene_vs_FullSeq": ("PerGene", "FullSeq"),
+    "Comet_vs_PerGene_vs_FullSeq": ("Comet", "PerGene", "FullSeq"),
 }
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_PERGENE_DIR = REPO_ROOT / "HCVData" / "nonComet-PerGene"
-DEFAULT_FULLGENOME_DIR = REPO_ROOT / "HCVData" / "nonComet-Full-genome"
+DEFAULT_FULLSEQ_DIR = REPO_ROOT / "HCVData" / "nonComet-Full-genome"
 DEFAULT_COMET_CSV = REPO_ROOT / "HCVData" / "Comet-Full-genome" / "all_comet_subtype.csv"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison"
 
@@ -81,7 +81,7 @@ def compare_calls(
 ) -> tuple[dict[str, int | str], list[dict[str, str]]]:
     # Per-gene BLAST defines the accession universe for every comparison. This
     # keeps NS3, NS5A, and NS5B comparisons scoped to the corresponding
-    # PerGene file instead of all FullGenome or COMET accessions.
+    # PerGene file instead of all FullSeq or COMET accessions.
     accessions = set(calls_by_method["PerGene"])
     for method in methods:
         accessions.intersection_update(calls_by_method[method])
@@ -98,7 +98,7 @@ def compare_calls(
                 "Accession": accession,
                 "CometSubtype": calls_by_method["Comet"].get(accession, ""),
                 "BlastPerGeneSubtype": calls_by_method["PerGene"].get(accession, ""),
-                "BlastFullGenomeSubtype": calls_by_method["FullGenome"].get(accession, ""),
+                "BlastFullSeqSubtype": calls_by_method["FullSeq"].get(accession, ""),
                 "CompareCondition": condition,
             }
         )
@@ -116,7 +116,7 @@ def compare_calls(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pergene-dir", type=Path, default=DEFAULT_PERGENE_DIR)
-    parser.add_argument("--fullgenome-dir", type=Path, default=DEFAULT_FULLGENOME_DIR)
+    parser.add_argument("--fullseq-dir", type=Path, default=DEFAULT_FULLSEQ_DIR)
     parser.add_argument("--comet-csv", type=Path, default=DEFAULT_COMET_CSV)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     return parser.parse_args()
@@ -172,8 +172,8 @@ def main() -> None:
             "PerGene": read_blast_calls(
                 args.pergene_dir / f"{gene}_AllSeq_NonComet_Coverage.csv"
             ),
-            "FullGenome": read_blast_calls(
-                args.fullgenome_dir / f"{gene}_AllSeq_NonComet_Coverage.csv"
+            "FullSeq": read_blast_calls(
+                args.fullseq_dir / f"{gene}_AllSeq_NonComet_Coverage.csv"
             ),
         }
         for condition, methods in COMPARISONS.items():
@@ -193,7 +193,7 @@ def main() -> None:
             "Accession",
             "CometSubtype",
             "BlastPerGeneSubtype",
-            "BlastFullGenomeSubtype",
+            "BlastFullSeqSubtype",
             "CompareCondition",
         ],
         difference_rows,
@@ -203,7 +203,7 @@ def main() -> None:
             row["Gene"],
             row["CometSubtype"],
             row["BlastPerGeneSubtype"],
-            row["BlastFullGenomeSubtype"],
+            row["BlastFullSeqSubtype"],
             row["CompareCondition"],
         )
         for row in difference_rows
@@ -213,11 +213,11 @@ def main() -> None:
             "Gene": gene,
             "CometSubtype": comet_subtype,
             "BlastPerGeneSubtype": pergene_subtype,
-            "BlastFullGenomeSubtype": fullgenome_subtype,
+            "BlastFullSeqSubtype": fullseq_subtype,
             "DifferentCount": count,
             "CompareCondition": condition,
         }
-        for (gene, comet_subtype, pergene_subtype, fullgenome_subtype, condition), count in sorted(
+        for (gene, comet_subtype, pergene_subtype, fullseq_subtype, condition), count in sorted(
             subtype_counts.items(), key=lambda item: (item[0][4], item[0][0], -item[1], item[0])
         )
     ]
@@ -225,7 +225,7 @@ def main() -> None:
         "Gene",
         "CometSubtype",
         "BlastPerGeneSubtype",
-        "BlastFullGenomeSubtype",
+        "BlastFullSeqSubtype",
         "DifferentCount",
         "CompareCondition",
     ]

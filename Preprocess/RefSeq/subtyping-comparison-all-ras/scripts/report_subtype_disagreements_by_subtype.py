@@ -14,11 +14,11 @@ STEP11_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison-all-ras" / "11-report
 OUTPUT_DIR = REPO_ROOT / "HCVData" / "subtyping-comparison-all-ras" / "12-report-subtype-disagreements"
 GENES = ("NS3", "NS5A", "NS5B")
 DISAGREEMENT_STATUSES = ("AllFiveDisagree", "AvailableCallsDisagree")
-COMET_SUBTYPE_COLUMN = "CometPerGeneSubtype"
+COMET_SUBTYPE_COLUMN = "CometFullSeqSubtype"
 OTHER_SUBTYPE_COLUMNS = (
     "PerGeneSubtype",
-    "FullGenomeSubtype",
-    "CometFullGenomeSubtype",
+    "FullSeqSubtype",
+    "CometFullSeqSubtype",
     "GenBankSubtype",
 )
 
