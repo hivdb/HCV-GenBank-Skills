@@ -727,7 +727,7 @@ class Pipeline:
                         "--subtype-output-xlsx",
                         step_dir / f"NS5A_Subtype_{upper}_Distance_{suffix}.xlsx",
                         "--min-subtype-sequences",
-                        "10",
+                        "1",
                     )
 
         return [
