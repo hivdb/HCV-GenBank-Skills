@@ -29,15 +29,18 @@ def selected_accessions(
     path = STEP11_DIR / f"{gene}_Subtype_Agreement_By_Accession.csv"
     with path.open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
-        required = {"Accession", "CometFullSeqSubtype"}
+        required = {"Accession", "CometFullSeqSubtype", "FullSeqSubtype"}
         if not reader.fieldnames or (missing := required - set(reader.fieldnames)):
             raise ValueError(f"{path} is missing columns: {', '.join(sorted(missing))}")
         for row in reader:
             accession = accession_key(row.get("Accession", ""))
             if not accession:
                 continue
-            selected.add(accession)
             subtype = str(row.get("CometFullSeqSubtype", "")).strip().upper()
+            fullseq_subtype = str(row.get("FullSeqSubtype", "")).strip().upper()
+            if subtype == fullseq_subtype:
+                continue
+            selected.add(accession)
             comet_fullseq_subtypes[accession] = subtype
             if subtype in selected_by_subtype:
                 selected_by_subtype[subtype].add(accession)
@@ -72,10 +75,7 @@ def export_gene(gene: str) -> None:
     matched_genotype_accessions = {label: set() for label in output_paths}
     try:
         for source_sheet in source.worksheets:
-            target_sheets = {
-                label: workbook.create_sheet(source_sheet.title)
-                for label, workbook in destinations.items()
-            }
+            target_sheets = {}
             rows = source_sheet.iter_rows(values_only=True)
             header = next(rows, None)
             if header is None:
@@ -85,15 +85,18 @@ def export_gene(gene: str) -> None:
                 "CometFullSeqSubtype",
                 *header[1:],
             )
-            for target_sheet in target_sheets.values():
-                target_sheet.append(output_header)
             matched_rows = {label: 0 for label in output_paths}
             for row in rows:
                 accession = accession_key(row[0] if row else "")
                 for label, selected_set in selected_sets.items():
                     if accession not in selected_set:
                         continue
-                    target_sheets[label].append(
+                    target_sheet = target_sheets.get(label)
+                    if target_sheet is None:
+                        target_sheet = destinations[label].create_sheet(source_sheet.title)
+                        target_sheet.append(output_header)
+                        target_sheets[label] = target_sheet
+                    target_sheet.append(
                         (
                             row[0],
                             comet_fullseq_subtypes.get(accession, ""),
@@ -109,7 +112,10 @@ def export_gene(gene: str) -> None:
             )
         for label, workbook in destinations.items():
             output_paths[label].parent.mkdir(parents=True, exist_ok=True)
-            workbook.save(output_paths[label])
+            if workbook.worksheets:
+                workbook.save(output_paths[label])
+            elif output_paths[label].exists():
+                output_paths[label].unlink()
     finally:
         source.close()
 
@@ -119,7 +125,8 @@ def export_gene(gene: str) -> None:
         matched = matched_genotype_accessions[label]
         print(f"{gene} {label} selected accessions: {len(selected_set):,}")
         print(f"{gene} {label} missing from Genotype sheet: {len(selected_set - matched):,}")
-        print(f"{gene} {label} output: {output_xlsx}")
+        if output_xlsx.exists():
+            print(f"{gene} {label} output: {output_xlsx}")
 
 
 def main() -> None:
