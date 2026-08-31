@@ -56,14 +56,22 @@ def input_paths(gene: str) -> dict[str, Path]:
     }
 
 
-def add_record(records: dict[str, tuple[str, str]], accession: str, genotype: str, subtype: str, source: Path) -> None:
-    if accession in records and records[accession] != (genotype, subtype):
+def add_record(
+    records: dict[str, tuple[str, str, str]],
+    accession: str,
+    genotype: str,
+    subtype: str,
+    subtype_aligned_nt: str,
+    source: Path,
+) -> None:
+    record = (genotype, subtype, subtype_aligned_nt)
+    if accession in records and records[accession] != record:
         raise ValueError(f"Conflicting calls for {accession} in {source}")
-    records[accession] = (genotype, subtype)
+    records[accession] = record
 
 
-def read_blast(path: Path) -> dict[str, tuple[str, str]]:
-    records: dict[str, tuple[str, str]] = {}
+def read_blast(path: Path) -> dict[str, tuple[str, str, str]]:
+    records: dict[str, tuple[str, str, str]] = {}
     with path.open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
         required = {"Accession", "ClosestGenotype", "ClosestSubtype"}
@@ -72,12 +80,19 @@ def read_blast(path: Path) -> dict[str, tuple[str, str]]:
         for row in reader:
             accession = accession_key(row.get("Accession", ""))
             if accession:
-                add_record(records, accession, row.get("ClosestGenotype", "").strip(), row.get("ClosestSubtype", "").strip(), path)
+                add_record(
+                    records,
+                    accession,
+                    row.get("ClosestGenotype", "").strip(),
+                    row.get("ClosestSubtype", "").strip(),
+                    row.get("ClosestSubtypeAlignedNT", "").strip(),
+                    path,
+                )
     return records
 
 
-def read_comet(path: Path) -> dict[str, tuple[str, str]]:
-    records: dict[str, tuple[str, str]] = {}
+def read_comet(path: Path) -> dict[str, tuple[str, str, str]]:
+    records: dict[str, tuple[str, str, str]] = {}
     with path.open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
         required = {"name", "subtype"}
@@ -87,12 +102,12 @@ def read_comet(path: Path) -> dict[str, tuple[str, str]]:
             accession = accession_key(row.get("name", ""))
             subtype = row.get("subtype", "").strip()
             if accession:
-                add_record(records, accession, comet_genotype(subtype), subtype, path)
+                add_record(records, accession, comet_genotype(subtype), subtype, "", path)
     return records
 
 
-def read_genbank(path: Path) -> dict[str, tuple[str, str]]:
-    records: dict[str, tuple[str, str]] = {}
+def read_genbank(path: Path) -> dict[str, tuple[str, str, str]]:
+    records: dict[str, tuple[str, str, str]] = {}
     with path.open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(source)
         required = {"accession", "genotype", "subtype"}
@@ -101,7 +116,14 @@ def read_genbank(path: Path) -> dict[str, tuple[str, str]]:
         for row in reader:
             accession = accession_key(row.get("accession", ""))
             if accession:
-                add_record(records, accession, row.get("genotype", "").strip(), row.get("subtype", "").strip(), path)
+                add_record(
+                    records,
+                    accession,
+                    row.get("genotype", "").strip(),
+                    row.get("subtype", "").strip(),
+                    "",
+                    path,
+                )
     return records
 
 
@@ -121,7 +143,11 @@ def main() -> None:
         accession_order.extend(sorted(set(source_calls) - known_accessions))
         known_accessions.update(source_calls)
 
-    fields = ["Accession", *(field for source in calls for field in (f"{source}Genotype", f"{source}Subtype"))]
+    fields = ["Accession"]
+    for source in calls:
+        fields.extend((f"{source}Genotype", f"{source}Subtype"))
+        if source in {"PerGene", "FullSeq"}:
+            fields.append(f"{source}ClosestSubtypeAlignedNT")
     output_csv = MERGE_OUTPUT_DIR / f"{args.gene}_Subtyping_Sources_Merged.csv"
     missing_csv = MERGE_OUTPUT_DIR / f"{args.gene}_Missing_Accessions_By_Source.csv"
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -143,9 +169,13 @@ def main() -> None:
         for accession in accession_order:
             row = {"Accession": accession}
             for source, source_calls in calls.items():
-                genotype, subtype = source_calls.get(accession, ("", ""))
+                genotype, subtype, subtype_aligned_nt = source_calls.get(
+                    accession, ("", "", "")
+                )
                 row[f"{source}Genotype"] = genotype
                 row[f"{source}Subtype"] = subtype
+                if source in {"PerGene", "FullSeq"}:
+                    row[f"{source}ClosestSubtypeAlignedNT"] = subtype_aligned_nt
             writer.writerow(row)
 
     print(f"Merged {args.gene} accessions: {len(accession_order):,}")

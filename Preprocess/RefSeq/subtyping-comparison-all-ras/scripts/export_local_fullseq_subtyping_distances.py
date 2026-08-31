@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export LocalFullSeq distance rows for Step 11 disagreement accessions."""
+"""Export full-sequence distance rows for Step 11 disagreement accessions."""
 
 from __future__ import annotations
 
@@ -43,17 +43,26 @@ def selected_accessions(gene: str) -> tuple[set[str], dict[str, set[str]]]:
 def export_gene(gene: str) -> None:
     selected, selected_by_subtype = selected_accessions(gene)
     output_paths = {
-        "all": STEP11_DIR / f"{gene}_LocalFullSeq_Subtyping_Distances.xlsx",
+        "all": STEP11_DIR / f"{gene}_Subtyping_Distances.xlsx",
         **{
             subtype: STEP11_DIR
-            / f"{gene}_LocalFullSeq_CometFullSeqSubtype_{subtype}_Subtyping_Distances.xlsx"
+            / f"{gene}_CometFullSeqSubtype_{subtype}_Subtyping_Distances.xlsx"
             for subtype in SPECIAL_COMET_FULLSEQ_SUBTYPES
         },
     }
     selected_sets = {"all": selected, **selected_by_subtype}
-    old_output = STEP11_DIR / f"LocalFullSeq_{gene}_Subtyping_Distances.xlsx"
-    if old_output.exists():
-        old_output.unlink()
+    legacy_outputs = [
+        STEP11_DIR / f"LocalFullSeq_{gene}_Subtyping_Distances.xlsx",
+        STEP11_DIR / f"{gene}_LocalFullSeq_Subtyping_Distances.xlsx",
+        *[
+            STEP11_DIR
+            / f"{gene}_LocalFullSeq_CometFullSeqSubtype_{subtype}_Subtyping_Distances.xlsx"
+            for subtype in SPECIAL_COMET_FULLSEQ_SUBTYPES
+        ],
+    ]
+    for legacy_output in legacy_outputs:
+        if legacy_output.exists():
+            legacy_output.unlink()
     source = load_workbook(SOURCE_XLSX, read_only=True, data_only=False)
     destinations = {label: Workbook(write_only=True) for label in output_paths}
     matched_genotype_accessions = {label: set() for label in output_paths}

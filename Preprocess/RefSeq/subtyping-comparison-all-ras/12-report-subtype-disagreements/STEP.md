@@ -3,7 +3,7 @@
 Run from the repository root:
 
 ```bash
-python3 Preprocess/RefSeq/subtyping-comparison-all-ras/scripts/report_subtype_disagreements_by_subtype.py
+uv run python Preprocess/RefSeq/subtyping-comparison-all-ras/scripts/report_subtype_disagreements_by_subtype.py
 ```
 
 For NS3, NS5A, and NS5B, this step groups non-unanimous subtype calls by

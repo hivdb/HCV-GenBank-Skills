@@ -20,6 +20,10 @@ METHOD_COLUMNS = (
     "PerGeneSubtype",
     "GenBankSubtype",
 )
+ALIGNED_NT_COLUMNS = (
+    "FullSeqClosestSubtypeAlignedNT",
+    "PerGeneClosestSubtypeAlignedNT",
+)
 METHOD_NAMES = {
     "PerGeneSubtype": "PerGene",
     "FullSeqSubtype": "FullSeq",
@@ -71,7 +75,7 @@ def build_reports(gene: str) -> None:
         reader = csv.DictReader(source)
         if not reader.fieldnames:
             raise ValueError(f"No header found in {input_csv}")
-        required = {"Accession", *METHOD_COLUMNS}
+        required = {"Accession", *METHOD_COLUMNS, *ALIGNED_NT_COLUMNS}
         missing = required - set(reader.fieldnames)
         if missing:
             raise ValueError(f"{input_csv} is missing columns: {', '.join(sorted(missing))}")
@@ -81,6 +85,9 @@ def build_reports(gene: str) -> None:
         total_accessions = 0
         for row in reader:
             calls = {column: subtype(row.get(column, "")) for column in METHOD_COLUMNS}
+            aligned_nt = {
+                column: row.get(column, "").strip() for column in ALIGNED_NT_COLUMNS
+            }
             present_calls = [value for value in calls.values() if value]
             blank_methods = [METHOD_NAMES[column] for column in METHOD_COLUMNS if not calls[column]]
             unique_calls = sorted(set(present_calls))
@@ -92,6 +99,7 @@ def build_reports(gene: str) -> None:
                     {
                         "Accession": row["Accession"].strip(),
                         **calls,
+                        **aligned_nt,
                         "PresentMethodCount": len(present_calls),
                         "BlankMethods": ";".join(blank_methods),
                         "DistinctSubtypeCount": len(unique_calls),
@@ -103,7 +111,13 @@ def build_reports(gene: str) -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     detail_fields = (
         "Accession",
-        *METHOD_COLUMNS,
+        "CometFullSeqSubtype",
+        "CometPerGeneSubtype",
+        "FullSeqSubtype",
+        "FullSeqClosestSubtypeAlignedNT",
+        "PerGeneSubtype",
+        "PerGeneClosestSubtypeAlignedNT",
+        "GenBankSubtype",
         "PresentMethodCount",
         "BlankMethods",
         "DistinctSubtypeCount",
