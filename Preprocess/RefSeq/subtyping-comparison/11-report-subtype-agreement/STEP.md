@@ -15,3 +15,10 @@ majority support) and `MoreThanHalfDisagree` (no call has majority support),
 with plain-language agreement-status descriptions.
 All six report CSVs are also merged into `Subtype_Agreement_Reports.xlsx`,
 with one worksheet per CSV.
+
+Each gene's Step 11 accession list is also used to filter
+`HCVData/nonComet-Full-genome/Subtyping_Distances.xlsx`. The matching rows are
+saved separately as `<GENE>_LocalFullSeq_Subtyping_Distances.xlsx` in this
+output directory.
+For each gene, additional filtered workbooks are created for COMET full-sequence
+subtypes `1L`, `3B`, `3H`, and `4R`.
