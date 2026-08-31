@@ -1,0 +1,12 @@
+Gene,Column,BlankCount,TotalRows
+NS3,Accession,0,13113
+NS3,PerGeneGenotype,0,13113
+NS3,PerGeneSubtype,0,13113
+NS3,FullGenomeGenotype,0,13113
+NS3,FullGenomeSubtype,0,13113
+NS3,CometPerGeneGenotype,0,13113
+NS3,CometPerGeneSubtype,0,13113
+NS3,CometFullGenomeGenotype,11,13113
+NS3,CometFullGenomeSubtype,0,13113
+NS3,GenBankGenotype,2105,13113
+NS3,GenBankSubtype,3152,13113

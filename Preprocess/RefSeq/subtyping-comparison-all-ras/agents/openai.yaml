@@ -1,0 +1,4 @@
+interface:
+  display_name: "HCV Per-Gene COMET Comparison"
+  short_description: "Compare assigned per-gene BLAST calls with COMET."
+  default_prompt: "Use $subtyping-comparison-all-ras to filter assigned per-gene non-COMET calls and summarize their agreement with COMET."
