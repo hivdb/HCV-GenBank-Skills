@@ -1,5 +1,5 @@
-Accession,AssignedGenotype,Subtype7aDistance,Subtype7bDistance,FirstChoiceSubtype,FirstChoiceDistance,SecondChoiceSubtype,SecondChoiceDistance
-MT633132,7,28.675,20.066,7b,20.066,7a,28.675
-MH940291,7,20.983,28.125,7a,20.983,7b,28.125
-EF108306,7,0.000,28.814,7a,0.000,7b,28.814
-KX172138,7,29.072,18.225,7b,18.225,7a,29.072
+Accession,ClosestSubtypeAlignedNT,AssignedGenotype,Subtype7aDistance,Subtype7bDistance,FirstChoiceSubtype,FirstChoiceDistance,SecondChoiceSubtype,SecondChoiceDistance
+MT633132,1510,7,28.675,20.066,7b,20.066,7a,28.675
+MH940291,1892,7,20.983,28.125,7a,20.983,7b,28.125
+EF108306,1893,7,0.000,28.814,7a,0.000,7b,28.814
+KX172138,1893,7,29.072,18.225,7b,18.225,7a,29.072

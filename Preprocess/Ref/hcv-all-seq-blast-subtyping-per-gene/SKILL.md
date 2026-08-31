@@ -20,9 +20,9 @@ requested output directory.
   --threads 4
 ```
 
-The output files are `NS3_AllSeq_NonComet_Coverage.csv`, `NS5A_AllSeq_NonComet_Coverage.csv`, and `NS5B_AllSeq_NonComet_Coverage.csv`. Each gene also has a `*_Genotype_Distances.csv` file, one `*_Subtype_Distances_Genotype_<genotype>.csv` file per genotype, and a `*_Subtyping_Distances.xlsx` workbook.
+The output files are `NS3_AllSeq_NonComet_Coverage.csv`, `NS5A_AllSeq_NonComet_Coverage.csv`, and `NS5B_AllSeq_NonComet_Coverage.csv`. Each gene also has a `*_Genotype_Distances.csv` file, one `*_Subtype_Distances_Genotype_<genotype>.csv` file per genotype, and a `*_Subtyping_Distances.xlsx` workbook. Every distance CSV and workbook sheet includes `ClosestSubtypeAlignedNT`, the aligned nucleotide length for the selected subtype call (blank if no subtype call passed the threshold).
 
-Each table has seven columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePident`, `ClosestSubtype`, `ClosestSubtypePident`, `ReferenceOverlapAA`, and `FullyCover`. The percent-identity columns are the BLAST percent identities for the best gene-specific genotype and genotype-matched subtype hits. Blank assignment fields mean the sequence did not meet the assignment threshold.
+Each table has nine columns: `Accession`, `ClosestGenotype`, `ClosestGenotypePident`, `ClosestGenotypeAlignedNT`, `ClosestSubtype`, `ClosestSubtypePident`, `ClosestSubtypeAlignedNT`, `ReferenceOverlapAA`, and `FullyCover`. The `AlignedNT` columns are the BLASTN alignment lengths for the best gene-specific genotype and genotype-matched subtype hits. Blank assignment fields mean the sequence did not meet the assignment threshold.
 
 Each genotype-distance CSV has one row per accession, a distance column for every reference genotype, and the first and second choices with their distances. Each genotype-specific subtype-distance CSV does the same only for subtype references and accessions of that genotype. Distance is BLAST nucleotide percent-identity distance (`100 - pident`); blank values did not meet the minimum aligned-length threshold.
 

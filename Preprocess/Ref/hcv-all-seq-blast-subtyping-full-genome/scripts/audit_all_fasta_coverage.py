@@ -165,7 +165,7 @@ def write_choice_report(
     distance_key: str, assigned_genotype: bool = False,
 ) -> None:
     distance_fields = [f"{label_kind}{label}Distance" for label in labels]
-    fields = ["Accession"]
+    fields = ["Accession", "ClosestSubtypeAlignedNT"]
     if assigned_genotype:
         fields.append("AssignedGenotype")
     fields += distance_fields + [
@@ -179,7 +179,10 @@ def write_choice_report(
         writer.writeheader()
         for accession, call in calls.items():
             distances = call.get(distance_key, {})
-            row = {"Accession": accession}
+            row = {
+                "Accession": accession,
+                "ClosestSubtypeAlignedNT": call.get("subtype_aligned_nt", ""),
+            }
             if assigned_genotype:
                 row["AssignedGenotype"] = call.get("genotype", "")
             row.update(
@@ -197,7 +200,7 @@ def write_choice_sheet(
     calls: dict[str, dict[str, str]], distance_key: str, assigned_genotype: bool,
 ) -> None:
     distance_fields = [f"{label_kind}{label}Distance" for label in labels]
-    fields = ["Accession"]
+    fields = ["Accession", "ClosestSubtypeAlignedNT"]
     if assigned_genotype:
         fields.append("AssignedGenotype")
     fields += distance_fields + [
@@ -210,7 +213,10 @@ def write_choice_sheet(
     rows = []
     for accession, call in calls.items():
         distances = call.get(distance_key, {})
-        row = {"Accession": accession}
+        row = {
+            "Accession": accession,
+            "ClosestSubtypeAlignedNT": call.get("subtype_aligned_nt", ""),
+        }
         if assigned_genotype:
             row["AssignedGenotype"] = call.get("genotype", "")
         row.update({f"{label_kind}{label}Distance": distances.get(label, "") for label in labels})
@@ -335,8 +341,10 @@ def assignment_calls(
             call = {
                 "genotype": assigned_genotype,
                 "genotype_pident": genotype_hit[5],
+                "genotype_aligned_nt": genotype_hit[2],
                 "subtype": "",
                 "subtype_pident": "",
+                "subtype_aligned_nt": "",
                 "genotype_distances": dict(genotype_choices),
                 "genotype_distances_choices": genotype_choices,
                 "subtype_distances": {},
@@ -353,6 +361,7 @@ def assignment_calls(
                 call.update(
                     subtype=subtype_choices[0][0],
                     subtype_pident=subtype_hit[5],
+                    subtype_aligned_nt=subtype_hit[2],
                 )
             calls[accession] = call
     return {gene: dict(calls) for gene in GENES}, genotype_labels, subtype_labels_by_genotype
@@ -490,8 +499,10 @@ def main() -> None:
             "Accession",
             "ClosestGenotype",
             "ClosestGenotypePident",
+            "ClosestGenotypeAlignedNT",
             "ClosestSubtype",
             "ClosestSubtypePident",
+            "ClosestSubtypeAlignedNT",
             "ReferenceOverlapAA",
             "FullyCover",
         ]
@@ -538,9 +549,15 @@ def main() -> None:
                             "ClosestGenotypePident": assignment.get(
                                 "genotype_pident", ""
                             ),
+                            "ClosestGenotypeAlignedNT": assignment.get(
+                                "genotype_aligned_nt", ""
+                            ),
                             "ClosestSubtype": assignment.get("subtype", ""),
                             "ClosestSubtypePident": assignment.get(
                                 "subtype_pident", ""
+                            ),
+                            "ClosestSubtypeAlignedNT": assignment.get(
+                                "subtype_aligned_nt", ""
                             ),
                             "ReferenceOverlapAA": reference_overlap,
                             "FullyCover": fully_cover,
