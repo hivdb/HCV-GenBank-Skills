@@ -18,3 +18,4 @@ Run these steps in order:
 9. [09-count-merged-blank-values](09-count-merged-blank-values/STEP.md)
 10. [10-report-genotype-agreement](10-report-genotype-agreement/STEP.md)
 11. [11-report-subtype-agreement](11-report-subtype-agreement/STEP.md)
+12. [12-report-subtype-disagreements](12-report-subtype-disagreements/STEP.md)
