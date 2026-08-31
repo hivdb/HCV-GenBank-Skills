@@ -15,8 +15,10 @@ step's order and name as its subfolder:
    RefID to the `Original` worksheet. `Year` is extracted from `RefName`.
 2. `02_original_pmid_merge/` — merges non-empty PMIDs by RefID from `Original`,
    `Original_NS5A`, `Original_NS3`, and `Original_NS5B` into an Original-sheet
-   CSV, plus copies containing all non-empty PMIDs, numeric-only PMIDs, and
-   non-numeric PMIDs.
+   CSV. Before writing, it replaces each matching RefID's merged PMID with the
+   curated value in `Original_with_non_numeric_PMID.csv` in this skill folder.
+   It also writes copies containing all non-empty PMIDs, numeric-only PMIDs,
+   and non-numeric PMIDs.
 3. `03_found_pmid/Found_PMID.csv` — copies step 01 and fills blank `PMID`
    values from step 02 by RefID. `Found_PMID_report.csv` stores the found-PMID
    count for each Original worksheet: its RefIDs with blank step-01 PMID values
@@ -49,10 +51,16 @@ step's order and name as its subfolder:
    after, and removed row counts. It also copies step 03's `Found_PMID_report.csv`
    to a separate `Found_PMID_report` worksheet. The script prints each sheet's row
    count before and after deduplication.
-11. `11_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
-   05's `RefName`, `RefIDCount`, and `RefIDs` summary to the retained step-09
-   rows.
-12. `12_duplicate_refname_rows/` — one CSV for every step-11 RefName group with
+11. `11_pubmed_metadata_update/` — reads strictly numeric PMIDs from the four
+   step-10 CSVs, queries PubMed metadata, and writes one refreshed CSV per
+   sheet plus `Original_sheets_pubmed_metadata_updated.xlsx`. It updates
+   `Year`, `PMID`, `Title`, `Author`, and `Journal` only when PubMed returns a
+   record. `Year` is always a four-digit year or blank. `PubMed_API_Results.csv`
+   retains the complete API result for every queried PMID.
+12. `12_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
+   05's `RefName`, `RefIDCount`, and `RefIDs` summary to the PubMed-refreshed
+   retained Original rows.
+13. `13_duplicate_refname_rows/` — one CSV for every step-12 RefName group with
    `RefIDCount >= 2`. Each CSV contains the unchanged matching step-09 rows and
    is stored in `RefIDCount_<count>/` as `<RefName>__RefIDCount_<count>.csv`,
    with unsafe filename characters replaced by underscores.

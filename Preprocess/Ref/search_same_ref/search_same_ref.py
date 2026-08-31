@@ -11,11 +11,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
+import time
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 from zipfile import ZIP_DEFLATED, ZipFile
 from xml.sax.saxutils import escape
@@ -28,6 +32,9 @@ DEFAULT_REF_CSV = DATA_DIR / "Ref.csv"
 OUTPUT_DIR = REPO_ROOT / "outputs" / "Ref_same"
 DEFAULT_REF_WITH_REFNAMES_OUTPUT = OUTPUT_DIR / "01_ref_with_refname" / "Ref_with_RefName.csv"
 DEFAULT_MERGED_ORIGINAL_PMID_DIR = OUTPUT_DIR / "02_original_pmid_merge"
+DEFAULT_NON_NUMERIC_PMID_OVERRIDES_CSV = Path(__file__).with_name(
+    "Original_with_non_numeric_PMID.csv"
+)
 DEFAULT_FOUND_PMID_OUTPUT = OUTPUT_DIR / "03_found_pmid" / "Found_PMID.csv"
 DEFAULT_ORIGINAL_SHEETS_REPLACED_PMID_DIR = OUTPUT_DIR / "04_original_sheets_pmid_replaced"
 DEFAULT_REFNAME_SUMMARY = OUTPUT_DIR / "05_refname_counts" / "RefName_duplicate_counts.csv"
@@ -42,12 +49,18 @@ DEFAULT_GROUPKEY_REF_WITH_REFNAME_OUTPUT = (
 DEFAULT_ORIGINAL_SHEETS_GROUPKEY_DEDUPLICATION_DIR = (
     OUTPUT_DIR / "10_original_sheets_groupkey_deduplication"
 )
+DEFAULT_PUBMED_METADATA_UPDATE_DIR = OUTPUT_DIR / "11_pubmed_metadata_update"
 DEFAULT_DEDUPLICATED_REFNAME_SUMMARY = (
-    OUTPUT_DIR / "11_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
+    OUTPUT_DIR / "12_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
 )
-DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "12_duplicate_refname_rows"
+DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "13_duplicate_refname_rows"
 PMID_SHEETS = ("Original", "Original_NS5A", "Original_NS3", "Original_NS5B")
+STEP10_EXCEL_EXCLUDED_COLUMNS = frozenset(
+    {"enrich method", "verified_method", "URL 1", "LT5", "URL 2"}
+)
 SPREADSHEET_NS = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+PUBMED_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+PUBMED_BATCH_SIZE = 200
 
 
 def normalize_text(value: str | None) -> str:
@@ -686,8 +699,31 @@ def write_duplicate_refname_rows(
     return count
 
 
-def write_merged_original_pmids(workbook_path: Path, output_dir: Path) -> tuple[int, int, int]:
-    """Merge PMIDs from all Original sheets and write the requested Original CSV copies."""
+def read_pmid_overrides(path: Path) -> dict[int, str]:
+    """Read the user-curated RefID-to-PMID replacements for step 2."""
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        require_columns(path, ("RefID", "PMID"), reader.fieldnames)
+        overrides: dict[int, str] = {}
+        for row in reader:
+            raw_ref_id = (row.get("RefID") or "").strip()
+            if not raw_ref_id:
+                continue
+            ref_id = int(raw_ref_id)
+            pmid = (row.get("PMID") or "").strip()
+            previous = overrides.get(ref_id)
+            if previous is not None and previous != pmid:
+                raise ValueError(
+                    f"{path} contains conflicting PMID overrides for RefID {ref_id}"
+                )
+            overrides[ref_id] = pmid
+    return overrides
+
+
+def write_merged_original_pmids(
+    workbook_path: Path, output_dir: Path, overrides_csv: Path
+) -> tuple[int, int, int, int]:
+    """Merge sheet PMIDs, then replace matching RefIDs with curated PMIDs."""
     pmids_by_ref_id: dict[int, list[str]] = {}
     original_rows: list[dict[str, str]] | None = None
     fieldnames: list[str] | None = None
@@ -710,11 +746,17 @@ def write_merged_original_pmids(workbook_path: Path, output_dir: Path) -> tuple[
 
     if original_rows is None or fieldnames is None:
         raise AssertionError("Original sheet was not loaded")
+    pmid_overrides = read_pmid_overrides(overrides_csv)
     merged_rows = []
+    override_count = 0
     for row in original_rows:
         merged_row = dict(row)
         ref_id = int((row["RefID"] or "").strip())
-        merged_row["PMID"] = "; ".join(pmids_by_ref_id.get(ref_id, []))
+        if ref_id in pmid_overrides:
+            merged_row["PMID"] = pmid_overrides[ref_id]
+            override_count += 1
+        else:
+            merged_row["PMID"] = "; ".join(pmids_by_ref_id.get(ref_id, []))
         merged_rows.append(merged_row)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -732,7 +774,7 @@ def write_merged_original_pmids(workbook_path: Path, output_dir: Path) -> tuple[
     write_rows("Original_with_PMID.csv", with_pmid)
     write_rows("Original_with_numeric_PMID.csv", numeric_pmid)
     write_rows("Original_with_non_numeric_PMID.csv", non_numeric_pmid)
-    return len(merged_rows), len(numeric_pmid), len(non_numeric_pmid)
+    return len(merged_rows), len(numeric_pmid), len(non_numeric_pmid), override_count
 
 
 def write_found_pmids(step1_csv: Path, merged_pmid_csv: Path, output_csv: Path) -> int:
@@ -864,7 +906,9 @@ def excel_column_name(index: int) -> str:
 
 
 def write_csv_tables_xlsx(
-    tables: dict[str, tuple[list[str], list[dict[str, str]]]], output_xlsx: Path
+    tables: dict[str, tuple[list[str], list[dict[str, str]]]],
+    output_xlsx: Path,
+    excluded_columns: frozenset[str] = frozenset(),
 ) -> None:
     """Write CSV-shaped tables as an Excel workbook using inline-string cells."""
     output_xlsx.parent.mkdir(parents=True, exist_ok=True)
@@ -879,6 +923,11 @@ def write_csv_tables_xlsx(
     workbook_relationships = []
     with ZipFile(output_xlsx, "w", ZIP_DEFLATED) as archive:
         for index, (sheet_name, (fieldnames, rows)) in enumerate(tables.items(), start=1):
+            excel_fieldnames = [
+                fieldname
+                for fieldname in fieldnames
+                if fieldname not in excluded_columns
+            ]
             content_types.append(
                 f'<Override PartName="/xl/worksheets/sheet{index}.xml" '
                 'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
@@ -891,11 +940,11 @@ def write_csv_tables_xlsx(
                 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
                 f'Target="worksheets/sheet{index}.xml"/>'
             )
-            all_rows = [dict(zip(fieldnames, fieldnames)), *rows]
+            all_rows = [dict(zip(excel_fieldnames, excel_fieldnames)), *rows]
             xml_rows = []
             for row_index, row in enumerate(all_rows, start=1):
                 cells = []
-                for column_index, fieldname in enumerate(fieldnames):
+                for column_index, fieldname in enumerate(excel_fieldnames):
                     value = escape(str(row.get(fieldname, "")))
                     cell_reference = f"{excel_column_name(column_index)}{row_index}"
                     cells.append(
@@ -980,8 +1029,114 @@ def write_groupkey_deduplicated_original_sheets(
         reader = csv.DictReader(handle)
         require_columns(found_pmid_report_csv, ("Sheet", "FoundPMIDCount"), reader.fieldnames)
         tables["Found_PMID_report"] = (reader.fieldnames or [], list(reader))
-    write_csv_tables_xlsx(tables, output_dir / "Original_sheets_groupkey_deduplicated.xlsx")
+    write_csv_tables_xlsx(
+        tables,
+        output_dir / "Original_sheets_groupkey_deduplicated.xlsx",
+        STEP10_EXCEL_EXCLUDED_COLUMNS,
+    )
     return row_counts
+
+
+def pubmed_year(value: str) -> str:
+    """Extract a canonical four-digit year, never a worksheet formula or marker."""
+    match = re.search(r"(?:19|20)\d{2}", value or "")
+    return match.group(0) if match else ""
+
+
+def fetch_pubmed_metadata(pmids: set[str]) -> tuple[dict[str, dict[str, str]], list[dict[str, str]]]:
+    """Fetch PubMed summary metadata and retain one auditable result per PMID."""
+    metadata: dict[str, dict[str, str]] = {}
+    audit_rows: list[dict[str, str]] = []
+    ordered_pmids = sorted(pmids, key=int)
+    for start in range(0, len(ordered_pmids), PUBMED_BATCH_SIZE):
+        batch = ordered_pmids[start : start + PUBMED_BATCH_SIZE]
+        query = urlencode({"db": "pubmed", "id": ",".join(batch), "retmode": "json", "tool": "hcv_ref_same"})
+        try:
+            request = Request(
+                f"{PUBMED_ESUMMARY_URL}?{query}",
+                headers={"User-Agent": "HCV-GenBank-Skills/1.0"},
+            )
+            with urlopen(request, timeout=60) as response:
+                payload = json.load(response)
+            results = payload.get("result", {})
+            for pmid in batch:
+                record = results.get(pmid)
+                if not isinstance(record, dict):
+                    audit_rows.append({"PMID": pmid, "Status": "not_found", "Year": "", "Title": "", "Author": "", "Journal": "", "RawAPIResult": ""})
+                    continue
+                authors = "; ".join(
+                    str(author.get("name") or "").strip()
+                    for author in record.get("authors", [])
+                    if str(author.get("name") or "").strip()
+                )
+                year = pubmed_year(str(record.get("pubdate") or record.get("epubdate") or ""))
+                values = {
+                    "Year": year,
+                    "PMID": pmid,
+                    "Title": str(record.get("title") or "").strip(),
+                    "Author": authors,
+                    "Journal": str(record.get("fulljournalname") or record.get("source") or "").strip(),
+                }
+                metadata[pmid] = values
+                audit_rows.append({"Status": "found", "RawAPIResult": json.dumps(record, ensure_ascii=False, sort_keys=True), **values})
+        except Exception as error:
+            for pmid in batch:
+                audit_rows.append({"PMID": pmid, "Status": f"request_error: {error}", "Year": "", "Title": "", "Author": "", "Journal": "", "RawAPIResult": ""})
+        if start + PUBMED_BATCH_SIZE < len(ordered_pmids):
+            time.sleep(0.34)
+    return metadata, audit_rows
+
+
+def write_pubmed_metadata_updated_sheets(input_dir: Path, output_dir: Path) -> tuple[int, int]:
+    """Use valid step-10 PMIDs to produce PubMed-refreshed Original-sheet tables."""
+    tables: dict[str, tuple[list[str], list[dict[str, str]]]] = {}
+    valid_pmids: set[str] = set()
+    for sheet_name in PMID_SHEETS:
+        input_csv = input_dir / f"{sheet_name}_groupkey_deduplicated.csv"
+        with input_csv.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            require_columns(input_csv, ("RefID", "Year", "PMID", "Title", "Author", "Journal"), reader.fieldnames)
+            fieldnames = reader.fieldnames or []
+            rows = list(reader)
+        for row in rows:
+            pmid = (row.get("PMID") or "").strip()
+            if pmid.isdigit():
+                valid_pmids.add(pmid)
+        tables[sheet_name] = (fieldnames, rows)
+
+    metadata, audit_rows = fetch_pubmed_metadata(valid_pmids)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    updated_rows = 0
+    for sheet_name, (fieldnames, rows) in tables.items():
+        refreshed_rows = []
+        for row in rows:
+            refreshed = dict(row)
+            pmid = (refreshed.get("PMID") or "").strip()
+            values = metadata.get(pmid)
+            if values:
+                refreshed.update(values)
+                updated_rows += 1
+            refreshed["Year"] = pubmed_year(refreshed.get("Year") or "")
+            refreshed_rows.append(refreshed)
+        tables[sheet_name] = (fieldnames, refreshed_rows)
+        with (output_dir / f"{sheet_name}_pubmed_metadata_updated.csv").open(
+            "w", newline="", encoding="utf-8"
+        ) as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(refreshed_rows)
+
+    audit_fields = ["PMID", "Status", "Year", "Title", "Author", "Journal", "RawAPIResult"]
+    with (output_dir / "PubMed_API_Results.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=audit_fields, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(audit_rows)
+    write_csv_tables_xlsx(
+        tables,
+        output_dir / "Original_sheets_pubmed_metadata_updated.xlsx",
+        STEP10_EXCEL_EXCLUDED_COLUMNS,
+    )
+    return len(valid_pmids), updated_rows
 
 
 def parse_args() -> argparse.Namespace:
@@ -1024,6 +1179,12 @@ def parse_args() -> argparse.Namespace:
         help="Directory for merged Original PMID CSVs (default: outputs/Ref_same/02_original_pmid_merge).",
     )
     parser.add_argument(
+        "--non-numeric-pmid-overrides-csv",
+        type=Path,
+        default=DEFAULT_NON_NUMERIC_PMID_OVERRIDES_CSV,
+        help="Curated RefID-to-PMID replacements applied before writing step-02 CSVs.",
+    )
+    parser.add_argument(
         "--found-pmid-output-csv", type=Path, default=DEFAULT_FOUND_PMID_OUTPUT,
         help="CSV of step-01 rows with filled PMIDs (default: outputs/Ref_same/03_found_pmid/Found_PMID.csv).",
     )
@@ -1037,6 +1198,12 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_ORIGINAL_SHEETS_GROUPKEY_DEDUPLICATION_DIR,
         help="Directory for group-key-deduplicated step-04 sheet CSVs and Excel workbook (default: outputs/Ref_same/10_original_sheets_groupkey_deduplication).",
     )
+    parser.add_argument(
+        "--pubmed-metadata-update-output-dir",
+        type=Path,
+        default=DEFAULT_PUBMED_METADATA_UPDATE_DIR,
+        help="Directory for step-11 PubMed-refreshed CSVs, workbook, and API audit CSV.",
+    )
     return parser.parse_args()
 
 
@@ -1045,8 +1212,12 @@ def main() -> None:
     ref_with_refnames_rows = write_ref_with_refnames(
         args.ref_csv, args.workbook, args.sheet, args.ref_with_refnames_output_csv
     )
-    merged_original_rows, numeric_pmid_rows, non_numeric_pmid_rows = write_merged_original_pmids(
-        args.workbook, args.merged_original_pmid_output_dir
+    merged_original_rows, numeric_pmid_rows, non_numeric_pmid_rows, pmid_override_rows = (
+        write_merged_original_pmids(
+            args.workbook,
+            args.merged_original_pmid_output_dir,
+            args.non_numeric_pmid_overrides_csv,
+        )
     )
     found_pmid_replacements = write_found_pmids(
         args.ref_with_refnames_output_csv,
@@ -1085,11 +1256,17 @@ def main() -> None:
         args.original_sheets_groupkey_deduplication_output_dir,
         args.found_pmid_output_csv.parent / "Found_PMID_report.csv",
     )
+    valid_pubmed_pmids, pubmed_updated_rows = write_pubmed_metadata_updated_sheets(
+        args.original_sheets_groupkey_deduplication_output_dir,
+        args.pubmed_metadata_update_output_dir,
+    )
     deduplicated_refname_groups = write_deduplicated_refname_summary(
-        args.groupkey_ref_with_refname_output_csv, args.deduplicated_refname_summary_csv
+        args.pubmed_metadata_update_output_dir / "Original_pubmed_metadata_updated.csv",
+        args.deduplicated_refname_summary_csv,
     )
     duplicate_refname_files = write_duplicate_refname_rows(
-        args.deduplicated_refname_summary_csv, args.groupkey_ref_with_refname_output_csv,
+        args.deduplicated_refname_summary_csv,
+        args.pubmed_metadata_update_output_dir / "Original_pubmed_metadata_updated.csv",
         args.duplicate_refname_rows_dir,
     )
     def print_step(step: int, name: str) -> None:
@@ -1111,6 +1288,7 @@ def main() -> None:
     print(f"merged_original_rows={merged_original_rows}")
     print(f"numeric_pmid_rows={numeric_pmid_rows}")
     print(f"non_numeric_pmid_rows={non_numeric_pmid_rows}")
+    print(f"pmid_override_rows={pmid_override_rows}")
 
     print_step(3, "Found PMID")
     print(f"output_csv={display_path(args.found_pmid_output_csv)}")
@@ -1152,11 +1330,17 @@ def main() -> None:
         print(f"groupkey_dedup_{sheet_name}_rows_before={before}")
         print(f"groupkey_dedup_{sheet_name}_rows_after={after}")
 
-    print_step(11, "Deduplicated RefName counts")
+    print_step(11, "PubMed metadata update")
+    print(f"output_dir={display_path(args.pubmed_metadata_update_output_dir)}")
+    print(f"valid_pubmed_pmids={valid_pubmed_pmids}")
+    print(f"pubmed_updated_rows={pubmed_updated_rows}")
+    print(f"api_results_csv={display_path(args.pubmed_metadata_update_output_dir / 'PubMed_API_Results.csv')}")
+
+    print_step(12, "Deduplicated RefName counts")
     print(f"output_csv={display_path(args.deduplicated_refname_summary_csv)}")
     print(f"deduplicated_refname_groups={deduplicated_refname_groups}")
 
-    print_step(12, "Duplicate RefName rows")
+    print_step(13, "Duplicate RefName rows")
     print(f"output_dir={display_path(args.duplicate_refname_rows_dir)}")
     print(f"duplicate_refname_files={duplicate_refname_files}")
 
