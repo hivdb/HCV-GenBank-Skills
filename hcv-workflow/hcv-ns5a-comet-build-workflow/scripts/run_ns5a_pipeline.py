@@ -232,8 +232,7 @@ class Pipeline:
             )
         )
         self.reference_subtypes_csv = (
-            REPO_ROOT
-            / "HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
+            REPO_ROOT / "HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
         )
         self.temp_root = path_value(
             value(
@@ -741,269 +740,310 @@ class Pipeline:
             Step(
                 "select-noncomet-priority-assignments",
                 "select non-COMET and reference assignments that override or supplement COMET",
-                lambda: self.run(
-                    "select_noncomet_priority_assignments.py",
-                    "--noncomet-coverage-csv",
-                    self.noncomet_coverage_csv,
-                    "--comet-subtyping-csv",
-                    self.comet_csv,
-                    "--reference-subtypes-csv",
-                    self.reference_subtypes_csv,
-                    "--fasta-dir",
-                    self.fasta_pool,
-                    "--output-csv",
-                    self.priority_assignments_csv,
-                    stdout_path=summary("select-noncomet-priority-assignments"),
-                ),
-            ),
-            Step(
-                "filter-accession-metadata",
-                "filter master metadata to COMET-filtered FASTA accessions",
-                lambda: self.run(
-                    "filter_accessions_metadata_by_fasta.py",
-                    "--fasta-dir",
-                    self.included_fasta_dir,
-                    "--metadata-csv",
-                    self.metadata_csv,
-                    "--output-dir",
-                    self.metadata_dir,
-                ),
-            ),
-            Step(
-                "split-refid-metadata",
-                "create per-RefID metadata filters",
                 lambda: (
                     self.run(
-                        "prepare_ns5a_pipeline_workdirs.py",
-                        "--clean-dir",
-                        self.refid_metadata_dir,
+                        "select_noncomet_priority_assignments.py",
+                        "--noncomet-coverage-csv",
+                        self.noncomet_coverage_csv,
+                        "--comet-subtyping-csv",
+                        self.comet_csv,
+                        "--reference-subtypes-csv",
+                        self.reference_subtypes_csv,
+                        "--fasta-dir",
+                        self.fasta_pool,
+                        "--output-csv",
+                        self.priority_assignments_csv,
+                        stdout_path=summary("select-noncomet-priority-assignments"),
                     ),
-                    self.run(
-                        "split_refid_metadata_csv.py",
-                        "--input-csv",
-                        self.metadata_dir / "included_accessions_metadata.csv",
+                ),
+                Step(
+                    "filter-accession-metadata",
+                    "filter master metadata to COMET-filtered FASTA accessions",
+                    lambda: self.run(
+                        "filter_accessions_metadata_by_fasta.py",
+                        "--fasta-dir",
+                        self.included_fasta_dir,
+                        "--metadata-csv",
+                        self.metadata_csv,
                         "--output-dir",
-                        self.refid_metadata_dir,
-                        "--source-fasta-dir",
-                        self.staged_fasta_dir,
-                        "--comet-fasta-dir",
-                        self.included_fasta_dir,
+                        self.metadata_dir,
                     ),
                 ),
-            ),
-            Step(
-                "filter-refid-fastas",
-                "filter COMET-filtered FASTA records by RefID metadata",
-                lambda: (
-                    shutil.copytree(
-                        self.included_fasta_dir,
-                        self.filtered_fasta_dir,
-                        dirs_exist_ok=True,
+                Step(
+                    "split-refid-metadata",
+                    "create per-RefID metadata filters",
+                    lambda: (
+                        self.run(
+                            "prepare_ns5a_pipeline_workdirs.py",
+                            "--clean-dir",
+                            self.refid_metadata_dir,
+                        ),
+                        self.run(
+                            "split_refid_metadata_csv.py",
+                            "--input-csv",
+                            self.metadata_dir / "included_accessions_metadata.csv",
+                            "--output-dir",
+                            self.refid_metadata_dir,
+                            "--source-fasta-dir",
+                            self.staged_fasta_dir,
+                            "--comet-fasta-dir",
+                            self.included_fasta_dir,
+                        ),
                     ),
-                    self.run(
-                        "filter_refid_fastas_by_metadata.py",
-                        "--metadata-dir",
-                        self.refid_metadata_dir,
+                ),
+                Step(
+                    "filter-refid-fastas",
+                    "filter COMET-filtered FASTA records by RefID metadata",
+                    lambda: (
+                        shutil.copytree(
+                            self.included_fasta_dir,
+                            self.filtered_fasta_dir,
+                            dirs_exist_ok=True,
+                        ),
+                        self.run(
+                            "filter_refid_fastas_by_metadata.py",
+                            "--metadata-dir",
+                            self.refid_metadata_dir,
+                            "--fasta-dir",
+                            self.filtered_fasta_dir,
+                            "--kept-accessions-output",
+                            self.kept_accessions_csv,
+                        ),
+                    ),
+                ),
+                Step(
+                    "build-genotype-workbook",
+                    "build the COMET genotype workbook",
+                    lambda: self.run(
+                        "build_ns5a_comet_gt_allstudies.py",
                         "--fasta-dir",
                         self.filtered_fasta_dir,
-                        "--kept-accessions-output",
-                        self.kept_accessions_csv,
-                    ),
-                ),
-            ),
-            Step(
-                "build-genotype-workbook",
-                "build the COMET genotype workbook",
-                lambda: self.run(
-                    "build_ns5a_comet_gt_allstudies.py",
-                    "--fasta-dir",
-                    self.filtered_fasta_dir,
-                    "--comet-genotype-csv",
-                    comet_gt_csv,
-                    "--priority-assignments-csv",
-                    self.priority_assignments_csv,
-                    "--output-dir",
-                    self.step_dir("build-genotype-workbook"),
-                    stdout_path=summary("build-genotype-workbook"),
-                ),
-            ),
-            Step(
-                "add-genotype-counts",
-                "add the genotype-count worksheet",
-                lambda: self.run("add_gt_counts_sheet.py", "--workbook", gt_workbook),
-            ),
-            Step(
-                "build-subtype-workbook",
-                "build the COMET subtype workbook",
-                lambda: self.run(
-                    "build_ns5a_comet_subtype_allstudies.py",
-                    "--genotype-workbook",
-                    gt_workbook,
-                    "--comet-subtype-csv",
-                    comet_subtype_csv,
-                    "--priority-assignments-csv",
-                    self.priority_assignments_csv,
-                    "--output-dir",
-                    self.step_dir("build-subtype-workbook"),
-                    stdout_path=summary("build-subtype-workbook"),
-                ),
-            ),
-            Step(
-                "extract-profile-aa",
-                "extract genotype-position amino-acid sequences",
-                extract_aa,
-            ),
-            Step(
-                "validate-profile-alignment",
-                "write alignment QC columns and flagged-accession report",
-                lambda: self.run(
-                    "validate_ns5a_profile_alignment.py",
-                    "--input-workbook",
-                    self.step_dir("extract-profile-aa")
-                    / "NS5A_Profile_Input_Source.xlsx",
-                    "--gt-aa-json",
-                    self.gt_aa_json,
-                    "--output-workbook",
-                    self.aa_workbook,
-                    "--flagged-accessions-csv",
-                    self.step_dir("validate-profile-alignment")
-                    / "NS5A_Profile_Alignment_QC_Flagged_Accessions.csv",
-                    stdout_path=summary("validate-profile-alignment"),
-                ),
-            ),
-            Step(
-                "summarize-qc-mutation-burden",
-                "summarize QC-passed genotype mutation burden",
-                lambda: self.run(
-                    "build_qc_passed_genotype_mutation_burden_summary.py",
-                    "--input-workbook",
-                    self.aa_workbook,
-                    "--output-csv",
-                    self.step_dir("summarize-qc-mutation-burden")
-                    / "NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv",
-                ),
-            ),
-            Step(
-                "report-profile-input-counts",
-                "report profile-input inclusion counts",
-                report_profile_counts,
-            ),
-            Step(
-                "build-complete-profiles",
-                "build genotype and subtype complete profiles",
-                lambda: self.run(
-                    "build_ns5a_completeprofiles_tabspergt.py",
-                    "--input-workbook",
-                    self.aa_workbook,
-                    "--output-dir",
-                    self.step_dir("build-complete-profiles"),
-                    "--profile-accessions-csv",
-                    self.profile_accessions_csv,
-                    stdout_path=summary("build-complete-profiles"),
-                ),
-            ),
-            Step(
-                "merge-subtype-complete-profiles",
-                "merge subtype complete-profile worksheets into one table",
-                lambda: self.run(
-                    "merge_ns5a_subtype_completeprofiles.py",
-                    "--input-workbook",
-                    subtype_profile,
-                    "--output-workbook",
-                    self.step_dir("merge-subtype-complete-profiles")
-                    / "NS5A_Subtype_CompleteProfiles_Merged.xlsx",
-                    stdout_path=summary("merge-subtype-complete-profiles"),
-                ),
-            ),
-            Step(
-                "export-noncomet-priority-accessions",
-                "export non-COMET priority profile accessions",
-                lambda: self.run(
-                    "export_noncomet_priority_profile_accessions.py",
-                    "--profile-accessions-csv",
-                    self.profile_accessions_csv,
-                    "--comet-subtype-csv",
-                    self.comet_csv,
-                    "--noncomet-coverage-csv",
-                    self.noncomet_coverage_csv,
-                    "--output-csv",
-                    self.step_dir("export-noncomet-priority-accessions")
-                    / "NS5A_NonComet_Priority_Profile_Accessions.csv",
-                ),
-            ),
-            Step(
-                "export-consensus-fastas",
-                "export genotype and subtype consensus FASTA files",
-                lambda: self.run(
-                    "export_ns5a_consensus_fasta.py",
-                    "--gt-profile-workbook",
-                    gt_profile,
-                    "--subtype-profile-workbook",
-                    subtype_profile,
-                    "--output-dir",
-                    self.step_dir("export-consensus-fastas"),
-                ),
-            ),
-            Step(
-                "align-subtype-consensus-to-gt1a",
-                "align subtype consensuses to the fixed GT1_1a coordinate system",
-                lambda: self.run(
-                    "align_ns5a_subtype_consensuses_to_gt1a.py",
-                    "--input-fasta",
-                    subtype_consensus,
-                    "--output-fasta",
-                    self.step_dir("align-subtype-consensus-to-gt1a")
-                    / "NS5A_Subtype_Consensus_Aligned_to_GT1_1a.fasta",
-                ),
-            ),
-            Step(
-                "compare-reference-consensus",
-                "compare GT1_1a-aligned COMET consensuses to pairwise-aligned subtype references",
-                lambda: (
-                    self.run(
-                        "export_gt_reference_consensus_differences.py",
-                        "--gene",
-                        "NS5A_NTD",
-                        "--reference-fasta",
-                        REPO_ROOT / "HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
-                        "--consensus-dir",
-                        self.step_dir("export-consensus-fastas"),
+                        "--comet-genotype-csv",
+                        comet_gt_csv,
+                        "--priority-assignments-csv",
+                        self.priority_assignments_csv,
                         "--output-dir",
-                        self.step_dir("compare-reference-consensus"),
-                        "--subtype-reference-fasta",
-                        REPO_ROOT
-                        / "HCVData/Subtype-Ref/HCV_Subtype_Refs_NS5A_NTD_AA_Pairwise_Aligned.fasta",
-                        "--subtype-consensus-fasta",
-                        self.step_dir("align-subtype-consensus-to-gt1a")
-                        / "NS5A_Subtype_Consensus_Aligned_to_GT1_1a.fasta",
-                        "--subtype-length-csv",
-                        self.step_dir("compare-reference-consensus")
-                        / "NS5A_Subtype_Reference_Consensus_AA_Lengths.csv",
+                        self.step_dir("build-genotype-workbook"),
+                        stdout_path=summary("build-genotype-workbook"),
                     ),
-                    self.run(
-                        "build_ns5a_subtype_consensus_reference_distance.py",
+                ),
+                Step(
+                    "add-genotype-counts",
+                    "add the genotype-count worksheet",
+                    lambda: self.run(
+                        "add_gt_counts_sheet.py", "--workbook", gt_workbook
+                    ),
+                ),
+                Step(
+                    "build-subtype-workbook",
+                    "build the COMET subtype workbook",
+                    lambda: self.run(
+                        "build_ns5a_comet_subtype_allstudies.py",
+                        "--genotype-workbook",
+                        gt_workbook,
+                        "--comet-subtype-csv",
+                        comet_subtype_csv,
+                        "--priority-assignments-csv",
+                        self.priority_assignments_csv,
+                        "--output-dir",
+                        self.step_dir("build-subtype-workbook"),
+                        stdout_path=summary("build-subtype-workbook"),
+                    ),
+                ),
+                Step(
+                    "extract-profile-aa",
+                    "extract genotype-position amino-acid sequences",
+                    extract_aa,
+                ),
+                Step(
+                    "validate-profile-alignment",
+                    "write alignment QC columns and flagged-accession report",
+                    lambda: self.run(
+                        "validate_ns5a_profile_alignment.py",
+                        "--input-workbook",
+                        self.step_dir("extract-profile-aa")
+                        / "NS5A_Profile_Input_Source.xlsx",
+                        "--gt-aa-json",
+                        self.gt_aa_json,
+                        "--output-workbook",
+                        self.aa_workbook,
+                        "--flagged-accessions-csv",
+                        self.step_dir("validate-profile-alignment")
+                        / "NS5A_Profile_Alignment_QC_Flagged_Accessions.csv",
+                        stdout_path=summary("validate-profile-alignment"),
+                    ),
+                ),
+                Step(
+                    "summarize-qc-mutation-burden",
+                    "summarize QC-passed genotype mutation burden",
+                    lambda: self.run(
+                        "build_qc_passed_genotype_mutation_burden_summary.py",
+                        "--input-workbook",
+                        self.aa_workbook,
+                        "--output-csv",
+                        self.step_dir("summarize-qc-mutation-burden")
+                        / "NS5A_QC_Passed_Genotype_Mutation_Burden_Summary.csv",
+                    ),
+                ),
+                Step(
+                    "report-profile-input-counts",
+                    "report profile-input inclusion counts",
+                    report_profile_counts,
+                ),
+                Step(
+                    "build-complete-profiles",
+                    "build genotype and subtype complete profiles",
+                    lambda: self.run(
+                        "build_ns5a_completeprofiles_tabspergt.py",
+                        "--input-workbook",
+                        self.aa_workbook,
+                        "--output-dir",
+                        self.step_dir("build-complete-profiles"),
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        stdout_path=summary("build-complete-profiles"),
+                    ),
+                ),
+                Step(
+                    "merge-subtype-complete-profiles",
+                    "merge subtype complete-profile worksheets into one table",
+                    lambda: (
+                        self.run(
+                            "merge_ns5a_subtype_completeprofiles.py",
+                            "--input-workbook",
+                            subtype_profile,
+                            "--output-workbook",
+                            self.step_dir("merge-subtype-complete-profiles")
+                            / "NS5A_Subtype_CompleteProfiles_Merged.xlsx",
+                            stdout_path=summary("merge-subtype-complete-profiles"),
+                        ),
+                        self.run(
+                            "../../export_profile_accession_aa_calls.py",
+                            "--profile-input-workbook",
+                            self.aa_workbook,
+                            "--profile-accessions-csv",
+                            self.profile_accessions_csv,
+                            "--gt-profile-workbook",
+                            gt_profile,
+                            "--output-csv",
+                            self.step_dir("merge-subtype-complete-profiles")
+                            / "NS5A_Profile_Accession_AA_Calls.csv",
+                            stdout_path=summary(
+                                "merge-subtype-complete-profiles",
+                                "profile_accession_aa_calls_summary.json",
+                            ),
+                        ),
+                    ),
+                ),
+                Step(
+                    "export-noncomet-priority-accessions",
+                    "export non-COMET priority profile accessions",
+                    lambda: self.run(
+                        "export_noncomet_priority_profile_accessions.py",
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--comet-subtype-csv",
+                        self.comet_csv,
+                        "--noncomet-coverage-csv",
+                        self.noncomet_coverage_csv,
+                        "--output-csv",
+                        self.step_dir("export-noncomet-priority-accessions")
+                        / "NS5A_NonComet_Priority_Profile_Accessions.csv",
+                    ),
+                ),
+                Step(
+                    "export-consensus-fastas",
+                    "export genotype and subtype consensus FASTA files",
+                    lambda: self.run(
+                        "export_ns5a_consensus_fasta.py",
+                        "--gt-profile-workbook",
+                        gt_profile,
                         "--subtype-profile-workbook",
                         subtype_profile,
-                        "--subtype-json",
-                        self.subtype_json,
-                        "--output-xlsx",
-                        self.step_dir("compare-reference-consensus")
-                        / "NS5A_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx",
+                        "--output-dir",
+                        self.step_dir("export-consensus-fastas"),
                     ),
                 ),
-            ),
-            Step(
-                "build-genotype-ras-profile",
-                "build genotype RAS profile",
-                lambda: self.run(
-                    "build_ns5a_gt_ras_profiles.py",
-                    "--gt-profile-workbook",
-                    gt_profile,
-                    "--gt-aa-json",
-                    self.gt_aa_json,
-                    "--output-dir",
-                    self.step_dir("build-genotype-ras-profile"),
-                    stdout_path=summary("build-genotype-ras-profile"),
+                Step(
+                    "align-subtype-consensus-to-gt1a",
+                    "align subtype consensuses to the fixed GT1_1a coordinate system",
+                    lambda: self.run(
+                        "align_ns5a_subtype_consensuses_to_gt1a.py",
+                        "--input-fasta",
+                        subtype_consensus,
+                        "--output-fasta",
+                        self.step_dir("align-subtype-consensus-to-gt1a")
+                        / "NS5A_Subtype_Consensus_Aligned_to_GT1_1a.fasta",
+                    ),
+                ),
+                Step(
+                    "compare-reference-consensus",
+                    "compare GT1_1a-aligned COMET consensuses to pairwise-aligned subtype references",
+                    lambda: (
+                        self.run(
+                            "export_gt_reference_consensus_differences.py",
+                            "--gene",
+                            "NS5A_NTD",
+                            "--reference-fasta",
+                            REPO_ROOT
+                            / "HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
+                            "--consensus-dir",
+                            self.step_dir("export-consensus-fastas"),
+                            "--output-dir",
+                            self.step_dir("compare-reference-consensus"),
+                            "--subtype-reference-fasta",
+                            REPO_ROOT
+                            / "HCVData/Subtype-Ref/HCV_Subtype_Refs_NS5A_NTD_AA_Pairwise_Aligned.fasta",
+                            "--subtype-consensus-fasta",
+                            self.step_dir("align-subtype-consensus-to-gt1a")
+                            / "NS5A_Subtype_Consensus_Aligned_to_GT1_1a.fasta",
+                            "--subtype-length-csv",
+                            self.step_dir("compare-reference-consensus")
+                            / "NS5A_Subtype_Reference_Consensus_AA_Lengths.csv",
+                        ),
+                        self.run(
+                            "build_ns5a_subtype_consensus_reference_distance.py",
+                            "--subtype-profile-workbook",
+                            subtype_profile,
+                            "--subtype-json",
+                            self.subtype_json,
+                            "--output-xlsx",
+                            self.step_dir("compare-reference-consensus")
+                            / "NS5A_Subtype_Consensus_Reference_AA_Distance_RAS.xlsx",
+                        ),
+                    ),
+                ),
+                Step(
+                    "build-genotype-ras-profile",
+                    "build genotype RAS profile",
+                    lambda: (
+                        self.run(
+                        "build_ns5a_gt_ras_profiles.py",
+                        "--gt-profile-workbook",
+                        gt_profile,
+                        "--gt-aa-json",
+                        self.gt_aa_json,
+                        "--output-dir",
+                        self.step_dir("build-genotype-ras-profile"),
+                        stdout_path=summary("build-genotype-ras-profile"),
+                    ),
+                    self.run(
+                        "../../export_profile_ras_ambiguity_calls.py",
+                        "--profile-input-workbook",
+                        self.aa_workbook,
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--positions",
+                        RAS_POSITIONS,
+                        "--group-by",
+                        "genotype",
+                        "--output-csv",
+                        self.step_dir("build-genotype-ras-profile")
+                        / "NS5A_GT_RAS_Ambiguity_Calls.csv",
+                        stdout_path=summary(
+                            "build-genotype-ras-profile", "ambiguity_calls_summary.json"
+                        ),
+                    ),
                 ),
             ),
             Step(
@@ -1030,6 +1070,23 @@ class Pipeline:
                         self.aa_workbook,
                         "--profile-accessions-csv",
                         self.profile_accessions_csv,
+                    ),
+                    self.run(
+                        "../../export_profile_ras_ambiguity_calls.py",
+                        "--profile-input-workbook",
+                        self.aa_workbook,
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--positions",
+                        RAS_POSITIONS,
+                        "--group-by",
+                        "subtype",
+                        "--output-csv",
+                        self.step_dir("build-subtype-ras-profile")
+                        / "NS5A_Subtype_RAS_Ambiguity_Calls.csv",
+                        stdout_path=summary(
+                            "build-subtype-ras-profile", "ambiguity_calls_summary.json"
+                        ),
                     ),
                 ),
             ),

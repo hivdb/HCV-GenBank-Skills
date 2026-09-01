@@ -248,8 +248,7 @@ class Pipeline:
             )
         )
         self.reference_subtypes_csv = (
-            REPO_ROOT
-            / "HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
+            REPO_ROOT / "HCVData/Subtype-Ref/HCV_Subtype_Refs_AA_Accession_Subtype.csv"
         )
         self.temp_root = path_value(
             value(
@@ -913,14 +912,32 @@ class Pipeline:
             Step(
                 "merge-subtype-complete-profiles",
                 "merge subtype complete-profile worksheets into one table",
-                lambda: self.run(
-                    "merge_ns3_subtype_completeprofiles.py",
-                    "--input-workbook",
-                    subtype_profile,
-                    "--output-workbook",
-                    self.step_dir("merge-subtype-complete-profiles")
-                    / "NS3_Subtype_CompleteProfiles_Merged.xlsx",
-                    stdout_path=summary("merge-subtype-complete-profiles"),
+                lambda: (
+                    self.run(
+                        "merge_ns3_subtype_completeprofiles.py",
+                        "--input-workbook",
+                        subtype_profile,
+                        "--output-workbook",
+                        self.step_dir("merge-subtype-complete-profiles")
+                        / "NS3_Subtype_CompleteProfiles_Merged.xlsx",
+                        stdout_path=summary("merge-subtype-complete-profiles"),
+                    ),
+                    self.run(
+                        "../../export_profile_accession_aa_calls.py",
+                        "--profile-input-workbook",
+                        self.aa_workbook,
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--gt-profile-workbook",
+                        gt_profile,
+                        "--output-csv",
+                        self.step_dir("merge-subtype-complete-profiles")
+                        / "NS3_Profile_Accession_AA_Calls.csv",
+                        stdout_path=summary(
+                            "merge-subtype-complete-profiles",
+                            "profile_accession_aa_calls_summary.json",
+                        ),
+                    ),
                 ),
             ),
             Step(
@@ -973,7 +990,8 @@ class Pipeline:
                         "--gene",
                         "NS3",
                         "--reference-fasta",
-                        REPO_ROOT / "HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
+                        REPO_ROOT
+                        / "HCVData/Genotype-Ref/HCV_GT_Refs_NS3_NS5A_NTD_NS5B_AA.fasta",
                         "--consensus-dir",
                         self.step_dir("export-consensus-fastas"),
                         "--output-dir",
@@ -1003,15 +1021,34 @@ class Pipeline:
             Step(
                 "build-genotype-ras-profile",
                 "build genotype RAS profile",
-                lambda: self.run(
-                    "build_ns3_gt_ras_profiles.py",
-                    "--gt-profile-workbook",
-                    gt_profile,
-                    "--gt-aa-json",
-                    self.gt_aa_json,
-                    "--output-dir",
-                    self.step_dir("build-genotype-ras-profile"),
-                    stdout_path=summary("build-genotype-ras-profile"),
+                lambda: (
+                    self.run(
+                        "build_ns3_gt_ras_profiles.py",
+                        "--gt-profile-workbook",
+                        gt_profile,
+                        "--gt-aa-json",
+                        self.gt_aa_json,
+                        "--output-dir",
+                        self.step_dir("build-genotype-ras-profile"),
+                        stdout_path=summary("build-genotype-ras-profile"),
+                    ),
+                    self.run(
+                        "../../export_profile_ras_ambiguity_calls.py",
+                        "--profile-input-workbook",
+                        self.aa_workbook,
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--positions",
+                        RAS_POSITIONS,
+                        "--group-by",
+                        "genotype",
+                        "--output-csv",
+                        self.step_dir("build-genotype-ras-profile")
+                        / "NS3_GT_RAS_Ambiguity_Calls.csv",
+                        stdout_path=summary(
+                            "build-genotype-ras-profile", "ambiguity_calls_summary.json"
+                        ),
+                    ),
                 ),
             ),
             Step(
@@ -1038,6 +1075,23 @@ class Pipeline:
                         self.aa_workbook,
                         "--profile-accessions-csv",
                         self.profile_accessions_csv,
+                    ),
+                    self.run(
+                        "../../export_profile_ras_ambiguity_calls.py",
+                        "--profile-input-workbook",
+                        self.aa_workbook,
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--positions",
+                        RAS_POSITIONS,
+                        "--group-by",
+                        "subtype",
+                        "--output-csv",
+                        self.step_dir("build-subtype-ras-profile")
+                        / "NS3_Subtype_RAS_Ambiguity_Calls.csv",
+                        stdout_path=summary(
+                            "build-subtype-ras-profile", "ambiguity_calls_summary.json"
+                        ),
                     ),
                 ),
             ),

@@ -14,7 +14,7 @@ from openpyxl import load_workbook
 README_GENE = {"NS3": "NS3", "NS5A": "NS5A_NTD", "NS5B": "NS5B"}
 
 
-def add_distance_notes(path: Path) -> None:
+def add_distance_notes(path: Path, sequence_type: str) -> None:
     """Add an explanation of the sequence-quality exclusion rule."""
     workbook = load_workbook(path)
     if "Notes" in workbook.sheetnames:
@@ -23,7 +23,7 @@ def add_distance_notes(path: Path) -> None:
     notes.append(["Note"])
     notes.append(
         [
-            "Sequences with an ambiguous or missing amino-acid call at any "
+            f"Sequences with an ambiguous or missing {sequence_type} call at any "
             "required comparison position are excluded from this distance matrix."
         ]
     )
@@ -175,6 +175,10 @@ def main() -> None:
 
     sources = (
         (
+            Path(__file__).resolve().parents[2] / "profile_accession_aa_call_handling.md",
+            "Profile_Accession_AA_Call_Handling.md",
+        ),
+        (
             artifact(
                 ("compare-reference-consensus", "publish-ictv-report"),
                 f"README_Subtype_Consensus_Mutations_{README_GENE[gene]}.docx",
@@ -211,6 +215,13 @@ def main() -> None:
         ),
         (
             artifact(
+                ("merge-subtype-complete-profiles",),
+                f"{gene}_Profile_Accession_AA_Calls.csv",
+            ),
+            f"{gene}_Profile_Accession_AA_Calls.csv",
+        ),
+        (
+            artifact(
                 ("analyze-genotype-subtype-aa-predictability",),
                 f"{gene}_Genotype_Subtype_AA_Predictability.xlsx",
             ),
@@ -220,7 +231,7 @@ def main() -> None:
             (source, source.name)
             for source in artifacts(
                 "build-paired-distance-matrices",
-                f"{gene}_*AA_Distance_*.xlsx",
+                f"{gene}_*Distance_*.xlsx",
             )
         ),
     )
@@ -237,8 +248,9 @@ def main() -> None:
     for source, destination_name in sources:
         report_path = destination / destination_name
         shutil.copy2(source, report_path)
-        if "_AA_Distance_" in destination_name:
-            add_distance_notes(report_path)
+        if "_Distance_" in destination_name:
+            sequence_type = "amino-acid" if "_AA_Distance_" in destination_name else "nucleotide"
+            add_distance_notes(report_path, sequence_type)
 
     write_workflow_summary(root, gene, destination)
 
