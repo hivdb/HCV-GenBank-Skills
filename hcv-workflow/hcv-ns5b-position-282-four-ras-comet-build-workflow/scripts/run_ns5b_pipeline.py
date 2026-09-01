@@ -852,9 +852,8 @@ class Pipeline:
             Step(
                 "select-noncomet-priority-assignments",
                 "select non-COMET and reference assignments that override or supplement COMET",
-                lambda: (
-                    self.run(
-                        "select_noncomet_priority_assignments.py",
+                lambda: self.run(
+                    "select_noncomet_priority_assignments.py",
                         "--noncomet-coverage-csv",
                         self.noncomet_coverage_csv,
                         "--comet-subtyping-csv",
