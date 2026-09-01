@@ -10,6 +10,11 @@ from `HCV_BlastHists_202604_data.xlsx` plus the corresponding `Accessions.csv`.
 Results are written under `outputs/Ref_same/` in this order, with each
 step's order and name as its subfolder:
 
+Before step 1, the workflow clears this report directory so every report is
+fresh. It preserves `12_pubmed_metadata_update/PubMed_API_Results.csv`, which
+is reused as the PubMed API cache; only PMIDs absent from that cache are sent
+to PubMed again.
+
 1. `01_ref_with_refname/Ref_with_RefName.csv` — `HCVData/HCV-all-seq-subtype/Ref.csv`
    with `MedlineID` renamed to `PMID` and `RefName` appended by matching its
    RefID to the `Original` worksheet. `Year` is extracted from `RefName`.
@@ -29,39 +34,54 @@ step's order and name as its subfolder:
    sheet after replacing its `PMID` by `RefID` from step 02's
    `Original_merged_PMID.csv`. The script prints the changed-row count for each
    sheet.
-5. `05_refname_counts/RefName_duplicate_counts.csv` — one row per non-empty
+5. `05_sheet_accession_counts/` — reads each step-04 sheet's RefIDs, matches
+   them to `Accessions.csv`, and writes one `RefID,Accession` CSV per sheet plus
+   `sheet_accession_counts.csv` with each sheet's RefID count, matched-RefID
+   count, and total matching-accession count.
+6. `06_refname_counts/RefName_duplicate_counts.csv` — one row per non-empty
    `RefName`, sorted by descending record count, with `RefName`, `RefIDCount`,
    and `RefIDs` columns.
-6. `06_same_ref_candidates/same_ref_candidates.csv` — directly matched RefID
+7. `07_same_ref_candidates/same_ref_candidates.csv` — directly matched RefID
    candidate pairs.
-7. `07_same_ref_candidate_groups/same_ref_candidate_groups.csv` — each
+8. `08_same_ref_candidate_groups/same_ref_candidate_groups.csv` — each
    candidate `GroupKeyRefID`, `RefIDCount`, and complete semicolon-separated
-   `RefIDs` list.
-8. `08_same_ref_candidate_group_refnames/same_ref_candidate_groups_refnames.csv`
-   — step 07 with a deduplicated `RefNameList` and `RefNameListCount`, looked
+   `RefIDs` list. It also writes `same_ref_candidate_groups_NS3.csv`,
+   `same_ref_candidate_groups_NS5A.csv`, and
+   `same_ref_candidate_groups_NS5B.csv`; each adds the unique non-empty
+   worksheet `Status` values across the group's RefIDs and `StatusCount`.
+9. `09_same_ref_candidate_group_refnames/same_ref_candidate_groups_refnames.csv`
+   — step 08 with a deduplicated `RefNameList` and `RefNameListCount`, looked
    up from step 03 for every grouped RefID.
-9. `09_ref_with_refname_groupkey_deduplication/Ref_with_RefName_groupkey_deduplicated.csv`
-   — copies step 03 and removes every non-key group-member row from step 08.
+10. `10_ref_with_refname_groupkey_deduplication/Ref_with_RefName_groupkey_deduplicated.csv`
+   — copies step 03 and removes every non-key group-member row from step 09.
    All columns and values in retained rows are unchanged. The
    script prints `original_rows_before` and `original_rows_after`.
-10. `10_original_sheets_groupkey_deduplication/` — applies the step-09 group-key
+11. `11_original_sheets_groupkey_deduplication/` — applies the step-10 group-key
    deduplication to every step-04 sheet CSV. It writes one unchanged-column CSV
    per sheet plus `Original_sheets_groupkey_deduplicated.xlsx`, containing those
    four CSV tables as worksheets and a `Summary` worksheet with the before,
    after, and removed row counts. It also copies step 03's `Found_PMID_report.csv`
-   to a separate `Found_PMID_report` worksheet. The script prints each sheet's row
+   to a separate `Found_PMID_report` worksheet.
+   `GroupKey_Deduplication_Audit.csv` has one row per applied group in each
+   sheet, including the old Status of the kept GroupKeyRefID and every removed
+   RefID. `RemovedRefIDOldStatuses` is the unique list of Status values from
+   the removed rows. If any row in the group previously had `Status = Include`,
+   the retained GroupKeyRefID is written with `Status = Include`; the audit
+   records this as `DeduplicatedStatus`. The script prints each sheet's row
    count before and after deduplication.
-11. `11_pubmed_metadata_update/` — reads strictly numeric PMIDs from the four
-   step-10 CSVs, queries PubMed metadata, and writes one refreshed CSV per
+12. `12_pubmed_metadata_update/` — reads strictly numeric PMIDs from the four
+   step-11 CSVs, queries PubMed metadata, and writes one refreshed CSV per
    sheet plus `Original_sheets_pubmed_metadata_updated.xlsx`. It updates
    `Year`, `PMID`, `Title`, `Author`, and `Journal` only when PubMed returns a
    record. `Year` is always a four-digit year or blank. `PubMed_API_Results.csv`
-   retains the complete API result for every queried PMID.
-12. `12_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
-   05's `RefName`, `RefIDCount`, and `RefIDs` summary to the PubMed-refreshed
+   retains the complete API result for every queried PMID. Its
+   `Sheet_Row_Counts/Original_sheets_pubmed_metadata_updated_row_counts.csv`
+   records each worksheet's total rows (including the header) and data rows.
+13. `13_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
+   06's `RefName`, `RefIDCount`, and `RefIDs` summary to the PubMed-refreshed
    retained Original rows.
-13. `13_duplicate_refname_rows/` — one CSV for every step-12 RefName group with
-   `RefIDCount >= 2`. Each CSV contains the unchanged matching step-09 rows and
+14. `14_duplicate_refname_rows/` — one CSV for every step-13 RefName group with
+   `RefIDCount >= 2`. Each CSV contains the unchanged matching step-10 rows and
    is stored in `RefIDCount_<count>/` as `<RefName>__RefIDCount_<count>.csv`,
    with unsafe filename characters replaced by underscores.
 

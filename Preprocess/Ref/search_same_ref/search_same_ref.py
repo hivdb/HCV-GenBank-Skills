@@ -13,6 +13,7 @@ import argparse
 import csv
 import json
 import re
+import shutil
 import time
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
@@ -37,23 +38,24 @@ DEFAULT_NON_NUMERIC_PMID_OVERRIDES_CSV = Path(__file__).with_name(
 )
 DEFAULT_FOUND_PMID_OUTPUT = OUTPUT_DIR / "03_found_pmid" / "Found_PMID.csv"
 DEFAULT_ORIGINAL_SHEETS_REPLACED_PMID_DIR = OUTPUT_DIR / "04_original_sheets_pmid_replaced"
-DEFAULT_REFNAME_SUMMARY = OUTPUT_DIR / "05_refname_counts" / "RefName_duplicate_counts.csv"
-DEFAULT_OUTPUT = OUTPUT_DIR / "06_same_ref_candidates" / "same_ref_candidates.csv"
-DEFAULT_GROUPS_OUTPUT = OUTPUT_DIR / "07_same_ref_candidate_groups" / "same_ref_candidate_groups.csv"
+DEFAULT_SHEET_ACCESSION_COUNTS_DIR = OUTPUT_DIR / "05_sheet_accession_counts"
+DEFAULT_REFNAME_SUMMARY = OUTPUT_DIR / "06_refname_counts" / "RefName_duplicate_counts.csv"
+DEFAULT_OUTPUT = OUTPUT_DIR / "07_same_ref_candidates" / "same_ref_candidates.csv"
+DEFAULT_GROUPS_OUTPUT = OUTPUT_DIR / "08_same_ref_candidate_groups" / "same_ref_candidate_groups.csv"
 DEFAULT_GROUP_REFNAMES_OUTPUT = (
-    OUTPUT_DIR / "08_same_ref_candidate_group_refnames" / "same_ref_candidate_groups_refnames.csv"
+    OUTPUT_DIR / "09_same_ref_candidate_group_refnames" / "same_ref_candidate_groups_refnames.csv"
 )
 DEFAULT_GROUPKEY_REF_WITH_REFNAME_OUTPUT = (
-    OUTPUT_DIR / "09_ref_with_refname_groupkey_deduplication" / "Ref_with_RefName_groupkey_deduplicated.csv"
+    OUTPUT_DIR / "10_ref_with_refname_groupkey_deduplication" / "Ref_with_RefName_groupkey_deduplicated.csv"
 )
 DEFAULT_ORIGINAL_SHEETS_GROUPKEY_DEDUPLICATION_DIR = (
-    OUTPUT_DIR / "10_original_sheets_groupkey_deduplication"
+    OUTPUT_DIR / "11_original_sheets_groupkey_deduplication"
 )
-DEFAULT_PUBMED_METADATA_UPDATE_DIR = OUTPUT_DIR / "11_pubmed_metadata_update"
+DEFAULT_PUBMED_METADATA_UPDATE_DIR = OUTPUT_DIR / "12_pubmed_metadata_update"
 DEFAULT_DEDUPLICATED_REFNAME_SUMMARY = (
-    OUTPUT_DIR / "12_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
+    OUTPUT_DIR / "13_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
 )
-DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "13_duplicate_refname_rows"
+DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "14_duplicate_refname_rows"
 PMID_SHEETS = ("Original", "Original_NS5A", "Original_NS3", "Original_NS5B")
 STEP10_EXCEL_EXCLUDED_COLUMNS = frozenset(
     {"enrich method", "verified_method", "URL 1", "LT5", "URL 2"}
@@ -61,6 +63,7 @@ STEP10_EXCEL_EXCLUDED_COLUMNS = frozenset(
 SPREADSHEET_NS = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 PUBMED_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 PUBMED_BATCH_SIZE = 200
+PUBMED_CACHE_FILENAME = "PubMed_API_Results.csv"
 
 
 def normalize_text(value: str | None) -> str:
@@ -448,20 +451,108 @@ def write_candidates(records: dict[int, RefRecord], candidates: list[Candidate],
             })
 
 
-def write_candidate_groups(candidates: list[Candidate], output_csv: Path) -> int:
-    """Write connected candidate groups with their complete RefID membership."""
+def load_statuses_by_ref_id_by_sheet(
+    workbook_path: Path,
+) -> dict[str, dict[int, set[str]]]:
+    """Collect non-empty Status values by RefID for each gene worksheet."""
+    statuses_by_sheet: dict[str, dict[int, set[str]]] = {}
+    for gene, sheet_name in (
+        ("NS3", "Original_NS3"),
+        ("NS5A", "Original_NS5A"),
+        ("NS5B", "Original_NS5B"),
+    ):
+        rows = list(read_worksheet_rows(workbook_path, sheet_name))
+        if not rows or "Status" not in rows[0]:
+            statuses_by_sheet[gene] = {}
+            continue
+        statuses: dict[int, set[str]] = {}
+        for row in rows:
+            ref_id = (row.get("RefID") or "").strip()
+            status = (row.get("Status") or "").strip()
+            if ref_id and status:
+                statuses.setdefault(int(ref_id), set()).add(status)
+        statuses_by_sheet[gene] = statuses
+    return statuses_by_sheet
+
+
+def candidate_groups(candidates: list[Candidate]) -> dict[int, list[int]]:
+    """Return connected candidate groups keyed by their lowest RefID."""
     groups: dict[int, list[int]] = {}
     for ref_id, group_key in component_keys(candidates).items():
         groups.setdefault(group_key, []).append(ref_id)
+    return groups
+
+
+def clean_report_directory_preserving_pubmed_cache() -> Path:
+    """Clear generated reports while retaining the reusable PubMed API cache."""
+    cache_path = DEFAULT_PUBMED_METADATA_UPDATE_DIR / PUBMED_CACHE_FILENAME
+    preserved_cache: bytes | None = None
+    if cache_path.is_file():
+        preserved_cache = cache_path.read_bytes()
+    if OUTPUT_DIR.exists():
+        shutil.rmtree(OUTPUT_DIR)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    if preserved_cache is not None:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(preserved_cache)
+    return cache_path
+
+
+def write_candidate_groups(candidates: list[Candidate], output_csv: Path) -> int:
+    """Write connected candidate groups with their complete RefID membership."""
+    groups = candidate_groups(candidates)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle, lineterminator="\n")
         writer.writerow(["GroupKeyRefID", "RefIDCount", "RefIDs"])
-        writer.writerows(
-            [group_key, len(ref_ids), "; ".join(str(ref_id) for ref_id in sorted(ref_ids))]
-            for group_key, ref_ids in sorted(groups.items())
-        )
+        for group_key, ref_ids in sorted(groups.items()):
+            writer.writerow(
+                [
+                    group_key,
+                    len(ref_ids),
+                    "; ".join(str(ref_id) for ref_id in sorted(ref_ids)),
+                ]
+            )
     return len(groups)
+
+
+def write_candidate_group_status_reports(
+    candidates: list[Candidate], workbook_path: Path, output_dir: Path
+) -> None:
+    """Write one candidate-group status report for each gene worksheet."""
+    groups = candidate_groups(candidates)
+    for gene, statuses_by_ref_id in load_statuses_by_ref_id_by_sheet(workbook_path).items():
+        output_csv = output_dir / f"same_ref_candidate_groups_{gene}.csv"
+        with output_csv.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=(
+                    "GroupKeyRefID",
+                    "RefIDCount",
+                    "RefIDs",
+                    "Status",
+                    "StatusCount",
+                ),
+                lineterminator="\n",
+            )
+            writer.writeheader()
+            for group_key, ref_ids in sorted(groups.items()):
+                statuses = sorted(
+                    {
+                        status
+                        for ref_id in ref_ids
+                        for status in statuses_by_ref_id.get(ref_id, set())
+                    }
+                )
+                writer.writerow(
+                    {
+                        "GroupKeyRefID": group_key,
+                        "RefIDCount": len(ref_ids),
+                        "RefIDs": "; ".join(str(ref_id) for ref_id in sorted(ref_ids)),
+                        "Status": "; ".join(statuses),
+                        "StatusCount": len(statuses),
+                    }
+                )
 
 
 def read_refname_by_ref_id(input_csv: Path) -> dict[int, str]:
@@ -895,6 +986,78 @@ def write_original_sheets_with_replaced_pmids(
     return updates_by_sheet
 
 
+def write_sheet_accession_counts(
+    sheet_dir: Path, accessions_csv: Path, output_dir: Path
+) -> dict[str, tuple[int, int, int]]:
+    """Report Accessions.csv matches for the RefIDs in each step-04 sheet."""
+    accessions_by_ref_id: dict[str, list[str]] = {}
+    with accessions_csv.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        require_columns(accessions_csv, ("RefID", "Accession"), reader.fieldnames)
+        for row in reader:
+            ref_id = (row.get("RefID") or "").strip()
+            accession = (row.get("Accession") or "").strip()
+            if ref_id and accession:
+                accessions_by_ref_id.setdefault(ref_id, []).append(accession)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary_rows: list[dict[str, str | int]] = []
+    counts: dict[str, tuple[int, int, int]] = {}
+    for sheet_name in PMID_SHEETS:
+        sheet_csv = sheet_dir / f"{sheet_name}_PMID_replaced.csv"
+        with sheet_csv.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            require_columns(sheet_csv, ("RefID",), reader.fieldnames)
+            sheet_ref_ids = {
+                (row.get("RefID") or "").strip()
+                for row in reader
+                if (row.get("RefID") or "").strip()
+            }
+        matched_ref_ids = sorted(sheet_ref_ids & accessions_by_ref_id.keys(), key=int)
+        match_rows = [
+            {"RefID": ref_id, "Accession": accession}
+            for ref_id in matched_ref_ids
+            for accession in accessions_by_ref_id[ref_id]
+        ]
+        with (output_dir / f"{sheet_name}_accession_matches.csv").open(
+            "w", newline="", encoding="utf-8"
+        ) as handle:
+            writer = csv.DictWriter(
+                handle, fieldnames=("RefID", "Accession"), lineterminator="\n"
+            )
+            writer.writeheader()
+            writer.writerows(match_rows)
+        counts[sheet_name] = (
+            len(sheet_ref_ids),
+            len(matched_ref_ids),
+            len(match_rows),
+        )
+        summary_rows.append(
+            {
+                "Sheet": sheet_name,
+                "SheetRefIDCount": len(sheet_ref_ids),
+                "MatchedRefIDCount": len(matched_ref_ids),
+                "TotalMatchingAccessions": len(match_rows),
+            }
+        )
+    with (output_dir / "sheet_accession_counts.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=(
+                "Sheet",
+                "SheetRefIDCount",
+                "MatchedRefIDCount",
+                "TotalMatchingAccessions",
+            ),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        writer.writerows(summary_rows)
+    return counts
+
+
 def excel_column_name(index: int) -> str:
     """Return the one-based Excel column name for a zero-based index."""
     name = ""
@@ -984,12 +1147,13 @@ def write_csv_tables_xlsx(
 
 def write_groupkey_deduplicated_original_sheets(
     groups_csv: Path, input_dir: Path, output_dir: Path, found_pmid_report_csv: Path
-) -> dict[str, tuple[int, int]]:
-    """Apply group-key deduplication to every step-04 Original-sheet CSV."""
+) -> tuple[dict[str, tuple[int, int]], int]:
+    """Apply group-key deduplication and write its per-sheet removal audit."""
     group_keys = read_groupkey_by_ref_id(groups_csv)
     output_dir.mkdir(parents=True, exist_ok=True)
     tables: dict[str, tuple[list[str], list[dict[str, str]]]] = {}
     row_counts: dict[str, tuple[int, int]] = {}
+    audit_rows: list[dict[str, str | int]] = []
     for sheet_name in PMID_SHEETS:
         input_csv = input_dir / f"{sheet_name}_PMID_replaced.csv"
         with input_csv.open(newline="", encoding="utf-8") as handle:
@@ -997,6 +1161,20 @@ def write_groupkey_deduplicated_original_sheets(
             require_columns(input_csv, ("RefID",), reader.fieldnames)
             fieldnames = reader.fieldnames or []
             source_rows = list(reader)
+        rows_by_ref_id: dict[int, list[dict[str, str]]] = {}
+        for row in source_rows:
+            raw_ref_id = (row["RefID"] or "").strip()
+            if raw_ref_id:
+                rows_by_ref_id.setdefault(int(raw_ref_id), []).append(row)
+        group_has_include = {
+            group_key: any(
+                (row.get("Status") or "").strip() == "Include"
+                for ref_id, rows in rows_by_ref_id.items()
+                if group_keys.get(ref_id) == group_key
+                for row in rows
+            )
+            for group_key in set(group_keys.values())
+        }
         retained_rows = []
         for row in source_rows:
             raw_ref_id = (row["RefID"] or "").strip()
@@ -1004,8 +1182,55 @@ def write_groupkey_deduplicated_original_sheets(
                 retained_rows.append(row)
                 continue
             ref_id = int(raw_ref_id)
-            if group_keys.get(ref_id, ref_id) == ref_id:
-                retained_rows.append(row)
+            group_key = group_keys.get(ref_id, ref_id)
+            if group_key == ref_id:
+                retained_row = dict(row)
+                if group_has_include.get(group_key, False) and "Status" in fieldnames:
+                    retained_row["Status"] = "Include"
+                retained_rows.append(retained_row)
+        applied_group_keys = sorted(
+            {
+                group_key
+                for ref_id, group_key in group_keys.items()
+                if ref_id != group_key and ref_id in rows_by_ref_id
+            }
+        )
+        for group_key in applied_group_keys:
+            removed_ref_ids = sorted(
+                ref_id
+                for ref_id in rows_by_ref_id
+                if ref_id != group_key and group_keys.get(ref_id) == group_key
+            )
+            group_key_statuses = sorted(
+                {
+                    (row.get("Status") or "").strip()
+                    for row in rows_by_ref_id.get(group_key, [])
+                    if (row.get("Status") or "").strip()
+                }
+            )
+            removed_statuses = sorted(
+                {
+                    (row.get("Status") or "").strip()
+                    for ref_id in removed_ref_ids
+                    for row in rows_by_ref_id[ref_id]
+                    if (row.get("Status") or "").strip()
+                }
+            )
+            audit_rows.append(
+                {
+                    "Sheet": sheet_name,
+                    "GroupKeyRefID": group_key,
+                    "GroupKeyOldStatus": "; ".join(group_key_statuses),
+                    "DeduplicatedStatus": (
+                        "Include"
+                        if group_has_include.get(group_key, False)
+                        else "; ".join(group_key_statuses)
+                    ),
+                    "RemovedRefIDCount": len(removed_ref_ids),
+                    "RemovedRefIDs": "; ".join(str(ref_id) for ref_id in removed_ref_ids),
+                    "RemovedRefIDOldStatuses": "; ".join(removed_statuses),
+                }
+            )
         output_csv = output_dir / f"{sheet_name}_groupkey_deduplicated.csv"
         with output_csv.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
@@ -1029,18 +1254,64 @@ def write_groupkey_deduplicated_original_sheets(
         reader = csv.DictReader(handle)
         require_columns(found_pmid_report_csv, ("Sheet", "FoundPMIDCount"), reader.fieldnames)
         tables["Found_PMID_report"] = (reader.fieldnames or [], list(reader))
+    audit_csv = output_dir / "GroupKey_Deduplication_Audit.csv"
+    with audit_csv.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=(
+                "Sheet",
+                "GroupKeyRefID",
+                "GroupKeyOldStatus",
+                "DeduplicatedStatus",
+                "RemovedRefIDCount",
+                "RemovedRefIDs",
+                "RemovedRefIDOldStatuses",
+            ),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        writer.writerows(audit_rows)
     write_csv_tables_xlsx(
         tables,
         output_dir / "Original_sheets_groupkey_deduplicated.xlsx",
         STEP10_EXCEL_EXCLUDED_COLUMNS,
     )
-    return row_counts
+    return row_counts, len(audit_rows)
 
 
 def pubmed_year(value: str) -> str:
     """Extract a canonical four-digit year, never a worksheet formula or marker."""
     match = re.search(r"(?:19|20)\d{2}", value or "")
     return match.group(0) if match else ""
+
+
+def load_pubmed_cache(cache_csv: Path) -> tuple[dict[str, dict[str, str]], list[dict[str, str]]]:
+    """Load successful and not-found PubMed API results from a prior run."""
+    if not cache_csv.is_file():
+        return {}, []
+    audit_fields = ("PMID", "Status", "Year", "Title", "Author", "Journal", "RawAPIResult")
+    with cache_csv.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or not set(audit_fields).issubset(reader.fieldnames):
+            return {}, []
+        rows = [
+            {field: (row.get(field) or "") for field in audit_fields}
+            for row in reader
+            if (row.get("PMID") or "").strip().isdigit()
+            and (row.get("Status") or "") in {"found", "not_found"}
+        ]
+    metadata = {
+        row["PMID"]: {
+            "Year": row["Year"],
+            "PMID": row["PMID"],
+            "Title": row["Title"],
+            "Author": row["Author"],
+            "Journal": row["Journal"],
+        }
+        for row in rows
+        if row["Status"] == "found"
+    }
+    return metadata, rows
 
 
 def fetch_pubmed_metadata(pmids: set[str]) -> tuple[dict[str, dict[str, str]], list[dict[str, str]]]:
@@ -1104,7 +1375,14 @@ def write_pubmed_metadata_updated_sheets(input_dir: Path, output_dir: Path) -> t
                 valid_pmids.add(pmid)
         tables[sheet_name] = (fieldnames, rows)
 
-    metadata, audit_rows = fetch_pubmed_metadata(valid_pmids)
+    cache_csv = output_dir / PUBMED_CACHE_FILENAME
+    cached_metadata, cached_audit_rows = load_pubmed_cache(cache_csv)
+    uncached_pmids = valid_pmids - {
+        row["PMID"] for row in cached_audit_rows
+    }
+    fetched_metadata, fetched_audit_rows = fetch_pubmed_metadata(uncached_pmids)
+    metadata = {**cached_metadata, **fetched_metadata}
+    audit_rows = cached_audit_rows + fetched_audit_rows
     output_dir.mkdir(parents=True, exist_ok=True)
     updated_rows = 0
     for sheet_name, (fieldnames, rows) in tables.items():
@@ -1127,7 +1405,7 @@ def write_pubmed_metadata_updated_sheets(input_dir: Path, output_dir: Path) -> t
             writer.writerows(refreshed_rows)
 
     audit_fields = ["PMID", "Status", "Year", "Title", "Author", "Journal", "RawAPIResult"]
-    with (output_dir / "PubMed_API_Results.csv").open("w", newline="", encoding="utf-8") as handle:
+    with cache_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=audit_fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(audit_rows)
@@ -1136,6 +1414,25 @@ def write_pubmed_metadata_updated_sheets(input_dir: Path, output_dir: Path) -> t
         output_dir / "Original_sheets_pubmed_metadata_updated.xlsx",
         STEP10_EXCEL_EXCLUDED_COLUMNS,
     )
+    row_count_dir = output_dir / "Sheet_Row_Counts"
+    row_count_dir.mkdir(parents=True, exist_ok=True)
+    with (row_count_dir / "Original_sheets_pubmed_metadata_updated_row_counts.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("Sheet", "TotalRows", "DataRows"),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        for sheet_name, (_, rows) in tables.items():
+            writer.writerow(
+                {
+                    "Sheet": sheet_name,
+                    "TotalRows": len(rows) + 1,
+                    "DataRows": len(rows),
+                }
+            )
     return len(valid_pmids), updated_rows
 
 
@@ -1151,28 +1448,28 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--refname-summary-csv", type=Path, default=DEFAULT_REFNAME_SUMMARY,
-        help="CSV for RefName counts (default: outputs/Ref_same/05_refname_counts/RefName_duplicate_counts.csv).",
+        help="CSV for RefName counts (default: outputs/Ref_same/06_refname_counts/RefName_duplicate_counts.csv).",
     )
     parser.add_argument("--output-csv", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--groups-output-csv", type=Path, default=DEFAULT_GROUPS_OUTPUT,
-        help="CSV for grouped candidate RefIDs (default: outputs/Ref_same/07_same_ref_candidate_groups/same_ref_candidate_groups.csv).",
+        help="CSV for grouped candidate RefIDs (default: outputs/Ref_same/08_same_ref_candidate_groups/same_ref_candidate_groups.csv).",
     )
     parser.add_argument(
         "--group-refnames-output-csv", type=Path, default=DEFAULT_GROUP_REFNAMES_OUTPUT,
-        help="CSV for candidate groups with RefNames (default: outputs/Ref_same/08_same_ref_candidate_group_refnames/same_ref_candidate_groups_refnames.csv).",
+        help="CSV for candidate groups with RefNames (default: outputs/Ref_same/09_same_ref_candidate_group_refnames/same_ref_candidate_groups_refnames.csv).",
     )
     parser.add_argument(
         "--groupkey-ref-with-refname-output-csv", type=Path, default=DEFAULT_GROUPKEY_REF_WITH_REFNAME_OUTPUT,
-        help="CSV with Ref_with_RefName rows deduplicated to group keys (default: outputs/Ref_same/09_ref_with_refname_groupkey_deduplication/Ref_with_RefName_groupkey_deduplicated.csv).",
+        help="CSV with Ref_with_RefName rows deduplicated to group keys (default: outputs/Ref_same/10_ref_with_refname_groupkey_deduplication/Ref_with_RefName_groupkey_deduplicated.csv).",
     )
     parser.add_argument(
         "--deduplicated-refname-summary-csv", type=Path, default=DEFAULT_DEDUPLICATED_REFNAME_SUMMARY,
-        help="CSV of RefName counts from step 09 (default: outputs/Ref_same/11_ref_with_refname_refname_counts/RefName_duplicate_counts.csv).",
+        help="CSV of RefName counts from step 10 (default: outputs/Ref_same/13_ref_with_refname_refname_counts/RefName_duplicate_counts.csv).",
     )
     parser.add_argument(
         "--duplicate-refname-rows-dir", type=Path, default=DEFAULT_DUPLICATE_REFNAME_ROWS_DIR,
-        help="Directory for per-RefName duplicate-row CSVs (default: outputs/Ref_same/12_duplicate_refname_rows).",
+        help="Directory for per-RefName duplicate-row CSVs (default: outputs/Ref_same/14_duplicate_refname_rows).",
     )
     parser.add_argument(
         "--merged-original-pmid-output-dir", type=Path, default=DEFAULT_MERGED_ORIGINAL_PMID_DIR,
@@ -1194,21 +1491,28 @@ def parse_args() -> argparse.Namespace:
         help="Directory for step-02 PMID-replaced copies of all Original sheets (default: outputs/Ref_same/04_original_sheets_pmid_replaced).",
     )
     parser.add_argument(
+        "--sheet-accession-counts-output-dir",
+        type=Path,
+        default=DEFAULT_SHEET_ACCESSION_COUNTS_DIR,
+        help="Directory for per-sheet RefID-to-accession matches and counts (default: outputs/Ref_same/05_sheet_accession_counts).",
+    )
+    parser.add_argument(
         "--original-sheets-groupkey-deduplication-output-dir", type=Path,
         default=DEFAULT_ORIGINAL_SHEETS_GROUPKEY_DEDUPLICATION_DIR,
-        help="Directory for group-key-deduplicated step-04 sheet CSVs and Excel workbook (default: outputs/Ref_same/10_original_sheets_groupkey_deduplication).",
+        help="Directory for group-key-deduplicated step-04 sheet CSVs and Excel workbook (default: outputs/Ref_same/11_original_sheets_groupkey_deduplication).",
     )
     parser.add_argument(
         "--pubmed-metadata-update-output-dir",
         type=Path,
         default=DEFAULT_PUBMED_METADATA_UPDATE_DIR,
-        help="Directory for step-11 PubMed-refreshed CSVs, workbook, and API audit CSV.",
+        help="Directory for step-12 PubMed-refreshed CSVs, workbook, and API audit CSV.",
     )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    clean_report_directory_preserving_pubmed_cache()
     ref_with_refnames_rows = write_ref_with_refnames(
         args.ref_csv, args.workbook, args.sheet, args.ref_with_refnames_output_csv
     )
@@ -1235,6 +1539,11 @@ def main() -> None:
         args.merged_original_pmid_output_dir / "Original_merged_PMID.csv",
         args.original_sheets_replaced_pmid_output_dir,
     )
+    sheet_accession_counts = write_sheet_accession_counts(
+        args.original_sheets_replaced_pmid_output_dir,
+        args.accessions_csv,
+        args.sheet_accession_counts_output_dir,
+    )
     records = read_ref_records(args.found_pmid_output_csv)
     add_accession_data(records, args.accessions_csv)
     candidates = find_candidates(records)
@@ -1243,6 +1552,9 @@ def main() -> None:
     )
     write_candidates(records, candidates, args.output_csv)
     candidate_groups = write_candidate_groups(candidates, args.groups_output_csv)
+    write_candidate_group_status_reports(
+        candidates, args.workbook, args.groups_output_csv.parent
+    )
     candidate_group_refnames = write_candidate_group_refnames(
         args.groups_output_csv, args.found_pmid_output_csv, args.group_refnames_output_csv
     )
@@ -1250,7 +1562,7 @@ def main() -> None:
         args.group_refnames_output_csv, args.found_pmid_output_csv,
         args.groupkey_ref_with_refname_output_csv
     )
-    original_sheets_row_counts = write_groupkey_deduplicated_original_sheets(
+    original_sheets_row_counts, groupkey_deduplication_audit_rows = write_groupkey_deduplicated_original_sheets(
         args.group_refnames_output_csv,
         args.original_sheets_replaced_pmid_output_dir,
         args.original_sheets_groupkey_deduplication_output_dir,
@@ -1302,45 +1614,55 @@ def main() -> None:
     for sheet_name, updates in updated_pmid_rows_by_sheet.items():
         print(f"pmid_rows_updated_{sheet_name}={updates}")
 
-    print_step(5, "RefName counts")
+    print_step(5, "Sheet accession counts")
+    print(f"output_dir={display_path(args.sheet_accession_counts_output_dir)}")
+    print(f"summary_csv={display_path(args.sheet_accession_counts_output_dir / 'sheet_accession_counts.csv')}")
+    for sheet_name, (sheet_ref_ids, matched_ref_ids, total_accessions) in sheet_accession_counts.items():
+        print(f"sheet_ref_ids_{sheet_name}={sheet_ref_ids}")
+        print(f"matched_ref_ids_{sheet_name}={matched_ref_ids}")
+        print(f"total_matching_accessions_{sheet_name}={total_accessions}")
+
+    print_step(6, "RefName counts")
     print(f"output_csv={display_path(args.refname_summary_csv)}")
     print(f"refname_groups={refname_groups}")
 
-    print_step(6, "Same-reference candidates")
+    print_step(7, "Same-reference candidates")
     print(f"output_csv={display_path(args.output_csv)}")
     print(f"refs_total={len(records)}")
     print(f"candidate_pairs={len(candidates)}")
 
-    print_step(7, "Same-reference candidate groups")
+    print_step(8, "Same-reference candidate groups")
     print(f"output_csv={display_path(args.groups_output_csv)}")
     print(f"candidate_groups={candidate_groups}")
 
-    print_step(8, "Candidate groups with RefNames")
+    print_step(9, "Candidate groups with RefNames")
     print(f"output_csv={display_path(args.group_refnames_output_csv)}")
     print(f"candidate_group_refnames={candidate_group_refnames}")
 
-    print_step(9, "Ref-with-RefName group-key deduplication")
+    print_step(10, "Ref-with-RefName group-key deduplication")
     print(f"output_csv={display_path(args.groupkey_ref_with_refname_output_csv)}")
     print(f"original_rows_before={original_rows_before}")
     print(f"original_rows_after={original_rows_after}")
 
-    print_step(10, "Original sheets group-key deduplication")
+    print_step(11, "Original sheets group-key deduplication")
     print(f"output_dir={display_path(args.original_sheets_groupkey_deduplication_output_dir)}")
+    print(f"audit_csv={display_path(args.original_sheets_groupkey_deduplication_output_dir / 'GroupKey_Deduplication_Audit.csv')}")
+    print(f"groupkey_deduplication_audit_rows={groupkey_deduplication_audit_rows}")
     for sheet_name, (before, after) in original_sheets_row_counts.items():
         print(f"groupkey_dedup_{sheet_name}_rows_before={before}")
         print(f"groupkey_dedup_{sheet_name}_rows_after={after}")
 
-    print_step(11, "PubMed metadata update")
+    print_step(12, "PubMed metadata update")
     print(f"output_dir={display_path(args.pubmed_metadata_update_output_dir)}")
     print(f"valid_pubmed_pmids={valid_pubmed_pmids}")
     print(f"pubmed_updated_rows={pubmed_updated_rows}")
     print(f"api_results_csv={display_path(args.pubmed_metadata_update_output_dir / 'PubMed_API_Results.csv')}")
 
-    print_step(12, "Deduplicated RefName counts")
+    print_step(13, "Deduplicated RefName counts")
     print(f"output_csv={display_path(args.deduplicated_refname_summary_csv)}")
     print(f"deduplicated_refname_groups={deduplicated_refname_groups}")
 
-    print_step(13, "Duplicate RefName rows")
+    print_step(14, "Duplicate RefName rows")
     print(f"output_dir={display_path(args.duplicate_refname_rows_dir)}")
     print(f"duplicate_refname_files={duplicate_refname_files}")
 
