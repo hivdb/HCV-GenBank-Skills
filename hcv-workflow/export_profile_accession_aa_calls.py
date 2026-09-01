@@ -1,4 +1,4 @@
-"""Export QC-passed profile amino-acid calls with genotype consensus calls."""
+"""Export QC-passed RAS amino-acid calls with genotype consensus calls."""
 
 from __future__ import annotations
 
@@ -19,6 +19,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile-input-workbook", required=True)
     parser.add_argument("--profile-accessions-csv", required=True)
     parser.add_argument("--gt-profile-workbook", required=True)
+    parser.add_argument(
+        "--ras-positions",
+        required=True,
+        help="Comma-separated amino-acid positions to include in the export.",
+    )
     parser.add_argument("--output-csv", required=True)
     return parser.parse_args()
 
@@ -35,6 +40,13 @@ def load_profile_accessions(path: Path) -> set[str]:
             for row in csv.DictReader(handle)
             if str(row.get("accession") or "").strip()
         }
+
+
+def parse_positions(value: str) -> set[int]:
+    positions = {int(position.strip()) for position in value.split(",") if position.strip()}
+    if not positions:
+        raise ValueError("--ras-positions must contain at least one position")
+    return positions
 
 
 def load_gt_consensus(path: Path) -> dict[tuple[str, int], str]:
@@ -80,6 +92,7 @@ def load_gt_consensus(path: Path) -> dict[tuple[str, int], str]:
 
 def export_calls(args: argparse.Namespace) -> dict[str, object]:
     allowed_accessions = load_profile_accessions(Path(args.profile_accessions_csv))
+    ras_positions = parse_positions(args.ras_positions)
     consensus = load_gt_consensus(Path(args.gt_profile_workbook))
     workbook = load_workbook(
         args.profile_input_workbook, read_only=True, data_only=True
@@ -127,6 +140,8 @@ def export_calls(args: argparse.Namespace) -> dict[str, object]:
                     skipped_calls[amino_acid or "EMPTY"] += 1
                     continue
                 position = int(start) + offset
+                if position not in ras_positions:
+                    continue
                 writer.writerow(
                     {
                         "Accession": accession,
@@ -143,6 +158,7 @@ def export_calls(args: argparse.Namespace) -> dict[str, object]:
         "output_csv": str(output_path.resolve()),
         "rows_written": rows_written,
         "included_accession_count": len(included_accessions),
+        "ras_positions": sorted(ras_positions),
         "skipped_nonstandard_aa_calls": dict(sorted(skipped_calls.items())),
     }
 

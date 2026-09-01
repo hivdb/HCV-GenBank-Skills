@@ -944,6 +944,8 @@ class Pipeline:
                             self.profile_accessions_csv,
                             "--gt-profile-workbook",
                             gt_profile,
+                            "--ras-positions",
+                            RAS_POSITIONS,
                             "--output-csv",
                             self.step_dir("merge-subtype-complete-profiles")
                             / "NS5A_Profile_Accession_AA_Calls.csv",
