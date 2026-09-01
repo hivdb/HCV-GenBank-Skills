@@ -32,7 +32,8 @@ to PubMed again.
 4. `04_original_sheets_pmid_replaced/` — loads `Original`, `Original_NS5A`,
    `Original_NS3`, and `Original_NS5B` from the workbook and writes one CSV per
    sheet after replacing its `PMID` by `RefID` from step 02's
-   `Original_merged_PMID.csv`. The script prints the changed-row count for each
+   `Original_merged_PMID.csv`. Completely blank worksheet rows (without a
+   `RefID`) are not written. The script prints the changed-row count for each
    sheet.
 5. `05_sheet_accession_counts/` — reads each step-04 sheet's RefIDs, matches
    them to `Accessions.csv`, and writes one `RefID,Accession` CSV per sheet plus
@@ -76,7 +77,11 @@ to PubMed again.
    record. `Year` is always a four-digit year or blank. `PubMed_API_Results.csv`
    retains the complete API result for every queried PMID. Its
    `Sheet_Row_Counts/Original_sheets_pubmed_metadata_updated_row_counts.csv`
-   records each worksheet's total rows (including the header) and data rows.
+   records each worksheet's RefID rows, including the header in `TotalRows`,
+   plus `BlankRefIDRows` as an audit field. `Status_Counts/Status_Counts.csv`
+   records each sheet's RefID-row counts for
+   case-insensitive `Include`, `Exclude`, and `Short` Status values; all other
+   values, including blank values and misspellings, are counted as `Other`.
 13. `13_ref_with_refname_refname_counts/RefName_duplicate_counts.csv` — applies step
    06's `RefName`, `RefIDCount`, and `RefIDs` summary to the PubMed-refreshed
    retained Original rows.
@@ -84,6 +89,9 @@ to PubMed again.
    `RefIDCount >= 2`. Each CSV contains the unchanged matching step-10 rows and
    is stored in `RefIDCount_<count>/` as `<RefName>__RefIDCount_<count>.csv`,
    with unsafe filename characters replaced by underscores.
+15. `15_report_summary/Ref_same_Report_Summary.md` — Markdown tables containing
+   the values from step 05's accession-count summary, step 12's RefID row-count
+   summary, and step 12's Status-count summary.
 
 ```bash
 python3 Preprocess/Ref/search_same_ref/search_same_ref.py

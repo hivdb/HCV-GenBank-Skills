@@ -56,6 +56,7 @@ DEFAULT_DEDUPLICATED_REFNAME_SUMMARY = (
     OUTPUT_DIR / "13_ref_with_refname_refname_counts" / "RefName_duplicate_counts.csv"
 )
 DEFAULT_DUPLICATE_REFNAME_ROWS_DIR = OUTPUT_DIR / "14_duplicate_refname_rows"
+DEFAULT_REPORT_SUMMARY_MARKDOWN = OUTPUT_DIR / "15_report_summary" / "Ref_same_Report_Summary.md"
 PMID_SHEETS = ("Original", "Original_NS5A", "Original_NS3", "Original_NS5B")
 STEP10_EXCEL_EXCLUDED_COLUMNS = frozenset(
     {"enrich method", "verified_method", "URL 1", "LT5", "URL 2"}
@@ -969,13 +970,14 @@ def write_original_sheets_with_replaced_pmids(
         for row in rows:
             output_row = dict(row)
             raw_ref_id = (output_row["RefID"] or "").strip()
-            if raw_ref_id:
-                replacement = pmid_by_ref_id.get(int(raw_ref_id))
-                if replacement is not None:
-                    original_pmid = (output_row["PMID"] or "").strip()
-                    if original_pmid != replacement:
-                        updates += 1
-                    output_row["PMID"] = replacement
+            if not raw_ref_id:
+                continue
+            replacement = pmid_by_ref_id.get(int(raw_ref_id))
+            if replacement is not None:
+                original_pmid = (output_row["PMID"] or "").strip()
+                if original_pmid != replacement:
+                    updates += 1
+                output_row["PMID"] = replacement
             output_rows.append(output_row)
         output_csv = output_dir / f"{sheet_name}_PMID_replaced.csv"
         with output_csv.open("w", newline="", encoding="utf-8") as handle:
@@ -1179,7 +1181,6 @@ def write_groupkey_deduplicated_original_sheets(
         for row in source_rows:
             raw_ref_id = (row["RefID"] or "").strip()
             if not raw_ref_id:
-                retained_rows.append(row)
                 continue
             ref_id = int(raw_ref_id)
             group_key = group_keys.get(ref_id, ref_id)
@@ -1237,7 +1238,10 @@ def write_groupkey_deduplicated_original_sheets(
             writer.writeheader()
             writer.writerows(retained_rows)
         tables[sheet_name] = (fieldnames, retained_rows)
-        row_counts[sheet_name] = (len(source_rows), len(retained_rows))
+        row_counts[sheet_name] = (
+            sum(bool((row.get("RefID") or "").strip()) for row in source_rows),
+            len(retained_rows),
+        )
     tables["Summary"] = (
         ["Sheet", "RowsBefore", "RowsAfter", "RowsRemoved"],
         [
@@ -1312,6 +1316,108 @@ def load_pubmed_cache(cache_csv: Path) -> tuple[dict[str, dict[str, str]], list[
         if row["Status"] == "found"
     }
     return metadata, rows
+
+
+def status_category(value: str | None) -> str:
+    """Classify a worksheet Status using case-insensitive keyword matching."""
+    normalized = (value or "").casefold()
+    if "include" in normalized:
+        return "Include"
+    if "exclude" in normalized:
+        return "Exclude"
+    if "short" in normalized:
+        return "Short"
+    return "Other"
+
+
+def write_status_count_report(
+    tables: dict[str, tuple[list[str], list[dict[str, str]]]], output_dir: Path
+) -> Path:
+    """Write per-sheet counts for Include, Exclude, Short, and other Status values."""
+    report_dir = output_dir / "Status_Counts"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    output_csv = report_dir / "Status_Counts.csv"
+    with output_csv.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("Sheet", "TotalRows", "Include", "Exclude", "Short", "Other"),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        for sheet_name, (_, rows) in tables.items():
+            counts = {category: 0 for category in ("Include", "Exclude", "Short", "Other")}
+            refid_rows = [row for row in rows if (row.get("RefID") or "").strip()]
+            for row in refid_rows:
+                counts[status_category(row.get("Status"))] += 1
+            writer.writerow({"Sheet": sheet_name, "TotalRows": len(refid_rows), **counts})
+    return output_csv
+
+
+def write_pubmed_row_count_report(
+    tables: dict[str, tuple[list[str], list[dict[str, str]]]], output_dir: Path
+) -> Path:
+    """Write per-sheet row counts using non-empty RefIDs as the data-row rule."""
+    row_count_dir = output_dir / "Sheet_Row_Counts"
+    row_count_dir.mkdir(parents=True, exist_ok=True)
+    output_csv = row_count_dir / "Original_sheets_pubmed_metadata_updated_row_counts.csv"
+    with output_csv.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("Sheet", "TotalRows", "DataRows", "BlankRefIDRows"),
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        for sheet_name, (_, rows) in tables.items():
+            refid_rows = [row for row in rows if (row.get("RefID") or "").strip()]
+            writer.writerow(
+                {
+                    "Sheet": sheet_name,
+                    "TotalRows": len(refid_rows) + 1,
+                    "DataRows": len(refid_rows),
+                    "BlankRefIDRows": len(rows) - len(refid_rows),
+                }
+            )
+    return output_csv
+
+
+def write_report_summary_markdown(
+    accession_counts_csv: Path, pubmed_output_dir: Path, output_markdown: Path
+) -> Path:
+    """Combine the workflow's key sheet-count reports into one Markdown file."""
+    report_sources = (
+        ("Step 5: RefID-to-accession matches", accession_counts_csv),
+        (
+            "Step 12: RefID row counts",
+            pubmed_output_dir
+            / "Sheet_Row_Counts"
+            / "Original_sheets_pubmed_metadata_updated_row_counts.csv",
+        ),
+        (
+            "Step 12: Status counts",
+            pubmed_output_dir / "Status_Counts" / "Status_Counts.csv",
+        ),
+    )
+    output_markdown.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["# Ref_same report summary", ""]
+    for title, source_csv in report_sources:
+        with source_csv.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            fieldnames = reader.fieldnames or []
+            rows = list(reader)
+        lines.extend((f"## {title}", "", "| " + " | ".join(fieldnames) + " |"))
+        lines.append("| " + " | ".join("---" for _ in fieldnames) + " |")
+        for row in rows:
+            lines.append(
+                "| "
+                + " | ".join(
+                    (row.get(fieldname) or "").replace("|", "\\|").replace("\n", " ")
+                    for fieldname in fieldnames
+                )
+                + " |"
+            )
+        lines.append("")
+    output_markdown.write_text("\n".join(lines), encoding="utf-8")
+    return output_markdown
 
 
 def fetch_pubmed_metadata(pmids: set[str]) -> tuple[dict[str, dict[str, str]], list[dict[str, str]]]:
@@ -1414,25 +1520,8 @@ def write_pubmed_metadata_updated_sheets(input_dir: Path, output_dir: Path) -> t
         output_dir / "Original_sheets_pubmed_metadata_updated.xlsx",
         STEP10_EXCEL_EXCLUDED_COLUMNS,
     )
-    row_count_dir = output_dir / "Sheet_Row_Counts"
-    row_count_dir.mkdir(parents=True, exist_ok=True)
-    with (row_count_dir / "Original_sheets_pubmed_metadata_updated_row_counts.csv").open(
-        "w", newline="", encoding="utf-8"
-    ) as handle:
-        writer = csv.DictWriter(
-            handle,
-            fieldnames=("Sheet", "TotalRows", "DataRows"),
-            lineterminator="\n",
-        )
-        writer.writeheader()
-        for sheet_name, (_, rows) in tables.items():
-            writer.writerow(
-                {
-                    "Sheet": sheet_name,
-                    "TotalRows": len(rows) + 1,
-                    "DataRows": len(rows),
-                }
-            )
+    write_pubmed_row_count_report(tables, output_dir)
+    write_status_count_report(tables, output_dir)
     return len(valid_pmids), updated_rows
 
 
@@ -1507,6 +1596,12 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_PUBMED_METADATA_UPDATE_DIR,
         help="Directory for step-12 PubMed-refreshed CSVs, workbook, and API audit CSV.",
     )
+    parser.add_argument(
+        "--report-summary-markdown",
+        type=Path,
+        default=DEFAULT_REPORT_SUMMARY_MARKDOWN,
+        help="Markdown summary of the step-05 and step-12 count reports.",
+    )
     return parser.parse_args()
 
 
@@ -1580,6 +1675,11 @@ def main() -> None:
         args.deduplicated_refname_summary_csv,
         args.pubmed_metadata_update_output_dir / "Original_pubmed_metadata_updated.csv",
         args.duplicate_refname_rows_dir,
+    )
+    report_summary_markdown = write_report_summary_markdown(
+        args.sheet_accession_counts_output_dir / "sheet_accession_counts.csv",
+        args.pubmed_metadata_update_output_dir,
+        args.report_summary_markdown,
     )
     def print_step(step: int, name: str) -> None:
         print(f"\n=== Step {step:02d}: {name} ===")
@@ -1665,6 +1765,9 @@ def main() -> None:
     print_step(14, "Duplicate RefName rows")
     print(f"output_dir={display_path(args.duplicate_refname_rows_dir)}")
     print(f"duplicate_refname_files={duplicate_refname_files}")
+
+    print_step(15, "Report summary")
+    print(f"output_markdown={display_path(report_summary_markdown)}")
 
 
 if __name__ == "__main__":
