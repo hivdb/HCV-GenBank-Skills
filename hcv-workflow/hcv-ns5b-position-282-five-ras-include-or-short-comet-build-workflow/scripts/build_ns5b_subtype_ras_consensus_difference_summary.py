@@ -10,7 +10,7 @@ from pathlib import Path
 
 SCRIPT = (
     Path(__file__).resolve().parents[2]
-    / "hcv-ns3-comet-build-workflow"
+    / "hcv-ns3-one-ras-comet-build-workflow"
     / "scripts"
     / "build_ns3_subtype_ras_consensus_difference_summary.py"
 )

@@ -1406,7 +1406,7 @@ class Pipeline:
                     str(
                         REPO_ROOT
                         / "hcv-workflow"
-                        / "hcv-ns5a-comet-build-workflow"
+                        / "hcv-ns5a-one-ras-comet-build-workflow"
                         / "scripts"
                         / "add_subtype_consensus_mutation_summaries.py"
                     ),
