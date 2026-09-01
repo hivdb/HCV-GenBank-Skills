@@ -1,4 +1,0 @@
-interface:
-  display_name: "HCV NS5B Position-282 Plus Four-RAS Include-or-Short Build"
-  short_description: "Build NS5B reports using Include-or-Short reference selection"
-  default_prompt: "Use $hcv-ns5b-position-282-four-ras-include-or-short-comet-build-workflow to run or inspect the NS5B COMET build scripts requiring position 282 plus four RAS calls, using IncludedNS5BRefs_StatusIncludeOrShort.xlsx."
