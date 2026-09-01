@@ -37,7 +37,7 @@ DEFAULT_VARIANTS = {
         "#NS5A": REPO_ROOT
         / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
         "#NS5B": REPO_ROOT
-        / "outputs/comet-NS5B-position-282-five-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+        / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     },
 }
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs/hcv-profile-subtype-accession-summary"

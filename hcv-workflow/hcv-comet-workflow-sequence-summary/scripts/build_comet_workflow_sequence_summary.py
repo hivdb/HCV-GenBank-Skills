@@ -65,9 +65,9 @@ WORKFLOWS = (
         "Callable AA at position 282",
     ),
     (
-        "hcv-ns5b-position-282-five-ras-comet-build-workflow",
+        "hcv-ns5b-position-282-four-ras-comet-build-workflow",
         "NS5B",
-        "outputs/comet-NS5B-position-282-five-ras",
+        "outputs/comet-NS5B-position-282-four-ras",
         "Callable AA at position 282 plus ≥4 of positions 150, 159, 206, 316, 320, 321",
     ),
 )
