@@ -1,6 +1,6 @@
 ---
 name: hcv-profile-subtype-accession-summary
-description: Aggregate three predefined NS3, NS5A, and NS5B workflow combinations into per-genotype/subtype accession counts. Use when updating or reviewing cross-gene profile count summaries.
+description: Aggregate the active One RAS NS3, NS5A, and NS5B workflows into per-genotype/subtype accession counts. Use when updating or reviewing cross-gene profile count summaries.
 ---
 
 # HCV Profile Subtype Accession Summary
@@ -13,17 +13,17 @@ Run the summary script from the repository root after the gene profile workflows
 
 The script reads the NS3, NS5A, and NS5B `*_Subtype_RAS_Profiles.xlsx` files. It uses the per-subtype RAS-coverage count shown in each profile label, matching the combined profile count. It writes both a cross-gene genotype/subtype comparison and a gene-by-gene subtype list as CSV and Excel files. Counts below 10 are omitted except that every genotype 7 and genotype 8 subtype present in an input profile is retained. The workbooks color counts of 10 or more blue; CSV does not support formatting.
 
-## Summary versions
+## Default summary
 
-Running with no arguments generates these three version subfolders under `outputs/hcv-profile-subtype-accession-summary/`. Each also contains an `all-subtypes/` subfolder that retains every subtype, including counts below 10. Each uses the stage-23 `*_Subtype_RAS_Profiles.xlsx` workbooks from the listed workflows. The two generated Excel workbook filenames include the version condition.
+Running with no arguments generates the active One RAS summary under `outputs/hcv-profile-subtype-accession-summary/one-ras/`. Its `all-subtypes/` subfolder retains every subtype, including counts below 10. It uses the stage-23 `*_Subtype_RAS_Profiles.xlsx` workbooks from these active workflows.
 
-| Version | NS3 workflow | NS5A workflow | NS5B workflow | Summary output subfolder |
+The default summary also copies `HCV_Profile_Subtype_Accession_Counts_one-ras.xlsx` as `Table1_Gene_Subtype_Counts.xlsx` in the `one-ras/` folder.
+
+| Summary | NS3 workflow | NS5A workflow | NS5B workflow | Output subfolder |
 | --- | --- | --- | --- | --- |
-| All RAS | `hcv-ns3-all-ras-comet-build-workflow` | `hcv-ns5a-all-ras-comet-build-workflow` | `hcv-ns5b-all-ras-comet-build-workflow` | `all-ras/` |
 | One RAS | `hcv-ns3-one-ras-comet-build-workflow` | `hcv-ns5a-one-ras-comet-build-workflow` | `hcv-ns5b-position-282-include-or-short-comet-build-workflow` | `one-ras/` |
-| Position 282 plus four RAS positions | `hcv-ns3-comet-build-workflow` | `hcv-ns5a-comet-build-workflow` | `hcv-ns5b-position-282-four-ras-comet-build-workflow` | `position-282-four-ras/` |
 
-Run it to generate all three versions:
+Run it to generate the default One RAS summary:
 
 ```bash
 .venv/bin/python hcv-workflow/hcv-profile-subtype-accession-summary/scripts/build_profile_subtype_accession_summary.py \

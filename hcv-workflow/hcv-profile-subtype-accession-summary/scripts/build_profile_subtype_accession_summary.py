@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import re
+import shutil
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -15,14 +16,6 @@ from openpyxl.styles import Font
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_VARIANTS = {
-    "all-ras": {
-        "#NS3": REPO_ROOT
-        / "outputs/comet-NS3-all-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
-        "#NS5A": REPO_ROOT
-        / "outputs/comet-NS5A-all-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
-        "#NS5B": REPO_ROOT
-        / "outputs/comet-NS5B-all-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
-    },
     "one-ras": {
         "#NS3": REPO_ROOT
         / "outputs/comet-NS3-one-ras/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
@@ -30,14 +23,6 @@ DEFAULT_VARIANTS = {
         / "outputs/comet-NS5A-one-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
         "#NS5B": REPO_ROOT
         / "outputs/comet-NS5B-position-282-include-or-short/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
-    },
-    "position-282-four-ras": {
-        "#NS3": REPO_ROOT
-        / "outputs/comet-NS3/23_build-subtype-ras-profile/NS3_Subtype_RAS_Profiles.xlsx",
-        "#NS5A": REPO_ROOT
-        / "outputs/comet-NS5A/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
-        "#NS5B": REPO_ROOT
-        / "outputs/comet-NS5B-position-282-four-ras/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     },
 }
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "outputs/hcv-profile-subtype-accession-summary"
@@ -162,6 +147,8 @@ def build_summary(
         (3, 4, 5),
         suppress_repeated_first_column=True,
     )
+    if condition == "one-ras" and not include_all_subtypes:
+        shutil.copy2(xlsx_path, output_dir / "Table1_Gene_Subtype_Counts.xlsx")
 
     gene_list_headers = [
         "NS3 subtype",
@@ -235,7 +222,7 @@ def main() -> int:
     parser.add_argument(
         "--ns5b-ras-profile",
         type=Path,
-        help="Generate one summary with this NS5B RAS profile instead of all default variants.",
+        help="Generate one summary with this NS5B RAS profile instead of the default One RAS inputs.",
     )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     args = parser.parse_args()
