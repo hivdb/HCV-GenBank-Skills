@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse, csv
 from collections import Counter, defaultdict
 from pathlib import Path
+from statistics import median
 from openpyxl import Workbook, load_workbook
 
 RAS = (36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175)
@@ -105,12 +106,34 @@ def exclusions(wb, rows):
     ws.append(["total_excluded", sum(rows.values())])
 
 
-def matrix(wb, title, groups):
+def matrix(wb, title, groups, within_genotype_subtypes=False):
     labels = sorted(groups)
     ws = wb.create_sheet(title)
     ws.append(["Group", *labels])
-    for a in labels:
-        ws.append([a, *[distance(groups[a], groups[b]) for b in labels]])
+    same_genotype, different_genotype = [], []
+    for row_index, label_a in enumerate(labels):
+        row = [label_a]
+        for column_index, label_b in enumerate(labels):
+            value = distance(groups[label_a], groups[label_b])
+            if column_index < row_index:
+                row.append(None)
+            else:
+                row.append(value)
+                if value is not None:
+                    if within_genotype_subtypes:
+                        (same_genotype if row_index == column_index else different_genotype).append(value)
+                    elif not within_genotype_subtypes:
+                        (same_genotype if row_index == column_index else different_genotype).append(value)
+        ws.append(row)
+    ws.append([])
+    if within_genotype_subtypes:
+        ws.append(["Distance comparison", "Mean", "Median", "Pair count"])
+        for label, distances in (("Same subtype", same_genotype), ("Different subtype", different_genotype)):
+            ws.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
+    else:
+        ws.append(["Distance comparison", "Mean", "Median", "Pair count"])
+        for label, distances in (("Same genotype", same_genotype), ("Different genotype", different_genotype)):
+            ws.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
     for row in ws.iter_rows(min_row=2, min_col=2):
         for c in row:
             c.number_format = "0.0%"
@@ -145,7 +168,7 @@ def main():
             for gt in sorted(bygt):
                 kept = {st: s for st, s in bygt[gt].items() if len(s) >= minimum}
                 if kept:
-                    matrix(wb, gt, kept)
+                    matrix(wb, gt, kept, within_genotype_subtypes=True)
         counts = wb.create_sheet("sequence_counts")
         counts.append(["Group", "SequenceCount"])
         for label, seqs in sorted(groups[kind].items()):

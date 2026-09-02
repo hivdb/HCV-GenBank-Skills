@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse, csv
 from collections import Counter, defaultdict
 from pathlib import Path
+from statistics import median
 from openpyxl import Workbook, load_workbook
 
 VALID_AA = set("ACDEFGHIKLMNPQRSTVWY")
@@ -110,10 +111,31 @@ def main():
                 s = out.create_sheet(name)
                 labels = sorted(keep)
                 s.append(["Group", *labels])
-                [
-                    s.append([x, *[dist(keep[x], keep[y]) for y in labels]])
-                    for x in labels
-                ]
+                same_genotype, different_genotype = [], []
+                for row_index, label_a in enumerate(labels):
+                    row = [label_a]
+                    for column_index, label_b in enumerate(labels):
+                        value = dist(keep[label_a], keep[label_b])
+                        if column_index < row_index:
+                            row.append(None)
+                        else:
+                            row.append(value)
+                            if value is not None:
+                                if kind == "subtype":
+                                    (same_genotype if row_index == column_index else different_genotype).append(value)
+                                elif kind == "gt":
+                                    (same_genotype if row_index == column_index else different_genotype).append(value)
+                    s.append(row)
+                if kind == "gt":
+                    s.append([])
+                    s.append(["Distance comparison", "Mean", "Median", "Pair count"])
+                    for label, distances in (("Same genotype", same_genotype), ("Different genotype", different_genotype)):
+                        s.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
+                else:
+                    s.append([])
+                    s.append(["Distance comparison", "Mean", "Median", "Pair count"])
+                    for label, distances in (("Same subtype", same_genotype), ("Different subtype", different_genotype)):
+                        s.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
                 for row in s.iter_rows(min_row=2, min_col=2):
                     for c in row:
                         c.number_format = "0.0%"

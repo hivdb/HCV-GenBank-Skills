@@ -6,6 +6,7 @@ import argparse
 import csv
 from collections import Counter, defaultdict
 from pathlib import Path
+from statistics import median
 from openpyxl import Workbook, load_workbook
 
 NS3_NT_LENGTH = 631 * 3
@@ -128,8 +129,23 @@ def write(path, groups, minimum, positions_nt, excluded):
     ws = wb.active
     ws.title = "distance_matrix"
     ws.append(["Group", *labels])
-    for a in labels:
-        ws.append([a, *[distance(kept[a], kept[b], positions_nt) for b in labels]])
+    same_genotype: list[float] = []
+    different_genotype: list[float] = []
+    for row_index, label_a in enumerate(labels):
+        row = [label_a]
+        for column_index, label_b in enumerate(labels):
+            value = distance(kept[label_a], kept[label_b], positions_nt)
+            if column_index < row_index:
+                row.append(None)
+            else:
+                row.append(value)
+                if value is not None:
+                    (same_genotype if row_index == column_index else different_genotype).append(value)
+        ws.append(row)
+    ws.append([])
+    ws.append(["Distance comparison", "Mean", "Median", "Pair count"])
+    for label, distances in (("Same genotype", same_genotype), ("Different genotype", different_genotype)):
+        ws.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
     for row in ws.iter_rows(min_row=2, min_col=2):
         for cell in row:
             cell.number_format = "0.0%"
@@ -173,16 +189,23 @@ def write_subtypes_by_genotype(path, groups, minimum, positions_nt, excluded):
         labels = sorted(kept)
         ws = wb.create_sheet(genotype)
         ws.append(["Subtype", *labels])
-        for subtype_a in labels:
-            ws.append(
-                [
-                    subtype_a,
-                    *[
-                        distance(kept[subtype_a], kept[subtype_b], positions_nt)
-                        for subtype_b in labels
-                    ],
-                ]
-            )
+        same_subtype: list[float] = []
+        different_subtype: list[float] = []
+        for row_index, subtype_a in enumerate(labels):
+            row = [subtype_a]
+            for column_index, subtype_b in enumerate(labels):
+                value = distance(kept[subtype_a], kept[subtype_b], positions_nt)
+                if column_index < row_index:
+                    row.append(None)
+                else:
+                    row.append(value)
+                    if value is not None:
+                        (same_subtype if row_index == column_index else different_subtype).append(value)
+            ws.append(row)
+        ws.append([])
+        ws.append(["Distance comparison", "Mean", "Median", "Pair count"])
+        for label, distances in (("Same subtype", same_subtype), ("Different subtype", different_subtype)):
+            ws.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
         for row in ws.iter_rows(min_row=2, min_col=2):
             for cell in row:
                 cell.number_format = "0.0%"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+from statistics import median
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -108,15 +109,29 @@ def add_matrix_sheet(
     values: dict[tuple[str, str], float | int | None],
     number_format: str | None = None,
     column_names: list[str] | None = None,
+    upper_triangle: bool = False,
+    add_distance_summaries: bool = False,
 ) -> None:
     column_names = column_names or names
     ws = wb.create_sheet(title)
     ws.append(["Genotype", *column_names])
-    for row_name in names:
+    same_genotype: list[float] = []
+    different_genotype: list[float] = []
+    for row_index, row_name in enumerate(names):
         row: list[str | float | int | None] = [row_name]
-        for col_name in column_names:
-            row.append(values[(row_name, col_name)])
+        for column_index, col_name in enumerate(column_names):
+            value = values[(row_name, col_name)]
+            if upper_triangle and column_index < row_index:
+                value = None
+            elif add_distance_summaries and isinstance(value, (float, int)):
+                (same_genotype if row_index == column_index else different_genotype).append(value)
+            row.append(value)
         ws.append(row)
+    if add_distance_summaries:
+        ws.append([])
+        ws.append(["Distance comparison", "Mean", "Median", "Pair count"])
+        for label, distances in (("Same genotype", same_genotype), ("Different genotype", different_genotype)):
+            ws.append([label, sum(distances) / len(distances) if distances else None, median(distances) if distances else None, len(distances)])
     ws.freeze_panes = "B2"
     if number_format:
         for row in ws.iter_rows(min_row=2, min_col=2):
@@ -156,25 +171,15 @@ def write_workbook(
             differences[(name_a, name_b)] = difference_count
             compared_positions[(name_a, name_b)] = compared
 
-    name_order = {name: index for index, name in enumerate(names)}
-    display_distances = {
-        (name_a, name_b): (
-            distances[(name_a, name_b)]
-            if name_order[name_a] < name_order[name_b]
-            else None
-        )
-        for name_a in names
-        for name_b in names
-    }
-
     wb = create_workbook()
     add_matrix_sheet(
         wb,
         "distance_matrix",
-        names[:-1],
-        display_distances,
+        names,
+        distances,
         "0.0%",
-        column_names=names[1:],
+        upper_triangle=True,
+        add_distance_summaries=True,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)

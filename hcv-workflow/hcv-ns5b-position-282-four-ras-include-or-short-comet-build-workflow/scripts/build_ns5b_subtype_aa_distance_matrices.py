@@ -7,6 +7,7 @@ import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
+from statistics import median
 
 from openpyxl import Workbook, load_workbook
 
@@ -176,6 +177,7 @@ def add_distance_sheet(
     seqs = dict(records)
     ws = wb.create_sheet(genotype)
     ws.append(["Subtype", *display_labels[1:]])
+    within_genotype_distances: list[float] = []
     for row_index, row_name in enumerate(labels[:-1]):
         row: list[str | float | None] = [display_name(row_name)]
         for col_name in labels[1:]:
@@ -183,9 +185,14 @@ def add_distance_sheet(
             if row_index < col_index:
                 distance, _, _ = pairwise_distance(seqs[row_name], seqs[col_name])
                 row.append(distance)
+                if distance is not None:
+                    within_genotype_distances.append(distance)
             else:
                 row.append(None)
         ws.append(row)
+    ws.append([])
+    ws.append(["Within-genotype subtype distance", "Mean", "Median", "Pair count"])
+    ws.append(["All subtype pairs", sum(within_genotype_distances) / len(within_genotype_distances) if within_genotype_distances else None, median(within_genotype_distances) if within_genotype_distances else None, len(within_genotype_distances)])
     ws.freeze_panes = "B2"
     for row in ws.iter_rows(min_row=2, min_col=2):
         for cell in row:
