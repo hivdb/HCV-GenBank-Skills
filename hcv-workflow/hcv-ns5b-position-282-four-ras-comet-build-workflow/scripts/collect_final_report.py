@@ -233,21 +233,21 @@ def main() -> None:
                 ("build-combined-ras-reports",),
                 f"{gene}_Combined_RAS_Profiles.xlsx",
             ),
-            f"{gene}_Profile_GE10PerSubtype.xlsx",
+            f"for_paper/{gene}_Profile_GE10PerSubtype.xlsx",
         ),
         (
             artifact(
                 ("build-subtype-ras-profile",),
                 f"{gene}_Subtype_RAS_Profiles.xlsx",
             ),
-            f"{gene}_Profile_AllSubtypes.xlsx",
+            f"for_paper/{gene}_Profile_AllSubtypes.xlsx",
         ),
         (
             artifact(
                 ("merge-subtype-complete-profiles",),
                 f"{gene}_Subtype_CompleteProfiles_Merged.xlsx",
             ),
-            f"{gene}_CompleteProfile.xlsx",
+            f"for_paper/{gene}_CompleteProfile.xlsx",
         ),
         (
             artifact(
@@ -277,12 +277,16 @@ def main() -> None:
         f"{gene}_Combined_RAS_Profiles.xlsx",
         f"{gene}_Subtype_RAS_Profiles.xlsx",
         f"{gene}_Subtype_CompleteProfiles_Merged.xlsx",
+        f"{gene}_Profile_GE10PerSubtype.xlsx",
+        f"{gene}_Profile_AllSubtypes.xlsx",
+        f"{gene}_CompleteProfile.xlsx",
     ):
         legacy_path = destination / legacy_name
         if legacy_path.exists():
             legacy_path.unlink()
     for source, destination_name in sources:
         report_path = destination / destination_name
+        report_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, report_path)
         if "_Distance_" in destination_name:
             sequence_type = "amino-acid" if "_AA_Distance_" in destination_name else "nucleotide"
