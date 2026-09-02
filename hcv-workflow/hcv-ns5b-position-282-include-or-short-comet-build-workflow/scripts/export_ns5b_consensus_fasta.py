@@ -28,7 +28,7 @@ def script_temp_dir() -> Path:
     path = (
         Path(
             os.environ.get(
-                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282/temp"
+                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282-include-or-short/temp"
             )
         )
         / Path(__file__).stem

@@ -1170,6 +1170,8 @@ class Pipeline:
                         combined_ras,
                         "--combined-subtype-cutoff",
                         "10",
+                        "--profile-filter-reason",
+                        "No callable standard amino acid at any required NS5A RAS position",
                         "--output-xlsx",
                         self.step_dir("build-combined-ras-reports")
                         / "NS5A_Workflow_Sequence_Audit.xlsx",

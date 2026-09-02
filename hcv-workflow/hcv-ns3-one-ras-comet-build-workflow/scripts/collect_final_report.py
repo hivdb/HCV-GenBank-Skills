@@ -6,12 +6,16 @@ import argparse
 import csv
 import json
 import math
+import re
 import shutil
 from pathlib import Path
 
 from openpyxl import load_workbook
 
 README_GENE = {"NS3": "NS3", "NS5A": "NS5A_NTD", "NS5B": "NS5B"}
+SUBTYPE_PROFILE_LABEL = re.compile(
+    r"^GT(?P<genotype>[1-6])_(?P<subtype>\S+)\s+\((?P<accessions>\d+),"
+)
 
 
 def add_distance_notes(path: Path, sequence_type: str) -> None:
@@ -52,6 +56,23 @@ def step_directory(root: Path, step_name: str) -> Path:
             f"Expected one {step_name} directory under {root}, found {len(matches)}"
         )
     return matches[0]
+
+
+def count_gt1_to_gt6_subtypes_with_minimum_accessions(
+    profile_workbook: Path, minimum_accessions: int = 10
+) -> tuple[int, int]:
+    """Return qualifying and total GT1--GT6 subtype counts from the profile."""
+    workbook = load_workbook(profile_workbook, read_only=True, data_only=True)
+    worksheet = workbook["Combined_RAS_Profile"]
+    subtypes: dict[tuple[str, str], int] = {}
+    for (label, *_) in worksheet.iter_rows(min_row=2, values_only=True):
+        match = SUBTYPE_PROFILE_LABEL.match(str(label or "").strip())
+        if match:
+            key = (match["genotype"], match["subtype"].casefold())
+            subtypes[key] = int(match["accessions"])
+    workbook.close()
+    qualifying_count = sum(count >= minimum_accessions for count in subtypes.values())
+    return qualifying_count, len(subtypes)
 
 
 def write_workflow_summary(root: Path, gene: str, destination: Path) -> None:
@@ -108,6 +129,14 @@ def write_workflow_summary(root: Path, gene: str, destination: Path) -> None:
     coverage_subtype_count = coverage_workbook["Subtype_Summary"].max_row - 1
     coverage_workbook.close()
 
+    subtype_profile_path = (
+        step_directory(root, "build-subtype-ras-profile")
+        / f"{gene}_Subtype_RAS_Profiles.xlsx"
+    )
+    qualifying_subtype_count, subtype_profile_count = (
+        count_gt1_to_gt6_subtypes_with_minimum_accessions(subtype_profile_path)
+    )
+
     unassigned_path = (
         step_directory(root, "prepare-comet-assignments")
         / f"{gene}_Comet_Unassigned_Accession_Count.txt"
@@ -124,6 +153,13 @@ def write_workflow_summary(root: Path, gene: str, destination: Path) -> None:
                 "",
                 f"included_accession_count={complete_profile_total}",
                 f"Complete-profile genotype distribution: {complete_profile_distribution_text}",
+                "",
+                "## Subtype-profile representation",
+                "",
+                (
+                    "GT1-GT6 subtypes with at least 10 sequence accessions: "
+                    f"{qualifying_subtype_count} of {subtype_profile_count}"
+                ),
                 "",
                 "## Combined RAS reports",
                 "",
@@ -197,21 +233,21 @@ def main() -> None:
                 ("build-combined-ras-reports",),
                 f"{gene}_Combined_RAS_Profiles.xlsx",
             ),
-            "Table1.xlsx",
+            f"{gene}_Profile_GE10PerSubtype.xlsx",
         ),
         (
             artifact(
                 ("build-subtype-ras-profile",),
                 f"{gene}_Subtype_RAS_Profiles.xlsx",
             ),
-            "S_Table1.xlsx",
+            f"{gene}_Profile_AllSubtypes.xlsx",
         ),
         (
             artifact(
                 ("merge-subtype-complete-profiles",),
                 f"{gene}_Subtype_CompleteProfiles_Merged.xlsx",
             ),
-            "S_file1.xlsx",
+            f"{gene}_CompleteProfile.xlsx",
         ),
         (
             artifact(

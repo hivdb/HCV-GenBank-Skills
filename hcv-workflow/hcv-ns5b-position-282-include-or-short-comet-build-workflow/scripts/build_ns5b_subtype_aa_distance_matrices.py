@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--temp-dir",
-        default="outputs/comet-NS5B-position-282/temp/ns5b_subtype_aa_distance_matrices",
+        default="outputs/comet-NS5B-position-282-include-or-short/temp/ns5b_subtype_aa_distance_matrices",
     )
     parser.add_argument(
         "--start", type=int, default=150, help="1-based aligned start position"

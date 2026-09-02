@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import os
 import json
-import math
 import re
 import shutil
 from collections import defaultdict
@@ -18,10 +17,8 @@ from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from build_ns5b_combined_ras_profiles import (
-    read_profile_workbook,
-    write_combined_workbook,
-)
+# Historical PNG output kept for reference only.
+# from PIL import Image, ImageDraw, ImageFont
 
 
 DEFAULT_RESISTANCE_POSITIONS = [150, 159, 206, 282, 316, 320, 321]
@@ -34,10 +31,9 @@ type GridCell = str | int | VariantCell
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build subtype-level NS5B resistance-position AA profile summary in Excel."
+        description="Build GT-level NS5B resistance-position AA profile summary in Excel and PNG."
     )
-    parser.add_argument("--subtype-profile-workbook", required=True)
-    parser.add_argument("--gt-ras-profile-workbook", required=True)
+    parser.add_argument("--gt-profile-workbook", required=True)
     parser.add_argument("--gt-aa-json", required=True)
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument(
@@ -52,7 +48,7 @@ def script_temp_dir() -> Path:
     path = (
         Path(
             os.environ.get(
-                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282/temp"
+                "NS5B_STEP_OUTPUT_DIR", "outputs/comet-NS5B-position-282-include-or-short/temp"
             )
         )
         / Path(__file__).stem
@@ -81,7 +77,7 @@ def sanitize_label(value: str) -> str:
 
 
 def make_job_dir(base_output_dir: Path, workbook_path: Path) -> Path:
-    label = sanitize_label(f"{workbook_path.stem}_ns5b_subtype_resistance_profile")
+    label = sanitize_label(f"{workbook_path.stem}_ns5b_gt_resistance_profile")
     job_dir = base_output_dir / label
     if job_dir.exists():
         shutil.rmtree(job_dir)
@@ -126,73 +122,66 @@ def load_consensus_by_gt(json_path: Path) -> dict[str, str]:
     return consensus
 
 
-def load_subtype_profile_rows(
+def load_gt_profile_rows(
     workbook_path: Path,
     positions: list[int],
 ) -> tuple[
-    dict[str, dict[str, dict[int, list[tuple[str, float]]]]],
-    dict[str, dict[str, int]],
-    dict[str, dict[str, dict[int, int]]],
+    dict[str, dict[int, list[tuple[str, float]]]],
+    dict[str, int],
+    dict[str, dict[int, int]],
 ]:
     wb = load_workbook(workbook_path, read_only=True, data_only=True)
-    profile_rows: dict[str, dict[str, dict[int, list[tuple[str, float]]]]] = (
-        defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    )
-    subtype_counts: dict[str, dict[str, int]] = defaultdict(dict)
-    position_coverage: dict[str, dict[str, dict[int, int]]] = defaultdict(
-        lambda: defaultdict(dict)
-    )
+    result: dict[str, dict[int, list[tuple[str, float]]]] = {}
+    gt_counts: dict[str, int] = {}
+    position_coverage: dict[str, dict[int, int]] = {}
     wanted = set(positions)
     for sheet_name in wb.sheetnames:
         gt = sheet_name.replace("GT", "")
         ws = wb[sheet_name]
         next(ws.iter_rows(values_only=True))
+        by_pos: dict[int, list[tuple[str, float]]] = defaultdict(list)
+        coverage_by_pos: dict[int, int] = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
-            subtype = str(row[0])
-            pos = int(row[1])
-            denom = int(row[2])
-            aa = str(row[3])
-            pct = float(row[6])
+            pos = int(row[0])
+            denom = int(row[1])
+            aa = str(row[2])
+            pct = float(row[5])
             if pos in wanted:
-                profile_rows[gt][subtype][pos].append((aa, pct))
-                position_coverage[gt][subtype][pos] = denom
-                current = subtype_counts[gt].get(subtype, 0)
+                by_pos[pos].append((aa, pct))
+                coverage_by_pos[pos] = denom
+                current = gt_counts.get(gt, 0)
                 if denom > current:
-                    subtype_counts[gt][subtype] = denom
+                    gt_counts[gt] = denom
+        result[gt] = by_pos
+        position_coverage[gt] = coverage_by_pos
     wb.close()
-    return profile_rows, subtype_counts, position_coverage
+    return result, gt_counts, position_coverage
 
 
 def build_grid(
-    profile_rows: dict[str, dict[str, dict[int, list[tuple[str, float]]]]],
-    subtype_counts: dict[str, dict[str, int]],
-    position_coverage: dict[str, dict[str, dict[int, int]]],
+    profile_rows: dict[str, dict[int, list[tuple[str, float]]]],
+    gt_counts: dict[str, int],
+    position_coverage: dict[str, dict[int, int]],
     positions: list[int],
 ) -> list[list[GridCell]]:
     grid: list[list[GridCell]] = [[""] + [f"P{pos}" for pos in positions]]
-    ordered_subtypes: list[tuple[str, str]] = []
-    for gt in sorted(subtype_counts, key=int):
-        for subtype in sorted(subtype_counts[gt]):
-            ordered_subtypes.append((gt, subtype))
-
-    for gt, subtype in ordered_subtypes:
+    for gt in sorted(profile_rows, key=int):
         pos_variants: dict[int, VariantCell] = {}
         for pos in positions:
             variants = [
                 (aa, format_freq(pct))
                 for aa, pct in sorted(
-                    profile_rows[gt][subtype].get(pos, []),
-                    key=lambda item: (-item[1], item[0]),
+                    profile_rows[gt].get(pos, []), key=lambda item: (-item[1], item[0])
                 )
                 if aa not in EXCLUDED_AAS and pct >= FREQUENCY_THRESHOLD_PERCENT
             ]
             pos_variants[pos] = variants
 
         coverage_values = [
-            position_coverage[gt][subtype].get(pos, 0) for pos in positions
+            position_coverage.get(gt, {}).get(pos, 0) for pos in positions
         ]
         row: list[GridCell] = [
-            f"GT{gt}_{subtype} ({subtype_counts[gt][subtype]}, {format_coverage_range(coverage_values)})",
+            f"GT{gt} ({gt_counts.get(gt, 0)}, {format_coverage_range(coverage_values)})",
         ]
         for pos in positions:
             row.append(pos_variants[pos])
@@ -203,8 +192,8 @@ def build_grid(
 def write_excel(path: Path, grid: list[list[GridCell]], positions: list[int]) -> None:
     wb = Workbook()
     ws = wb.active
-    ws.title = "Subtype_Resistance_Profile"
-    block_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+    ws.title = "GT_Resistance_Profile"
+    gt_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
     bold = Font(bold=True)
 
     for row_idx, row in enumerate(grid, start=1):
@@ -216,78 +205,80 @@ def write_excel(path: Path, grid: list[list[GridCell]], positions: list[int]) ->
         first = row[0]
         if isinstance(first, str) and first.startswith("GT"):
             for cell in ws[row_idx]:
-                cell.fill = block_fill
+                cell.fill = gt_fill
                 cell.font = bold
         for cell in ws[row_idx]:
             cell.alignment = Alignment(horizontal="center")
 
     for col in range(1, len(positions) + 2):
-        ws.column_dimensions[get_column_letter(col)].width = 12 if col > 1 else 18
+        ws.column_dimensions[get_column_letter(col)].width = 12 if col > 1 else 14
     wb.save(path)
 
 
-def grid_to_profile_rows(
-    grid: list[list[GridCell]],
-) -> tuple[list[object], list[list[object]]]:
-    headers = list(grid[0])
-    headers[0] = None
-    rows = [
-        [
-            row[0],
-            *[
-                "".join(f"{aa}{pct}" for aa, pct in value)
-                if isinstance(value, list)
-                else value
-                for value in row[1:]
-            ],
-        ]
-        for row in grid[1:]
-    ]
-    return headers, rows
+# Historical PNG output kept for reference only.
+# def write_png(path: Path, grid: list[list[str]]) -> None:
+#     font = ImageFont.load_default()
+#     row_h = 24
+#     first_col_w = 110
+#     other_col_w = 78
+#     widths = [first_col_w] + [other_col_w] * (len(grid[0]) - 1)
+#     total_w = sum(widths) + 1
+#     total_h = len(grid) * row_h + 1
+#     image = Image.new("RGB", (total_w, total_h), "white")
+#     draw = ImageDraw.Draw(image)
+#
+#     y = 0
+#     for row in grid:
+#         x = 0
+#         row_type = row[0]
+#         for col_idx, text in enumerate(row):
+#             width = widths[col_idx]
+#             fill = "white"
+#             if row_type.startswith("GT"):
+#                 fill = "#D9EAF7"
+#             elif row_type == "Position":
+#                 fill = "#F2F2F2"
+#             elif row_type == "Consensus":
+#                 fill = "#E2F0D9"
+#             draw.rectangle([x, y, x + width, y + row_h], fill=fill, outline="#BFBFBF")
+#             bbox = draw.textbbox((0, 0), str(text), font=font)
+#             text_w = bbox[2] - bbox[0]
+#             text_h = bbox[3] - bbox[1]
+#             tx = x + (width - text_w) / 2
+#             ty = y + (row_h - text_h) / 2
+#             draw.text((tx, ty), str(text), fill="black", font=font)
+#             x += width
+#         y += row_h
+#     image.save(path)
 
 
 def main() -> int:
     args = parse_args()
-    subtype_profile_workbook = Path(args.subtype_profile_workbook).expanduser()
+    gt_profile_workbook = Path(args.gt_profile_workbook).expanduser()
     gt_aa_json = Path(args.gt_aa_json).expanduser()
     output_dir = Path(args.output_dir)
     positions = parse_positions(args.positions)
     script_temp_dir()
 
-    profile_rows, subtype_counts, position_coverage = load_subtype_profile_rows(
-        subtype_profile_workbook, positions
+    profile_rows, gt_counts, position_coverage = load_gt_profile_rows(
+        gt_profile_workbook, positions
     )
-    grid = build_grid(profile_rows, subtype_counts, position_coverage, positions)
-    headers, subtype_rows = grid_to_profile_rows(grid)
-    gt_headers, gt_rows = read_profile_workbook(
-        Path(args.gt_ras_profile_workbook).expanduser()
-    )
-    if headers != gt_headers:
-        raise RuntimeError(
-            "GT and subtype RAS profile workbooks have different position rows"
-        )
+    grid = build_grid(profile_rows, gt_counts, position_coverage, positions)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    excel_path = output_dir / "NS5B_Subtype_RAS_Profiles.xlsx"
-    explicit_excel_path = output_dir / "NS5B_Subtype_RAS_Profiles_Explicit_AA.xlsx"
-    write_excel(explicit_excel_path, grid, positions)
-    genotype_count, output_rows, high_mean_diff_subtypes = write_combined_workbook(
-        excel_path,
-        headers,
-        gt_rows,
-        subtype_rows,
-        FREQUENCY_THRESHOLD_PERCENT,
-        include_all_rows=True,
-    )
+    excel_path = output_dir / "NS5B_GT_RAS_Profiles.xlsx"
+    write_excel(excel_path, grid, positions)
+    # Historical PNG output kept for reference only.
+    # png_path = job_dir / "NS5B_GT_Resistance_Profile_Summary.png"
+    # write_png(png_path, grid)
 
     summary = {
         "excel": str(excel_path.resolve()),
-        "explicit_amino_acid_excel": str(explicit_excel_path.resolve()),
+        # Historical PNG output kept for reference only.
+        # "png": str(png_path.resolve()),
         "gene": TARGET_GENE,
         "positions": positions,
         "frequency_threshold_percent": FREQUENCY_THRESHOLD_PERCENT,
-        "included_subtype_count": output_rows - genotype_count,
-        "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
     }
     print(json.dumps(summary, indent=2))
     return 0

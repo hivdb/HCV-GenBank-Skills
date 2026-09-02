@@ -29,7 +29,7 @@ DEFAULT_VARIANTS = {
         "#NS5A": REPO_ROOT
         / "outputs/comet-NS5A-one-ras/23_build-subtype-ras-profile/NS5A_Subtype_RAS_Profiles.xlsx",
         "#NS5B": REPO_ROOT
-        / "outputs/comet-NS5B-position-282/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
+        / "outputs/comet-NS5B-position-282-include-or-short/23_build-subtype-ras-profile/NS5B_Subtype_RAS_Profiles.xlsx",
     },
     "position-282-four-ras": {
         "#NS3": REPO_ROOT

@@ -1156,6 +1156,8 @@ class Pipeline:
                         combined_ras,
                         "--combined-subtype-cutoff",
                         "10",
+                        "--profile-filter-reason",
+                        "No callable standard amino acid at any required NS3 RAS position",
                         "--output-xlsx",
                         self.step_dir("build-combined-ras-reports")
                         / "NS3_Workflow_Sequence_Audit.xlsx",
@@ -1296,13 +1298,7 @@ class Pipeline:
                 "publish-ictv-report",
                 "publish the NS3 ICTV comparison report",
                 lambda: self.run(
-                    str(
-                        REPO_ROOT
-                        / "hcv-workflow"
-                        / "hcv-ns5a-comet-build-workflow"
-                        / "scripts"
-                        / "add_subtype_consensus_mutation_summaries.py"
-                    ),
+                    "add_subtype_consensus_mutation_summaries.py",
                     "--gene",
                     "NS3",
                     "--comparison-workbook",

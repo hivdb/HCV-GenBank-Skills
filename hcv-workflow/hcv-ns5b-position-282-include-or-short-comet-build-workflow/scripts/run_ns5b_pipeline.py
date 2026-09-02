@@ -25,7 +25,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
-SKILL_NAME = "hcv-ns5b-position-282-comet-build-workflow"
+SKILL_NAME = "hcv-ns5b-position-282-include-or-short-comet-build-workflow"
 RAS_POSITIONS = "150,159,206,282,316,320,321"
 RANGE_POSITIONS = ",".join(str(position) for position in range(150, 322))
 STEP_NAMES = (
@@ -106,7 +106,7 @@ def load_config(config_path: Path) -> dict[str, str]:
     if config_path.is_file():
         with config_path.open("rb") as handle:
             config = tomllib.load(handle)
-        for section_name in ("common", "ns5b_comet", "ns5b_position_282"):
+        for section_name in ("common", "ns5b_comet", "ns5b_position_282_include_or_short"):
             section = config.get(section_name, {})
             if isinstance(section, dict):
                 values.update(
@@ -201,7 +201,7 @@ class Pipeline:
         self.fasta_pool = path_value(value("fasta_pool", "FASTA_POOL"))
         self.genbank_dir = path_value(value("genbank_dir", "GENBANK_DIR"))
         self.output_dir = path_value(
-            value("output_dir", "OUTPUT_DIR", "outputs/comet-NS5B-position-282")
+            value("output_dir", "OUTPUT_DIR", "outputs/comet-NS5B-position-282-include-or-short")
         )
         self.reference_fasta = path_value(
             value("reference_fasta", "REFERENCE_FASTA", "HCVData/HCV_GT_RefSeqs.fasta")

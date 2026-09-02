@@ -20,7 +20,7 @@ Running with no arguments generates these three version subfolders under `output
 | Version | NS3 workflow | NS5A workflow | NS5B workflow | Summary output subfolder |
 | --- | --- | --- | --- | --- |
 | All RAS | `hcv-ns3-all-ras-comet-build-workflow` | `hcv-ns5a-all-ras-comet-build-workflow` | `hcv-ns5b-all-ras-comet-build-workflow` | `all-ras/` |
-| One RAS | `hcv-ns3-one-ras-comet-build-workflow` | `hcv-ns5a-one-ras-comet-build-workflow` | `hcv-ns5b-position-282-comet-build-workflow` | `one-ras/` |
+| One RAS | `hcv-ns3-one-ras-comet-build-workflow` | `hcv-ns5a-one-ras-comet-build-workflow` | `hcv-ns5b-position-282-include-or-short-comet-build-workflow` | `one-ras/` |
 | Position 282 plus four RAS positions | `hcv-ns3-comet-build-workflow` | `hcv-ns5a-comet-build-workflow` | `hcv-ns5b-position-282-four-ras-comet-build-workflow` | `position-282-four-ras/` |
 
 Run it to generate all three versions:

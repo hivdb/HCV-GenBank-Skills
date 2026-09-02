@@ -230,7 +230,7 @@ def main() -> int:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("outputs/comet-NS5B-position-282"),
+        default=Path("outputs/comet-NS5B-position-282-include-or-short"),
         help="Directory for generated comparison workbooks (default: outputs/comet-NS5B-position-282).",
     )
     parser.add_argument(
