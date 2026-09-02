@@ -147,7 +147,7 @@ def build_summary(
         (3, 4, 5),
         suppress_repeated_first_column=True,
     )
-    if condition == "one-ras" and not include_all_subtypes:
+    if condition == "one-ras":
         shutil.copy2(xlsx_path, output_dir / "Table1_Gene_Subtype_Counts.xlsx")
 
     gene_list_headers = [
@@ -254,13 +254,6 @@ def main() -> int:
                 profiles["#NS5A"],
                 profiles["#NS5B"],
                 args.output_dir / variant,
-                variant,
-            )
-            summaries[f"{variant}/all-subtypes"] = build_summary(
-                profiles["#NS3"],
-                profiles["#NS5A"],
-                profiles["#NS5B"],
-                args.output_dir / variant / "all-subtypes",
                 variant,
                 include_all_subtypes=True,
             )

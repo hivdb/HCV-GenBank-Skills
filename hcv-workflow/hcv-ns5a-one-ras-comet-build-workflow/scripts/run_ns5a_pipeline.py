@@ -726,7 +726,7 @@ class Pipeline:
                         "--subtype-output-xlsx",
                         step_dir / f"NS5A_Subtype_{upper}_Distance_{suffix}.xlsx",
                         "--min-subtype-sequences",
-                        "1",
+                        "10" if sequence_type == "na" else "1",
                     )
 
         return [

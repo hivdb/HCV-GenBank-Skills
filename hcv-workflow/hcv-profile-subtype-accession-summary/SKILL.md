@@ -11,11 +11,11 @@ Run the summary script from the repository root after the gene profile workflows
 .venv/bin/python hcv-workflow/hcv-profile-subtype-accession-summary/scripts/build_profile_subtype_accession_summary.py
 ```
 
-The script reads the NS3, NS5A, and NS5B `*_Subtype_RAS_Profiles.xlsx` files. It uses the per-subtype RAS-coverage count shown in each profile label, matching the combined profile count. It writes both a cross-gene genotype/subtype comparison and a gene-by-gene subtype list as CSV and Excel files. Counts below 10 are omitted except that every genotype 7 and genotype 8 subtype present in an input profile is retained. The workbooks color counts of 10 or more blue; CSV does not support formatting.
+The script reads the NS3, NS5A, and NS5B `*_Subtype_RAS_Profiles.xlsx` files. It uses the per-subtype RAS-coverage count shown in each profile label, matching the combined profile count. It writes both a cross-gene genotype/subtype comparison and a gene-by-gene subtype list as CSV and Excel files. Every subtype in an input profile is retained. The workbooks color counts of 10 or more blue; CSV does not support formatting.
 
 ## Default summary
 
-Running with no arguments generates the active One RAS summary under `outputs/hcv-profile-subtype-accession-summary/one-ras/`. Its `all-subtypes/` subfolder retains every subtype, including counts below 10. It uses the stage-23 `*_Subtype_RAS_Profiles.xlsx` workbooks from these active workflows.
+Running with no arguments generates the active One RAS summary under `outputs/hcv-profile-subtype-accession-summary/one-ras/`. It retains every subtype, including those with fewer than 10 accessions. It uses the stage-23 `*_Subtype_RAS_Profiles.xlsx` workbooks from these active workflows.
 
 The default summary also copies `HCV_Profile_Subtype_Accession_Counts_one-ras.xlsx` as `Table1_Gene_Subtype_Counts.xlsx` in the `one-ras/` folder.
 
