@@ -239,7 +239,7 @@ def write_combined_workbook(
             worksheet.write_number(
                 worksheet_row, len(headers) - 1, subtype_mean_diff, mean_diff_format
             )
-            if subtype_mean_diff >= 2.5:
+            if subtype_mean_diff >= 0.8:
                 high_mean_diff_subtypes.append(
                     {"subtype": str(subtype_row[0]), "mean_diff": subtype_mean_diff}
                 )
@@ -294,7 +294,7 @@ def main() -> int:
         )
         or "none"
     )
-    print(f"Subtypes with MeanDiff >= 2.5: {high_mean_diff_text}", file=sys.stderr)
+    print(f"Subtypes with MeanDiff >= 0.8: {high_mean_diff_text}", file=sys.stderr)
     print(
         f"Mean MeanDiff across subtypes: {mean_subtype_mean_diff:.1f}", file=sys.stderr
     )
@@ -305,7 +305,7 @@ def main() -> int:
                 "genotype_count": genotype_count,
                 "profile_row_count": output_rows,
                 "included_subtype_count": output_rows - genotype_count,
-                "mean_diff_at_least_2_5_subtypes": high_mean_diff_subtypes,
+                "mean_diff_at_least_0_8_subtypes": high_mean_diff_subtypes,
                 "mean_subtype_mean_diff": mean_subtype_mean_diff,
                 "full_profile_subtype_count": full_profile_subtype_count,
                 "full_profile_subtype_at_least_10_sequence_count": full_profile_subtype_at_least_10_count,

@@ -119,7 +119,7 @@ def write_workflow_summary(root: Path, gene: str, destination: Path) -> None:
     combined_dir = step_directory(root, "build-combined-ras-reports")
     with (combined_dir / "last_run_summary.json").open(encoding="utf-8") as handle:
         combined_summary = json.load(handle)
-    high_mean_diff = combined_summary.get("mean_diff_at_least_2_5_subtypes", [])
+    high_mean_diff = combined_summary.get("mean_diff_at_least_0_8_subtypes", [])
     mean_diff_text = ", ".join(
         f"{str(item['subtype']).split('_', 1)[-1].split(maxsplit=1)[0]} ({item['mean_diff']:.1f})"
         for item in high_mean_diff
@@ -163,7 +163,7 @@ def write_workflow_summary(root: Path, gene: str, destination: Path) -> None:
                 "",
                 "## Combined RAS reports",
                 "",
-                f"Subtypes with MeanDiff >= 2.5: {mean_diff_text}",
+                f"Subtypes with MeanDiff >= 0.8: {mean_diff_text}",
                 f"Mean MeanDiff across subtypes: {combined_summary.get('mean_subtype_mean_diff', 0):.1f}",
                 (
                     "Wrote "
