@@ -74,6 +74,29 @@ Complete-profile construction additionally requires a callable standard amino ac
 
 ## Outputs
 
+Stage 24, `export-subtype-low-frequency-accessions`, follows `build-subtype-ras-profile`.
+It writes `24_export-subtype-low-frequency-accessions/NS3_Subtype_RAS_Below5Pct_Accessions_Refs.csv`.
+Each row links an observed subtype RAS amino-acid call with exact frequency below 5%
+to an eligible accession and its original source-workbook RefID (one row per link).
+The CSV includes genotype, subtype, position, amino acid, count, position coverage,
+percentage, accession, RefID, RefName, RefYear (from Year), PMID, Title, Author,
+and Journal. Reference metadata is joined by RefID from `Original_NS3` in
+`HCVData/HCV_BlastHists_202604_data.xlsx`; missing RefIDs fail the export,
+and empty source fields stay blank. The standalone exporter accepts
+`--reference-workbook` and `--reference-sheet` to select another reference source.
+Calls below the report's 1% display cutoff are
+included; X and stop calls are excluded. Frequencies use the complete subtype
+profile counts, and accession matching reuses profile eligibility/QC filters.
+Subsequent stage directory numbers shift by one.
+The same stage also writes three separate Excel files in that directory:
+`NS3_Subtype_RAS_Below5Pct_1a_155K_Accessions_Refs.xlsx`,
+`NS3_Subtype_RAS_Below5Pct_3b_155M_or_I_Accessions_Refs.xlsx`, and
+`NS3_Subtype_RAS_Below5Pct_6l_156V_Accessions_Refs.xlsx`.
+Each retains the below-5% filter and selects only its named subtype, position,
+and amino acid(s). Sheet `Accessions` contains the calls and accession/RefID links.
+Sheet `References` contains one row per RefID with citation metadata and
+`AccessionCount`, the number of unique accessions linked to that RefID on the first sheet.
+
 The final GT7/GT8 comparison step reads `HCVData/nonComet-Full-genome/NS3_AllSeq_NonComet_Coverage.csv` and writes the workflow/non-COMET-coverage subtype comparison workbook and CSV in its own numbered output directory.
 
 The workflow writes NS3 outputs under `outputs/comet-NS3-one-ras/`, including:

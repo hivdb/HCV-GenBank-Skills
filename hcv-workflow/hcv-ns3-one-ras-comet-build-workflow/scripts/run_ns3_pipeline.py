@@ -51,6 +51,7 @@ STEP_NAMES = (
     "compare-reference-consensus",
     "build-genotype-ras-profile",
     "build-subtype-ras-profile",
+    "export-subtype-low-frequency-accessions",
     "build-combined-ras-reports",
     "add-nonconsensus-row",
     "summarize-subtype-ras-differences",
@@ -1095,6 +1096,25 @@ class Pipeline:
                             "build-subtype-ras-profile", "ambiguity_calls_summary.json"
                         ),
                     ),
+                ),
+            ),
+            Step(
+                "export-subtype-low-frequency-accessions",
+                "export subtype RAS calls below 5% with source accessions and RefIDs",
+                lambda: self.run(
+                    "export_ns3_subtype_low_frequency_accessions.py",
+                    "--reference-workbook",
+                    REPO_ROOT / "HCVData/HCV_BlastHists_202604_data.xlsx",
+                    "--reference-sheet",
+                    "Original_NS3",
+                    "--subtype-profile-workbook",
+                    subtype_profile,
+                    "--profile-input-workbook",
+                    self.aa_workbook,
+                    "--output-csv",
+                    self.step_dir("export-subtype-low-frequency-accessions")
+                    / "NS3_Subtype_RAS_Below5Pct_Accessions_Refs.csv",
+                    stdout_path=summary("export-subtype-low-frequency-accessions"),
                 ),
             ),
             Step(
