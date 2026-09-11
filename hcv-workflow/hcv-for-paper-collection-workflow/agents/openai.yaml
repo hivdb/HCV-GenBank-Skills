@@ -1,0 +1,3 @@
+interface:
+  display_name: "HCV For-Paper Collection Workflow"
+  short_description: "Collect HCV Comet publication tables and figures"
