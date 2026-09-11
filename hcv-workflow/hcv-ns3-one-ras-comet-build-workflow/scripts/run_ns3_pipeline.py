@@ -921,6 +921,9 @@ class Pipeline:
                         "--output-workbook",
                         self.step_dir("merge-subtype-complete-profiles")
                         / "NS3_Subtype_CompleteProfiles_Merged.xlsx",
+                        "--range-output-workbook",
+                        self.step_dir("merge-subtype-complete-profiles") / "NS3_Subtype_CompleteProfiles_Pos36_175.xlsx",
+                        "--range-start", "36", "--range-end", "175",
                         stdout_path=summary("merge-subtype-complete-profiles"),
                     ),
                     self.run(
