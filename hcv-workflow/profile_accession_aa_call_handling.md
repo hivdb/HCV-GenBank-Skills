@@ -21,6 +21,14 @@ does not encode amino-acid mixtures.  Consequently, symbols such as `B`,
 they are treated as non-standard calls and omitted rather than being split or
 silently assigned to a standard amino acid.
 
+## Accession totals
+
+Each accession-call export is accompanied by
+`*_Profile_Accession_AA_Calls_Accession_Totals.csv`. It contains one
+`TotalAccessions` value: the overall number of unique accessions. Counts are
+based on distinct accessions, not amino-acid calls, so an accession
+represented at multiple RAS positions is counted once.
+
 ## Ambiguous DNA codons and amino-acid mixtures
 
 An ambiguous nucleotide codon can encode several amino acids.  For example,

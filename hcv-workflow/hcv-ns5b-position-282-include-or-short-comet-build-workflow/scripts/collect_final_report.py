@@ -258,6 +258,13 @@ def main() -> None:
         ),
         (
             artifact(
+                ("merge-subtype-complete-profiles",),
+                f"{gene}_Profile_Accession_AA_Calls_Accession_Totals.csv",
+            ),
+            f"{gene}_Profile_Accession_AA_Calls_Accession_Totals.csv",
+        ),
+        (
+            artifact(
                 ("analyze-genotype-subtype-aa-predictability",),
                 f"{gene}_Genotype_Subtype_AA_Predictability.xlsx",
             ),

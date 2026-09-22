@@ -12,6 +12,7 @@ from openpyxl import load_workbook
 
 CANONICAL_AAS = frozenset("ACDEFGHIKLMNPQRSTVWY")
 EXPORT_COLUMNS = ["Accession", "Position", "Genotype", "Subtype", "GT_Consensus", "AA"]
+ACCESSION_TOTAL_COLUMNS = ["TotalAccessions"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -90,6 +91,20 @@ def load_gt_consensus(path: Path) -> dict[tuple[str, int], str]:
     return {key: value[1] for key, value in calls.items()}
 
 
+def write_accession_totals(
+    output_path: Path, accession_groups: dict[str, tuple[str, str]]
+) -> Path:
+    """Write the overall unique-accession count without subgroup rows."""
+    summary_path = output_path.with_name(
+        f"{output_path.stem}_Accession_Totals.csv"
+    )
+    with summary_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=ACCESSION_TOTAL_COLUMNS)
+        writer.writeheader()
+        writer.writerow({"TotalAccessions": len(accession_groups)})
+    return summary_path
+
+
 def export_calls(args: argparse.Namespace) -> dict[str, object]:
     allowed_accessions = load_profile_accessions(Path(args.profile_accessions_csv))
     ras_positions = parse_positions(args.ras_positions)
@@ -116,6 +131,7 @@ def export_calls(args: argparse.Namespace) -> dict[str, object]:
     rows_written = 0
     skipped_calls: Counter[str] = Counter()
     included_accessions: set[str] = set()
+    accession_groups: dict[str, tuple[str, str]] = {}
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=EXPORT_COLUMNS)
         writer.writeheader()
@@ -135,6 +151,7 @@ def export_calls(args: argparse.Namespace) -> dict[str, object]:
             genotype = normalize_gt(row[index["ClosestGT"]])
             subtype = str(row[index["ClosestSubtype"]] or "").strip()
             included_accessions.add(accession)
+            accession_groups[accession] = (genotype, subtype)
             for offset, amino_acid in enumerate(sequence):
                 if amino_acid not in CANONICAL_AAS and amino_acid != "*":
                     skipped_calls[amino_acid or "EMPTY"] += 1
@@ -154,8 +171,10 @@ def export_calls(args: argparse.Namespace) -> dict[str, object]:
                 )
                 rows_written += 1
     workbook.close()
+    accession_totals_path = write_accession_totals(output_path, accession_groups)
     return {
         "output_csv": str(output_path.resolve()),
+        "accession_totals_csv": str(accession_totals_path.resolve()),
         "rows_written": rows_written,
         "included_accession_count": len(included_accessions),
         "ras_positions": sorted(ras_positions),
