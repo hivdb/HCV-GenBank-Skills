@@ -49,6 +49,16 @@ Direct script execution is also supported. Use `uv run python ...` for Python en
 
 Skill-specific scripts live inside each skill's `scripts/` directory.
 
+## Publication-table provenance
+
+The `for_paper/` workbooks are copies of workflow outputs collected by
+`hcv-workflow/hcv-for-paper-collection-workflow/scripts/collect_for_paper.py`.
+The source workbooks for the subtype complete-profile tables are:
+
+- `Table S2 - NS3.xlsx`: `outputs/comet-NS3-one-ras/17_merge-subtype-complete-profiles/NS3_Subtype_CompleteProfiles_Pos36_175.xlsx`
+- `Table S3 - NS5A.xlsx`: `outputs/comet-NS5A-one-ras/17_merge-subtype-complete-profiles/NS5A_Subtype_CompleteProfiles_Pos24_93.xlsx`
+- `Table S4 - NS5B.xlsx`: `outputs/comet-NS5B-position-282-four-ras/17_merge-subtype-complete-profiles/NS5B_Subtype_CompleteProfiles_Pos150_321.xlsx`
+
 ## Repository Layout
 
 ```text
