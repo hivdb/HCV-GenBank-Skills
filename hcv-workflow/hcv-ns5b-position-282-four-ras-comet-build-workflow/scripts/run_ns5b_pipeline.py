@@ -46,6 +46,7 @@ STEP_NAMES = (
     "report-profile-input-counts",
     "build-complete-profiles",
     "merge-subtype-complete-profiles",
+    "export-accession-aa-wide-table",
     "export-noncomet-priority-accessions",
     "export-consensus-fastas",
     "align-subtype-consensus-to-gt1a",
@@ -65,7 +66,13 @@ STEP_NAMES = (
     "compare-gt7-gt8-local-assignments",
     "collect-report",
 )
-STEP_ORDER = {name: number for number, name in enumerate(STEP_NAMES, start=1)}
+STEP_ORDER = {
+    name: (number if number <= 17 else number - 1)
+    for number, name in enumerate(STEP_NAMES, start=1)
+}
+STEP_ORDER["export-accession-aa-wide-table"] = 17.5
+STEP_LABEL = {name: f"{int(order):02d}" for name, order in STEP_ORDER.items()}
+STEP_LABEL["export-accession-aa-wide-table"] = "17a"
 
 
 @dataclass(frozen=True)
@@ -75,8 +82,12 @@ class Step:
     action: Callable[[], None]
 
     @property
-    def order(self) -> int:
+    def order(self) -> float:
         return STEP_ORDER[self.name]
+
+    @property
+    def label(self) -> str:
+        return STEP_LABEL[self.name]
 
 
 def parse_dotenv(path: Path) -> dict[str, str]:
@@ -289,7 +300,7 @@ class Pipeline:
         )
 
     def step_dir(self, name: str) -> Path:
-        return self.output_dir / f"{STEP_ORDER[name]:02d}_{name}"
+        return self.output_dir / f"{STEP_LABEL[name]}_{name}"
 
     def profile_accessions_for_current_step(self) -> Path:
         return self.profile_accessions_csv
@@ -354,8 +365,8 @@ class Pipeline:
             print(result.stderr, end="", file=sys.stderr)
         return result.stdout
 
-    def announce(self, order: int, name: str, description: str) -> None:
-        print(f"\n## Step {order}: {name}\n{description}")
+    def announce(self, label: str, name: str, description: str) -> None:
+        print(f"\n## Step {label}: {name}\n{description}")
 
     @staticmethod
     def fasta_accessions(directory: Path) -> set[str]:
@@ -1052,6 +1063,28 @@ class Pipeline:
                     ),
                 ),
                 Step(
+                    "export-accession-aa-wide-table",
+                    "export accession amino-acid calls at positions 150 through 321",
+                    lambda: self.run(
+                        "../../export_profile_accession_aa_wide.py",
+                        "--input-workbook",
+                        self.aa_workbook,
+                        "--profile-accessions-csv",
+                        self.profile_accessions_csv,
+                        "--start-position",
+                        "150",
+                        "--end-position",
+                        "321",
+                        "--output-csv",
+                        self.step_dir("export-accession-aa-wide-table")
+                        / "NS5B_Profile_Accession_AA_Calls_Wide_Pos150_321.csv",
+                        "--copy-output-csv",
+                        REPO_ROOT
+                        / "covariant_analysis/NS5B_Profile_Accession_AA_Calls_Wide_Pos150_321.csv",
+                        stdout_path=summary("export-accession-aa-wide-table"),
+                    ),
+                ),
+                Step(
                     "export-noncomet-priority-accessions",
                     "export non-COMET priority profile accessions",
                     lambda: self.run(
@@ -1497,7 +1530,7 @@ def main() -> int:
     step_by_name = {step.name: step for step in steps}
     if args.list_steps:
         for step in steps:
-            pipeline.announce(step.order, step.name, step.description)
+            pipeline.announce(step.label, step.name, step.description)
         return 0
 
     requested = args.step or [step.name for step in steps]
@@ -1522,7 +1555,7 @@ def main() -> int:
         pipeline.current_step_dir = pipeline.step_dir(step.name)
         pipeline.current_step_order = step.order
         pipeline.current_step_dir.mkdir(parents=True, exist_ok=True)
-        pipeline.announce(step.order, step.name, step.description)
+        pipeline.announce(step.label, step.name, step.description)
         input_fasta_dir = (
             pipeline.staged_fasta_dir
             if step.order <= STEP_ORDER["stage-refid-fastas"]

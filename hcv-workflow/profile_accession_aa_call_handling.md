@@ -8,6 +8,13 @@ accession's genotype profile: highest `PctWithAA` wins, and exact ties are
 resolved by lexical one-letter amino-acid order.  A position without a
 genotype-profile call is reported as `X` for `GT_Consensus`.
 
+Each one-RAS workflow has auxiliary step 17a
+(`export-accession-aa-wide-table`), which writes one row per QC-passed profile
+accession with `Accession`, `Genotype`, `Subtype`, and one amino-acid column
+per position in the gene-specific analysis range: NS3 positions 36--175, NS5A
+positions 24--93, and NS5B positions 150--321. Empty cells denote a missing or
+non-standard amino-acid call at that position.
+
 Only the 20 standard one-letter amino acids and `*` are emitted in `AA`.
 `*` is retained as an observed stop codon; it is not treated as a mixture.
 `X` (unknown translation) and any other non-standard symbol are omitted from
