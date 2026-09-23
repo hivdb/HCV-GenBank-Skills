@@ -1,0 +1,358 @@
+---
+title: "HCV amino-acid covariation analysis"
+output: html_document
+params:
+  input_dir: "."
+  output_dir: "."
+  permutations: 999
+  seed: 20260923
+  min_n: 20
+  min_minor: 3
+  alpha: 0.05
+  min_combination_count: 3
+  include_all_position_scan: false
+  near_duplicate_differences: null
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+options(stringsAsFactors = FALSE)
+
+ras_positions <- list(
+  NS3 = c(36, 41, 43, 54, 55, 56, 80, 122, 155, 156, 158, 166, 168, 170, 175),
+  NS5A = c(24, 26, 28, 29, 30, 31, 32, 38, 58, 62, 92, 93),
+  NS5B = c(150, 159, 206, 282, 316, 320, 321)
+)
+
+if (!dir.exists(params$output_dir)) dir.create(params$output_dir, recursive = TRUE)
+```
+
+# Purpose
+
+For each position pair, this report measures amino-acid association **within
+subtype**, combines the subtype-specific mutual information (MI) values, and
+uses within-subtype permutations to obtain P values. It writes CSV result
+tables next to the input files (or to `params$output_dir`).
+
+The report produces two overall summaries for every pair:
+
+- **Sequence-weighted:** subtypes contribute in proportion to their usable
+  sequence count.
+- **Subtype-balanced:** each eligible subtype contributes equally.
+
+It runs both the complete data and an exact-deduplication sensitivity analysis.
+Exact deduplication uses all numeric columns in the input range within subtype
+and retains incomplete profiles without deduplicating them.
+
+# Functions
+
+```{r functions}
+gene_for <- function(path) {
+  matches <- names(ras_positions)[vapply(names(ras_positions), function(gene) {
+    grepl(gene, basename(path), fixed = TRUE)
+  }, logical(1))]
+  if (length(matches) != 1L) stop("Cannot identify NS3, NS5A, or NS5B from: ", path)
+  matches
+}
+
+read_profile <- function(path) {
+  dat <- read.csv(path, check.names = FALSE, stringsAsFactors = FALSE,
+                  na.strings = character())
+  positions <- names(dat)[grepl("^[0-9]+$", names(dat))]
+  required <- c("Genotype", "Subtype")
+  if (!all(required %in% names(dat))) {
+    stop(basename(path), " is missing: ", paste(setdiff(required, names(dat)), collapse = ", "))
+  }
+  if (!length(positions)) stop(basename(path), " has no numeric position columns")
+
+  dat[positions] <- lapply(dat[positions], function(x) {
+    x <- trimws(as.character(x))
+    x[x == ""] <- NA_character_
+    x
+  })
+  dat$Subtype <- trimws(as.character(dat$Subtype))
+  if (anyNA(dat$Subtype) || any(dat$Subtype == "")) stop(basename(path), " has an empty Subtype")
+  list(dat = dat, positions = positions[order(as.integer(positions))])
+}
+
+exact_deduplicate <- function(dat, positions) {
+  complete_profile <- complete.cases(dat[, positions, drop = FALSE])
+  complete_dat <- dat[complete_profile, , drop = FALSE]
+  incomplete_dat <- dat[!complete_profile, , drop = FALSE]
+  profile_key <- do.call(paste, c(complete_dat[, positions, drop = FALSE], sep = "\r"))
+  key <- paste(complete_dat$Subtype, profile_key, sep = "|")
+  rbind(complete_dat[!duplicated(key), , drop = FALSE], incomplete_dat)
+}
+
+profile_distance <- function(left, right, maximum) {
+  differences <- 0L
+  for (i in seq_along(left)) {
+    if (left[i] != right[i]) {
+      differences <- differences + 1L
+      if (differences > maximum) return(differences)
+    }
+  }
+  differences
+}
+
+complete_linkage_deduplicate <- function(dat, positions, maximum_differences) {
+  if (maximum_differences < 0) stop("near_duplicate_differences must be non-negative")
+  complete <- complete.cases(dat[, positions, drop = FALSE])
+  incomplete_dat <- dat[!complete, , drop = FALSE]
+  complete_dat <- dat[complete, , drop = FALSE]
+  retained <- list(incomplete_dat)
+
+  for (subtype in sort(unique(complete_dat$Subtype))) {
+    candidates <- complete_dat[complete_dat$Subtype == subtype, , drop = FALSE]
+    profiles <- lapply(seq_len(nrow(candidates)), function(i) as.character(candidates[i, positions]))
+    clusters <- lapply(seq_len(nrow(candidates)), function(i) i)
+    repeat {
+      merge <- NULL
+      for (left in seq_len(length(clusters) - 1L)) {
+        for (right in seq.int(left + 1L, length(clusters))) {
+          all_close <- all(vapply(clusters[[left]], function(i) {
+            all(vapply(clusters[[right]], function(j) {
+              profile_distance(profiles[[i]], profiles[[j]], maximum_differences) <= maximum_differences
+            }, logical(1)))
+          }, logical(1)))
+          if (all_close) {
+            merge <- c(left, right)
+            break
+          }
+        }
+        if (!is.null(merge)) break
+      }
+      if (is.null(merge)) break
+      clusters[[merge[1]]] <- c(clusters[[merge[1]]], clusters[[merge[2]]])
+      clusters[[merge[2]]] <- NULL
+    }
+    retained[[length(retained) + 1L]] <- candidates[vapply(clusters, `[`, integer(1), 1L), , drop = FALSE]
+  }
+  do.call(rbind, retained)
+}
+
+mutual_information <- function(x, y) {
+  tab <- table(x, y)
+  if (nrow(tab) < 2L || ncol(tab) < 2L) return(0)
+  p <- tab / sum(tab)
+  px <- rowSums(p)
+  py <- colSums(p)
+  expected <- outer(px, py)
+  present <- p > 0
+  sum(p[present] * log2(p[present] / expected[present]))
+}
+
+eligible_subtypes <- function(dat, pos1, pos2, min_n, min_minor) {
+  output <- list()
+  for (subtype in sort(unique(dat$Subtype))) {
+    d <- dat[dat$Subtype == subtype, c(pos1, pos2), drop = FALSE]
+    d <- d[complete.cases(d), , drop = FALSE]
+    if (nrow(d) < min_n) next
+    if (nrow(d) - max(table(d[[pos1]])) < min_minor) next
+    if (nrow(d) - max(table(d[[pos2]])) < min_minor) next
+    output[[subtype]] <- list(x = d[[pos1]], y = d[[pos2]], n = nrow(d))
+  }
+  output
+}
+
+weighted_mi <- function(mi, sizes, weighting) {
+  if (weighting == "sequence_weighted") return(sum(mi * sizes) / sum(sizes))
+  if (weighting == "subtype_balanced") return(mean(mi))
+  stop("Unknown weighting: ", weighting)
+}
+
+analyze_pair <- function(dat, pos1, pos2, permutations, min_n, min_minor) {
+  by_subtype <- eligible_subtypes(dat, pos1, pos2, min_n, min_minor)
+  sizes <- vapply(by_subtype, function(z) z$n, numeric(1))
+  base <- data.frame(
+    pos1 = as.integer(pos1), pos2 = as.integer(pos2),
+    n_subtypes = length(sizes), n_sequences = sum(sizes)
+  )
+  weighting <- c("sequence_weighted", "subtype_balanced")
+  if (!length(by_subtype)) {
+    return(cbind(base[rep(1, 2), ], weighting = weighting,
+                 observed_mi_bits = NA_real_, mean_permuted_mi_bits = NA_real_,
+                 adjusted_mi_bits = NA_real_, p_value = NA_real_))
+  }
+
+  observed_by_subtype <- vapply(by_subtype, function(z) mutual_information(z$x, z$y), numeric(1))
+  observed <- vapply(weighting, function(w) weighted_mi(observed_by_subtype, sizes, w), numeric(1))
+  permuted <- matrix(NA_real_, nrow = permutations, ncol = length(weighting),
+                     dimnames = list(NULL, weighting))
+  for (b in seq_len(permutations)) {
+    permuted_by_subtype <- vapply(by_subtype, function(z) {
+      mutual_information(z$x, sample(z$y, length(z$y), replace = FALSE))
+    }, numeric(1))
+    permuted[b, ] <- vapply(weighting, function(w) {
+      weighted_mi(permuted_by_subtype, sizes, w)
+    }, numeric(1))
+  }
+  data.frame(
+    base[rep(1, 2), ], weighting = weighting,
+    observed_mi_bits = observed,
+    mean_permuted_mi_bits = colMeans(permuted),
+    adjusted_mi_bits = observed - colMeans(permuted),
+    p_value = vapply(seq_along(weighting), function(i) {
+      (1 + sum(permuted[, i] >= observed[i])) / (permutations + 1)
+    }, numeric(1))
+  )
+}
+
+analyze_pairs <- function(dat, pairs, permutations, min_n, min_minor, label) {
+  started <- Sys.time()
+  results <- vector("list", nrow(pairs))
+  for (i in seq_len(nrow(pairs))) {
+    results[[i]] <- analyze_pair(dat, pairs[i, 1], pairs[i, 2], permutations, min_n, min_minor)
+    if (i %% 100L == 0L || i == nrow(pairs)) {
+      elapsed <- as.numeric(difftime(Sys.time(), started, units = "mins"))
+      cat(sprintf("    %s: %d/%d pairs (%.1f%%), elapsed %.1f min\n",
+                  label, i, nrow(pairs), 100 * i / nrow(pairs), elapsed))
+    }
+  }
+  results <- do.call(rbind, results)
+  results$q_value <- NA_real_
+  for (weight in unique(results$weighting)) {
+    selected <- results$weighting == weight & !is.na(results$p_value)
+    results$q_value[selected] <- p.adjust(results$p_value[selected], method = "BH")
+  }
+  results[order(results$weighting, results$q_value, -results$adjusted_mi_bits, na.last = TRUE), ]
+}
+
+subtype_mi_rows <- function(dat, selected_pairs, min_n, min_minor) {
+  output <- list()
+  index <- 0L
+  for (i in seq_len(nrow(selected_pairs))) {
+    pos1 <- as.character(selected_pairs[i, 1])
+    pos2 <- as.character(selected_pairs[i, 2])
+    by_subtype <- eligible_subtypes(dat, pos1, pos2, min_n, min_minor)
+    for (subtype in names(by_subtype)) {
+      z <- by_subtype[[subtype]]
+      index <- index + 1L
+      output[[index]] <- data.frame(pos1 = as.integer(pos1), pos2 = as.integer(pos2),
+                                    subtype = subtype, n_sequences = z$n,
+                                    mi_bits = mutual_information(z$x, z$y))
+    }
+  }
+  if (!length(output)) return(data.frame(pos1 = integer(), pos2 = integer(), subtype = character(),
+                                         n_sequences = integer(), mi_bits = numeric()))
+  do.call(rbind, output)
+}
+
+combination_rows <- function(dat, selected_pairs, min_n, min_minor, minimum_count) {
+  output <- list()
+  index <- 0L
+  for (i in seq_len(nrow(selected_pairs))) {
+    pos1 <- as.character(selected_pairs[i, 1])
+    pos2 <- as.character(selected_pairs[i, 2])
+    by_subtype <- eligible_subtypes(dat, pos1, pos2, min_n, min_minor)
+    for (subtype in names(by_subtype)) {
+      z <- by_subtype[[subtype]]
+      tab <- table(z$x, z$y)
+      for (row in seq_len(nrow(tab))) for (column in seq_len(ncol(tab))) {
+        observed <- tab[row, column]
+        if (observed < minimum_count) next
+        expected <- sum(tab[row, ]) * sum(tab[, column]) / z$n
+        index <- index + 1L
+        output[[index]] <- data.frame(
+          pos1 = as.integer(pos1), aa1 = rownames(tab)[row],
+          pos2 = as.integer(pos2), aa2 = colnames(tab)[column], subtype = subtype,
+          n_sequences = z$n, observed_count = observed,
+          expected_count_independent = expected,
+          lift_observed_over_expected = observed / expected,
+          log2_lift = log2(observed / expected)
+        )
+      }
+    }
+  }
+  if (!length(output)) return(data.frame(
+    pos1 = integer(), aa1 = character(), pos2 = integer(), aa2 = character(),
+    subtype = character(), n_sequences = integer(), observed_count = integer(),
+    expected_count_independent = numeric(), lift_observed_over_expected = numeric(), log2_lift = numeric()
+  ))
+  do.call(rbind, output)
+}
+
+write_scan_outputs <- function(prefix, family, results, dat) {
+  result_path <- file.path(params$output_dir, paste0(prefix, "_", family, ".csv"))
+  write.csv(results, result_path, row.names = FALSE)
+  selected <- unique(results[!is.na(results$q_value) & results$q_value <= params$alpha, c("pos1", "pos2")])
+  detail_prefix <- file.path(params$output_dir, paste0(prefix, "_", family, "_significant"))
+  write.csv(subtype_mi_rows(dat, selected, params$min_n, params$min_minor),
+            paste0(detail_prefix, "_subtype_mi.csv"), row.names = FALSE)
+  write.csv(combination_rows(dat, selected, params$min_n, params$min_minor,
+                             params$min_combination_count),
+            paste0(detail_prefix, "_aa_combinations.csv"), row.names = FALSE)
+  eligible <- length(unique(results[!is.na(results$p_value), c("pos1", "pos2")]))
+  cat(sprintf("    complete: %d eligible pairs; %d pairs with q <= %g; wrote %s\n",
+              eligible, nrow(selected), params$alpha, basename(result_path)))
+}
+```
+
+# Run the analyses
+
+```{r analyze}
+input_paths <- list.files(params$input_dir, pattern = "_Wide_.*\\.csv$", full.names = TRUE)
+input_paths <- input_paths[!grepl("_covariation_", basename(input_paths), fixed = TRUE)]
+if (!length(input_paths)) stop("No original *_Wide_*.csv input files found in: ", params$input_dir)
+
+cat(sprintf("Covariation analysis: %d input file(s); %d permutations; min_n=%d; min_minor=%d; seed=%d\n",
+            length(input_paths), params$permutations, params$min_n, params$min_minor, params$seed))
+set.seed(params$seed)
+
+for (path in input_paths) {
+  profile <- read_profile(path)
+  dat <- profile$dat
+  positions <- profile$positions
+  gene <- gene_for(path)
+  ras <- ras_positions[[gene]]
+  if (!all(as.character(ras) %in% positions)) {
+    stop(basename(path), " is missing RAS positions: ",
+         paste(setdiff(ras, as.integer(positions)), collapse = ", "))
+  }
+  non_ras <- setdiff(as.integer(positions), ras)
+  families <- list(
+    ras_ras = t(combn(ras, 2)),
+    ras_nonras = as.matrix(expand.grid(ras, non_ras, stringsAsFactors = FALSE))
+  )
+  if (isTRUE(params$include_all_position_scan)) {
+    families$all_positions <- t(combn(as.integer(positions), 2))
+  }
+
+  complete_profiles <- sum(complete.cases(dat[, positions, drop = FALSE]))
+  cat(sprintf("\nStarting %s\n  gene: %s; rows: %d; subtypes: %d; complete profiles: %d\n",
+              basename(path), gene, nrow(dat), length(unique(dat$Subtype)), complete_profiles))
+  cat(sprintf("  RAS positions: %s\n", paste(ras, collapse = ",")))
+
+  data_sets <- list(all_sequences = dat, exact_deduplicated = exact_deduplicate(dat, positions))
+  if (!is.null(params$near_duplicate_differences)) {
+    label <- paste0("complete_linkage_", params$near_duplicate_differences, "diff")
+    data_sets[[label]] <- complete_linkage_deduplicate(
+      dat, positions, params$near_duplicate_differences
+    )
+  }
+  summary <- data.frame(dataset = names(data_sets), n_rows = vapply(data_sets, nrow, integer(1)),
+                        n_subtypes = vapply(data_sets, function(x) length(unique(x$Subtype)), integer(1)))
+  prefix_base <- paste0(tools::file_path_sans_ext(basename(path)), "_covariation")
+
+  for (data_name in names(data_sets)) {
+    analysis_dat <- data_sets[[data_name]]
+    cat(sprintf("  data set: %s (%d rows)\n", data_name, nrow(analysis_dat)))
+    prefix <- paste(prefix_base, data_name, sep = "_")
+    for (family_name in names(families)) {
+      pairs <- families[[family_name]]
+      cat(sprintf("  scan: %s (%d pairs)\n", family_name, nrow(pairs)))
+      results <- analyze_pairs(analysis_dat, pairs, params$permutations, params$min_n,
+                               params$min_minor, family_name)
+      write_scan_outputs(prefix, family_name, results, analysis_dat)
+    }
+  }
+  write.csv(summary, file.path(params$output_dir, paste0(prefix_base, "_dataset_summary.csv")), row.names = FALSE)
+}
+```
+
+# Interpretation reminder
+
+A small q value and positive bias-adjusted MI support an amino-acid association
+within the sampled subtypes. They do not prove direct biological interaction:
+shared ancestry, repeated sampling, and study or geographic clustering can
+also create an association.
