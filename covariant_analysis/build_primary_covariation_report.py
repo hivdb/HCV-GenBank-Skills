@@ -18,6 +18,27 @@ from pathlib import Path
 
 INPUT_SUFFIX = "_covariation_all_sequences_ras_ras.csv"
 
+# The CSV retains machine-friendly field names; these labels are used in the workbook.
+EXCEL_FIELD_LABELS = {
+    "position_pair": "Position pair",
+    "pos1": "Position 1",
+    "pos2": "Position 2",
+    "n_subtypes": "Eligible subtypes",
+    "n_sequences": "Usable sequences",
+    "significant_weighting": "Significant analysis",
+    "sequence_weighted_adjusted_mi_bits": "Biased by subtype sequence count: adjusted MI (bits)",
+    "sequence_weighted_p_value": "Biased by subtype sequence count: P value",
+    "sequence_weighted_q_value": "Biased by subtype sequence count: q value",
+    "subtype_balanced_adjusted_mi_bits": "Equal-subtype-weighted adjusted MI (bits)",
+    "subtype_balanced_p_value": "Equal-subtype-weighted P value",
+    "subtype_balanced_q_value": "Equal-subtype-weighted q value",
+}
+
+EXCEL_ANALYSIS_LABELS = {
+    "sequence_weighted": "Biased by subtype sequence count",
+    "subtype_balanced": "Equal-subtype weighted",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -123,11 +144,38 @@ def smallest_q(row: dict[str, object]) -> float:
     return min(value for value in values if value is not None) if any(values) else float("inf")
 
 
+def exclude_low_sequence_outliers(report_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Exclude a gene's smallest row when it has under half the next-smallest count."""
+    by_gene: dict[str, list[dict[str, object]]] = {}
+    for row in report_rows:
+        by_gene.setdefault(str(row["gene"]), []).append(row)
+
+    retained: list[dict[str, object]] = []
+    for gene_rows in by_gene.values():
+        ranked = sorted(gene_rows, key=lambda row: int(str(row["n_sequences"])))
+        if len(ranked) >= 2:
+            smallest = int(str(ranked[0]["n_sequences"]))
+            second_smallest = int(str(ranked[1]["n_sequences"]))
+            if smallest < second_smallest / 2:
+                ranked = ranked[1:]
+        retained.extend(ranked)
+    return retained
+
+
 def excel_number_format(value: str) -> str:
     """Return a fixed-decimal format matching the presentation CSV value."""
     if not value or "." not in value:
         return "0"
     return "0." + "0" * len(value.split(".", maxsplit=1)[1])
+
+
+def excel_value(field: str, value: object) -> object:
+    """Use reader-friendly analysis names in the workbook only."""
+    if field != "significant_weighting" or not value:
+        return value
+    return "; ".join(
+        EXCEL_ANALYSIS_LABELS.get(label, label) for label in str(value).split("; ")
+    )
 
 
 def write_excel_report(path: Path, report_rows: list[dict[str, object]], fields: list[str]) -> None:
@@ -174,6 +222,10 @@ def write_excel_report(path: Path, report_rows: list[dict[str, object]], fields:
         "Compare both summaries: agreement supports a result across subtype weighting choices; disagreement can indicate "
         "that a large subtype is driving the sequence-weighted result."
     ])
+    read_me.append([
+        "Quality filter: within each gene sheet, the row with the fewest usable sequences is omitted when it has "
+        "fewer than half as many sequences as the second-smallest row."
+    ])
     read_me.append([])
     read_me.append(["Column", "Meaning"])
     read_me["A9"].font = Font(bold=True)
@@ -183,13 +235,11 @@ def write_excel_report(path: Path, report_rows: list[dict[str, object]], fields:
         ("pos1; pos2", "The same two amino-acid positions in separate numeric columns."),
         ("n_subtypes", "Number of subtypes with sufficient paired observations and amino-acid variation for this pair."),
         ("n_sequences", "Total usable sequences across the eligible subtypes for this pair."),
-        ("significant_weighting", "Shows which analysis had q value at or below the chosen cutoff (usually 0.05). 'sequence_weighted' means the pair was significant when larger subtypes had more influence. 'subtype_balanced' means it was significant when every eligible subtype had equal influence. 'sequence_weighted; subtype_balanced' means it was significant with both methods, which is stronger support that the result is not only due to the weighting choice."),
-        ("sequence_weighted_adjusted_mi_bits", "Association strength after subtracting average shuffled MI. Larger positive values mean stronger covariation; large subtypes have more influence."),
-        ("sequence_weighted_p_value", "Permutation P value for the sequence-weighted MI."),
-        ("sequence_weighted_q_value", "Sequence-weighted P value adjusted for testing many pairs in this scan."),
-        ("subtype_balanced_adjusted_mi_bits", "Association strength after subtracting average shuffled MI, with every eligible subtype given equal influence."),
-        ("subtype_balanced_p_value", "Permutation P value for the subtype-balanced MI."),
-        ("subtype_balanced_q_value", "Subtype-balanced P value adjusted for testing many pairs in this scan."),
+        ("Significant analysis", "Shows which analysis had q value at or below the chosen cutoff (usually 0.05). Biased by subtype sequence count means larger subtypes have more influence. Equal-subtype weighted means every eligible subtype has equal influence. Seeing both methods is stronger support that the result is not due only to the weighting choice."),
+        ("Biased by subtype sequence count: adjusted MI (bits)", "Association strength after subtracting average shuffled MI. Larger subtypes have more influence."),
+        ("Biased by subtype sequence count: P/q value", "Permutation P value and multiple-testing-adjusted q value for the analysis biased by subtype sequence count."),
+        ("Equal-subtype-weighted adjusted MI (bits)", "Association strength after subtracting average shuffled MI, with every eligible subtype given equal influence."),
+        ("Equal-subtype-weighted P/q value", "Permutation P value and multiple-testing-adjusted q value for the equal-subtype-weighted MI."),
     ]
     for definition in definitions:
         read_me.append(definition)
@@ -204,12 +254,12 @@ def write_excel_report(path: Path, report_rows: list[dict[str, object]], fields:
 
     for gene, rows in by_gene.items():
         worksheet = workbook.create_sheet(title=gene)
-        worksheet.append(sheet_fields)
+        worksheet.append([EXCEL_FIELD_LABELS.get(field, field) for field in sheet_fields])
         for cell in worksheet[1]:
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         for row in rows:
-            worksheet.append([row[field] for field in sheet_fields])
+            worksheet.append([excel_value(field, row[field]) for field in sheet_fields])
         for row_index in range(2, worksheet.max_row + 1):
             for column_index, field in enumerate(sheet_fields, start=1):
                 cell = worksheet.cell(row_index, column_index)
@@ -229,6 +279,7 @@ def write_excel_report(path: Path, report_rows: list[dict[str, object]], fields:
             width = min(40, max(12, max(len(str(cell.value or "")) for cell in column) + 2))
             worksheet.column_dimensions[column[0].column_letter].width = width
 
+    workbook.move_sheet(read_me, offset=len(workbook.worksheets) - 1)
     workbook.save(path)
 
 
@@ -245,6 +296,7 @@ def main() -> None:
     report_rows: list[dict[str, object]] = []
     for path in inputs:
         report_rows.extend(read_results(path, args.alpha, args.include_nonsignificant))
+    report_rows = exclude_low_sequence_outliers(report_rows)
     report_rows.sort(key=lambda row: (smallest_q(row), row["gene"], int(row["pos1"]), int(row["pos2"])))
     fields = [
         "gene", "position_pair", "pos1", "pos2", "n_subtypes", "n_sequences", "significant_weighting",
